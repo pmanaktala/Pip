@@ -59,12 +59,31 @@ public extension View {
     }
 
     /// Cross-fade navigation on iOS 27, default zoom/push on iOS 26.
+    /// The compile-time check keeps the project building with the iOS 26 SDK (CI runners).
     @ViewBuilder
     func pipNavigationTransition() -> some View {
+        #if swift(>=6.4)
         if #available(iOS 27, *) {
             self.navigationTransition(.crossFade)
         } else {
             self
         }
+        #else
+        self
+        #endif
+    }
+
+    /// iOS 27 tabs picker style, segmented on iOS 26.
+    @ViewBuilder
+    func pipTabsPickerStyle() -> some View {
+        #if swift(>=6.4)
+        if #available(iOS 27, *) {
+            self.pickerStyle(.tabs)
+        } else {
+            self.pickerStyle(.segmented)
+        }
+        #else
+        self.pickerStyle(.segmented)
+        #endif
     }
 }

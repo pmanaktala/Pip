@@ -25,6 +25,13 @@
 			remoteGlobalIDString = D3AB432B3055B2690096F1AD;
 			remoteInfo = Pip;
 		};
+		A1000000000000000000C035 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D3AB43243055B2690096F1AD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D3AB432B3055B2690096F1AD;
+			remoteInfo = Pip;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -44,6 +51,7 @@
 /* Begin PBXFileReference section */
 		A1000000000000000000C007 /* PipWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PipWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000000000000000000C008 /* PipTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PipTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1000000000000000000C030 /* PipUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PipUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D3AB432C3055B2690096F1AD /* Pip.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pip.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -83,6 +91,11 @@
 			path = PipTests;
 			sourceTree = "<group>";
 		};
+		A1000000000000000000C031 /* PipUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PipUITests;
+			sourceTree = "<group>";
+		};
 		D3AB432E3055B2690096F1AD /* Pip */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -115,6 +128,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A1000000000000000000C032 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -125,6 +145,7 @@
 				A1000000000000000000C009 /* PipCore */,
 				A1000000000000000000C00A /* PipWidgets */,
 				A1000000000000000000C00B /* PipTests */,
+				A1000000000000000000C031 /* PipUITests */,
 				D3AB432D3055B2690096F1AD /* Products */,
 			);
 			sourceTree = "<group>";
@@ -135,6 +156,7 @@
 				D3AB432C3055B2690096F1AD /* Pip.app */,
 				A1000000000000000000C007 /* PipWidgetsExtension.appex */,
 				A1000000000000000000C008 /* PipTests.xctest */,
+				A1000000000000000000C030 /* PipUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -213,6 +235,29 @@
 			productReference = D3AB432C3055B2690096F1AD /* Pip.app */;
 			productType = "com.apple.product-type.application";
 		};
+		A1000000000000000000C037 /* PipUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1000000000000000000C038 /* Build configuration list for PBXNativeTarget "PipUITests" */;
+			buildPhases = (
+				A1000000000000000000C034 /* Sources */,
+				A1000000000000000000C032 /* Frameworks */,
+				A1000000000000000000C033 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A1000000000000000000C036 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A1000000000000000000C031 /* PipUITests */,
+			);
+			name = PipUITests;
+			packageProductDependencies = (
+			);
+			productName = PipUITests;
+			productReference = A1000000000000000000C030 /* PipUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -227,6 +272,10 @@
 						CreatedOnToolsVersion = 27.0;
 					};
 					A1000000000000000000C00F = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = D3AB432B3055B2690096F1AD;
+					};
+					A1000000000000000000C037 = {
 						CreatedOnToolsVersion = 27.0;
 						TestTargetID = D3AB432B3055B2690096F1AD;
 					};
@@ -252,6 +301,7 @@
 				D3AB432B3055B2690096F1AD /* Pip */,
 				A1000000000000000000C00E /* PipWidgetsExtension */,
 				A1000000000000000000C00F /* PipTests */,
+				A1000000000000000000C037 /* PipUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -272,6 +322,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		D3AB432A3055B2690096F1AD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1000000000000000000C033 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -302,6 +359,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A1000000000000000000C034 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -314,6 +378,11 @@
 			isa = PBXTargetDependency;
 			target = D3AB432B3055B2690096F1AD /* Pip */;
 			targetProxy = A1000000000000000000C003 /* PBXContainerItemProxy */;
+		};
+		A1000000000000000000C036 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D3AB432B3055B2690096F1AD /* Pip */;
+			targetProxy = A1000000000000000000C035 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -561,6 +630,28 @@
 			};
 			name = Release;
 		};
+		A1000000000000000000C039 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pmanaktala.PipUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_TARGET_NAME = Pip;
+			};
+			name = Debug;
+		};
+		A1000000000000000000C03A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pmanaktala.PipUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_TARGET_NAME = Pip;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -596,6 +687,15 @@
 			buildConfigurations = (
 				D3AB43383055B26A0096F1AD /* Debug */,
 				D3AB43393055B26A0096F1AD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1000000000000000000C038 /* Build configuration list for PBXNativeTarget "PipUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000000000000000000C039 /* Debug */,
+				A1000000000000000000C03A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -32,27 +32,7 @@ struct PetHomeView: View {
                 }
                 .padding(.horizontal, PipSpacing.m)
             }
-            .toolbar {
-                if #available(iOS 27, *) {
-                    // iOS 27: let the system collapse the least important item first when space is tight.
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button { path.append(Destination.history) } label: { Label("History", systemImage: "calendar") }
-                    }
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button { path.append(Destination.pets) } label: { Label("Pets", systemImage: "pawprint") }
-                    }
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button { path.append(Destination.settings) } label: { Label("Settings", systemImage: "gearshape") }
-                    }
-                    .visibilityPriority(.low)
-                } else {
-                    ToolbarItemGroup(placement: .topBarTrailing) {
-                        Button { path.append(Destination.history) } label: { Label("History", systemImage: "calendar") }
-                        Button { path.append(Destination.pets) } label: { Label("Pets", systemImage: "pawprint") }
-                        Button { path.append(Destination.settings) } label: { Label("Settings", systemImage: "gearshape") }
-                    }
-                }
-            }
+            .toolbar { homeToolbar }
             .toolbarBackground(.hidden, for: .navigationBar)
             .navigationDestination(for: Destination.self) { destination in
                 Group {
@@ -98,6 +78,37 @@ struct PetHomeView: View {
                 }
             }
             #endif
+        }
+    }
+
+    /// iOS 27 lets the system collapse the least important item first when space is tight.
+    @ToolbarContentBuilder
+    private var homeToolbar: some ToolbarContent {
+        #if swift(>=6.4)
+        if #available(iOS 27, *) {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { path.append(Destination.history) } label: { Label("History", systemImage: "calendar") }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { path.append(Destination.pets) } label: { Label("Pets", systemImage: "pawprint") }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { path.append(Destination.settings) } label: { Label("Settings", systemImage: "gearshape") }
+            }
+            .visibilityPriority(.low)
+        } else {
+            legacyToolbar
+        }
+        #else
+        legacyToolbar
+        #endif
+    }
+
+    private var legacyToolbar: some ToolbarContent {
+        ToolbarItemGroup(placement: .topBarTrailing) {
+            Button { path.append(Destination.history) } label: { Label("History", systemImage: "calendar") }
+            Button { path.append(Destination.pets) } label: { Label("Pets", systemImage: "pawprint") }
+            Button { path.append(Destination.settings) } label: { Label("Settings", systemImage: "gearshape") }
         }
     }
 

@@ -47,19 +47,11 @@ struct HistoryView: View {
         }
     }
 
-    @ViewBuilder
     private var scopePicker: some View {
-        if #available(iOS 27, *) {
-            Picker("Scope", selection: $scope) {
-                ForEach(Scope.allCases) { Text($0.rawValue).tag($0) }
-            }
-            .pickerStyle(.tabs)
-        } else {
-            Picker("Scope", selection: $scope) {
-                ForEach(Scope.allCases) { Text($0.rawValue).tag($0) }
-            }
-            .pickerStyle(.segmented)
+        Picker("Scope", selection: $scope) {
+            ForEach(Scope.allCases) { Text($0.rawValue).tag($0) }
         }
+        .pipTabsPickerStyle()
     }
 
     // MARK: Month

@@ -10,13 +10,22 @@ struct PipApp: App {
 
     init() {
         let health = HealthSyncService()
+        #if DEBUG
+        // UI tests run against a fresh in-memory store with onboarding already done.
+        let uiTesting = ProcessInfo.processInfo.environment["PIP_UITEST"] == "1"
+        let container = uiTesting ? PipModelContainer.make(inMemory: true) : PipModelContainer.shared
+        let preferences = uiTesting ? Preferences(defaults: UserDefaults(suiteName: "uitest.\(UUID().uuidString)")!) : Preferences.shared
+        if uiTesting { preferences.hasCompletedOnboarding = true }
+        #else
         let container = PipModelContainer.shared
+        let preferences = Preferences.shared
+        #endif
         let effects: [any MoodLogSideEffect] = [
-            LiveActivityMoodSideEffect(preferences: .shared),
-            HealthMoodSideEffect(service: health, context: container.mainContext, preferences: .shared),
+            LiveActivityMoodSideEffect(preferences: preferences),
+            HealthMoodSideEffect(service: health, context: container.mainContext, preferences: preferences),
         ]
         MoodSideEffectRegistry.effects = effects
-        let state = AppState(container: container, sideEffects: effects)
+        let state = AppState(container: container, preferences: preferences, sideEffects: effects)
         _appState = State(initialValue: state)
         _health = State(initialValue: health)
         #if DEBUG
