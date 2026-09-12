@@ -18,6 +18,7 @@ struct PetSelectorView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .always))
             .indexViewStyle(.page(backgroundDisplayMode: .never))
+            .safeAreaPadding(.top, PipSpacing.m)
             .onChange(of: selection) { _, new in
                 Haptics.selection()
                 greet(new)
@@ -95,8 +96,8 @@ struct PetCard: View {
     var body: some View {
         VStack(spacing: PipSpacing.s) {
             AnimatedPetView(identity: PetIdentity(species: species), state: state)
-                .frame(maxWidth: 300)
-                .padding(.top, PipSpacing.m)
+                .frame(maxWidth: 280)
+                .padding(.top, PipSpacing.s)
             Text(species.defaultName)
                 .font(PipFont.title)
             Text(species.displayName)

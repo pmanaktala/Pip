@@ -48,7 +48,7 @@ public struct PetHomeWidgetView: View {
                 HStack(spacing: 8) {
                     ForEach([Mood.happy, .calm, .stressed], id: \.self) { mood in
                         Button(intent: LogMoodIntent(mood: mood)) {
-                            PetView(identity: identity, state: PetStateResolver.resolve(mood: mood, identity: identity), showsShadow: false, framing: .face)
+                            PetView(identity: identity, state: PetStateResolver.resolve(mood: mood, identity: identity), showsShadow: false, framing: .badge)
                                 .frame(width: 36, height: 36)
                                 .padding(3)
                                 .background(PetPalette.ambient(for: mood).opacity(0.25), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -75,7 +75,7 @@ public struct PetHomeWidgetView: View {
                     HStack(spacing: 6) {
                         ForEach(snapshot.today.suffix(6)) { stamp in
                             VStack(spacing: 1) {
-                                PetView(identity: identity, state: PetStateResolver.resolve(mood: stamp.mood, intensity: stamp.intensity, identity: identity), showsShadow: false, framing: .face)
+                                PetView(identity: identity, state: PetStateResolver.resolve(mood: stamp.mood, intensity: stamp.intensity, identity: identity), showsShadow: false, framing: .badge)
                                     .frame(width: 40, height: 40)
                                 Text(stamp.time, style: .time)
                                     .font(.system(size: 9, design: .rounded))
@@ -122,13 +122,13 @@ public struct PetLockScreenView: View {
         case .accessoryCircular:
             ZStack {
                 AccessoryWidgetBackground()
-                PetView(identity: identity, state: state, showsShadow: false, framing: .face)
+                PetView(identity: identity, state: state, showsShadow: false, framing: .badge)
                     .padding(4)
             }
             .accessibilityLabel("\(identity.name) \(state.mood.petDescription).")
         case .accessoryRectangular:
             HStack(spacing: 8) {
-                PetView(identity: identity, state: state, showsShadow: false, framing: .face)
+                PetView(identity: identity, state: state, showsShadow: false, framing: .badge)
                     .frame(width: 44, height: 44)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(identity.name).font(.headline.weight(.semibold)).widgetAccentable()

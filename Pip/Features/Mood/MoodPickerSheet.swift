@@ -136,8 +136,8 @@ struct MoodChoice: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: 4) {
-                PetView(identity: identity, state: PetStateResolver.resolve(mood: mood, identity: identity), showsShadow: false, framing: .face)
-                    .frame(width: 58, height: 58)
+                PetView(identity: identity, state: PetStateResolver.resolve(mood: mood, identity: identity), showsShadow: false, framing: .badge)
+                    .frame(width: 56, height: 56)
                 Text(mood.displayName)
                     .font(PipFont.caption)
                     .foregroundStyle(.primary)

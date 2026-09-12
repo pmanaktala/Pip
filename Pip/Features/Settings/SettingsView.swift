@@ -18,7 +18,7 @@ struct SettingsView: View {
                     PetSelectorView()
                 } label: {
                     HStack(spacing: 12) {
-                        PetView(identity: appState.identity, state: PetStateResolver.resting(identity: appState.identity), showsShadow: false, framing: .face)
+                        PetView(identity: appState.identity, state: PetStateResolver.resting(identity: appState.identity), showsShadow: false, framing: .badge)
                             .frame(width: 44, height: 44)
                         VStack(alignment: .leading) {
                             Text(appState.identity.name).font(PipFont.headline)
@@ -116,6 +116,7 @@ struct SettingsView: View {
         .scrollContentBackground(.hidden)
         .background(LinearGradient(colors: [PipColor.sceneTop, PipColor.sceneBottom], startPoint: .top, endPoint: .bottom).ignoresSafeArea())
         .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("Delete all app data?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
             Button("Delete Everything", role: .destructive) { appState.deleteAllData() }
             Button("Cancel", role: .cancel) {}

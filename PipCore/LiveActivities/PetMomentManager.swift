@@ -2,13 +2,17 @@ import ActivityKit
 import Foundation
 import OSLog
 
-/// Starts and ends pet-moment Live Activities. Never more than one at a time; every
-/// moment is ended with a dismissal date at request time, so it disappears on its own
-/// even if the app is never opened again.
+/// Starts and ends pet-moment Live Activities. Never more than one at a time.
+///
+/// A moment stays *active* for its duration so it lives in the Dynamic Island as well as on
+/// the Lock Screen (an ended activity is dropped from the island at once). It is ended by
+/// a timer while the app is running, by `endExpired()` whenever the app comes back, and by
+/// the system's stale date otherwise.
 @MainActor
 public final class PetMomentManager {
     public static let shared = PetMomentManager()
     private let log = Logger(subsystem: "com.pmanaktala.Pip", category: "LiveActivity")
+    private var expiry: Task<Void, Never>?
 
     public var isAvailable: Bool { ActivityAuthorizationInfo().areActivitiesEnabled }
 
@@ -17,18 +21,30 @@ public final class PetMomentManager {
         endAll()
         let endsAt = now.addingTimeInterval(kind.duration)
         let state = PetMomentAttributes.ContentState(kind: kind, mood: mood, intensity: intensity, message: message, endsAt: endsAt)
-        let content = ActivityContent(state: state, staleDate: endsAt)
+        let content = ActivityContent(state: state, staleDate: endsAt, relevanceScore: kind == .celebration ? 100 : 50)
         do {
             let activity = try Activity.request(attributes: PetMomentAttributes(identity: identity), content: content, pushType: nil)
-            // Ending immediately with a future dismissal keeps the moment temporary without background work.
-            Task { await activity.end(content, dismissalPolicy: .after(endsAt)) }
             log.info("Started pet moment \(kind.rawValue)")
+            expiry = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(max(1, endsAt.timeIntervalSince(now))))
+                guard !Task.isCancelled else { return }
+                await activity.end(content, dismissalPolicy: .immediate)
+                self?.log.info("Ended pet moment \(kind.rawValue) on schedule")
+            }
         } catch {
             log.error("Could not start Live Activity: \(error.localizedDescription)")
         }
     }
 
+    /// Ends any moment whose time has passed — call when the app becomes active.
+    public func endExpired(now: Date = .now) {
+        for activity in Activity<PetMomentAttributes>.activities where activity.content.state.endsAt <= now {
+            Task { await activity.end(nil, dismissalPolicy: .immediate) }
+        }
+    }
+
     public func endAll() {
+        expiry?.cancel()
         for activity in Activity<PetMomentAttributes>.activities {
             Task { await activity.end(nil, dismissalPolicy: .immediate) }
         }

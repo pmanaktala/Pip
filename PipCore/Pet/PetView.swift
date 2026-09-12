@@ -17,9 +17,11 @@ public struct PetView: View, Animatable {
     public enum Framing: Sendable {
         /// Whole pet with room for the tail and shadow.
         case full
-        /// Zoomed on the head — for tiny widgets and mood buttons.
+        /// Head and shoulders — for medium sizes (40–120pt) such as cards and the Live Activity.
         case face
-        /// Head fills the frame — for the app icon.
+        /// Head only, simplified — for tiny sizes (20–48pt) such as picker buttons and calendar cells.
+        case badge
+        /// Head fills the frame — used by the icon renderer.
         case icon
     }
 
@@ -45,34 +47,53 @@ public struct PetView: View, Animatable {
             var ctx = context
             ctx.translateBy(x: (size.width - 200 * scale) / 2, y: (size.height - 200 * scale) / 2)
             ctx.scaleBy(x: scale, y: scale)
-            if framing != .full {
-                // Zoom on the head region; the pivot keeps the face centred as the body squashes.
-                let zoom: CGFloat = framing == .icon ? 1.45 : 1.5
-                ctx.translateBy(x: 100, y: framing == .icon ? 104 : 100)
-                ctx.scaleBy(x: zoom, y: zoom)
-                ctx.translateBy(x: -100, y: framing == .icon ? -112 : -74)
+            let zoom: CGFloat
+            switch framing {
+            case .full: zoom = 1
+            case .face: zoom = 1.5
+            case .badge: zoom = 1.9
+            case .icon: zoom = 1.55
             }
-            Self.draw(&ctx, identity: identity, rig: rig, motion: motion, time: time, colorScheme: colorScheme, showsShadow: showsShadow)
+            if framing != .full {
+                // Zoom on the head; the pivot keeps the face centred as the pose changes.
+                let headY = Self.headCenterY(identity: identity, rig: rig)
+                let offset: CGFloat = switch framing {
+                case .face: 10
+                case .icon: -8
+                default: 0
+                }
+                ctx.translateBy(x: 100, y: 100)
+                ctx.scaleBy(x: zoom, y: zoom)
+                ctx.translateBy(x: -100, y: -(headY + offset))
+            }
+            let detail: PetPaintContext.Detail = scale * zoom < 0.42 || framing == .badge ? .small : .full
+            Self.draw(&ctx, identity: identity, rig: rig, motion: motion, time: time, colorScheme: colorScheme, showsShadow: showsShadow && framing == .full, detail: detail)
         }
         .aspectRatio(1, contentMode: .fit)
         .clipped()
         .accessibilityHidden(true)
     }
 
+    /// Where the head centre lands for a rig, so zoomed framings stay on the face.
+    static func headCenterY(identity: PetIdentity, rig: PetRig) -> CGFloat {
+        PetPaintContext(rig: rig, live: .still, palette: PetPalette.palette(for: identity.species), colorScheme: .light, anatomy: identity.species.anatomy).head.center.y
+    }
+
     /// Draws the pet in a 200×200 design space. Shared by the view and any offscreen rendering.
-    public static func draw(_ ctx: inout GraphicsContext, identity: PetIdentity, rig base: PetRig, motion: PetMotionProfile, time: TimeInterval?, colorScheme: ColorScheme, showsShadow: Bool) {
+    public static func draw(_ ctx: inout GraphicsContext, identity: PetIdentity, rig base: PetRig, motion: PetMotionProfile, time: TimeInterval?, colorScheme: ColorScheme, showsShadow: Bool, detail: PetPaintContext.Detail = .full) {
         let (rig, live) = PetAnimator.animate(rig: base, motion: motion, time: time)
-        let p = PetPaintContext(rig: rig, live: live, palette: PetPalette.palette(for: identity.species), colorScheme: colorScheme, anatomy: identity.species.anatomy)
+        let p = PetPaintContext(rig: rig, live: live, palette: PetPalette.palette(for: identity.species), colorScheme: colorScheme, anatomy: identity.species.anatomy, detail: detail)
 
         if showsShadow { PetDraw.floorShadow(&ctx, p) }
 
-        // Body transform: bounce / lift / jitter, then sway and breathing about the feet.
+        // Body transform about the feet: hop / lift / shiver, then lean, then squash & stretch.
         // Head tilt is applied by each painter about the neck.
-        let pivot = CGPoint(x: 100, y: p.floor)
-        ctx.translateBy(x: CGFloat(live.jitterX), y: CGFloat(live.bounce + rig.lift + live.jitterY))
+        let pivot = CGPoint(x: p.axis, y: p.floor)
+        let squash = CGFloat(live.squash)
+        ctx.translateBy(x: CGFloat(live.shiverX), y: CGFloat(-live.hop + rig.lift))
         ctx.translateBy(x: pivot.x, y: pivot.y)
-        ctx.rotate(by: .degrees(live.sway))
-        ctx.scaleBy(x: 1 / sqrt(live.breathScale), y: live.breathScale)
+        ctx.rotate(by: .degrees(rig.lean + live.lean))
+        ctx.scaleBy(x: 1 - (squash - 1) * 0.55, y: squash)
         ctx.translateBy(x: -pivot.x, y: -pivot.y)
 
         switch identity.species {
@@ -108,7 +129,7 @@ public struct AnimatedPetView: View {
         } else {
             TimelineView(.animation(minimumInterval: 1.0 / 60)) { context in
                 PetView(identity: identity, state: state, time: context.date.timeIntervalSinceReferenceDate, showsShadow: showsShadow)
-                    .animation(.spring(duration: 0.75, bounce: 0.25), value: state.rig)
+                    .animation(.smooth(duration: 0.7), value: state.rig)
             }
         }
     }

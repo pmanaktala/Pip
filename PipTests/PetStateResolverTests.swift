@@ -28,7 +28,7 @@ struct PetStateResolverTests {
         let dramatic = PetStateResolver.resolve(mood: .stressed, intensity: .strong, species: .cat, personality: .dramatic)
         let serene = PetStateResolver.resolve(mood: .stressed, intensity: .strong, species: .cat, personality: .serene)
         #expect(dramatic.rig.lying > serene.rig.lying)
-        #expect(dramatic.motion.jitter > serene.motion.jitter)
+        #expect(dramatic.motion.shiver > serene.motion.shiver)
 
         let optimistic = PetStateResolver.resolve(mood: .sad, intensity: .strong, species: .dog, personality: .optimistic)
         #expect(optimistic.rig.mouthCurve >= -0.15)

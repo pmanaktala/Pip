@@ -16,6 +16,14 @@ public struct PetRig: Equatable, Sendable {
     public var lying: Double = 0
     /// Vertical offset in canvas units (200pt canvas). Negative lifts the pet.
     public var lift: Double = 0
+    /// Whole-body lean in degrees about the feet. Positive leans to the pet's right.
+    public var lean: Double = 0
+    /// -1…1 head turn; shifts the face toward one side of the head.
+    public var headTurn: Double = 0
+    /// 0 = head held up, 1 = head sunk into the shoulders (tired, sad, stressed).
+    public var headDrop: Double = 0
+    /// 0 = arms/flippers/paws resting, 1 = raised.
+    public var armRaise: Double = 0
 
     // MARK: Ears & tail
     /// 0 = flat back / drooping, 1 = perked up.
@@ -105,7 +113,7 @@ extension PetRig {
         }
     }
 
-    static let fieldCount = 26
+    static let fieldCount = 27
 
     public var vector: Vector {
         get {
@@ -116,7 +124,7 @@ extension PetRig {
                 browInnerUp, browWeight,
                 mouthCurve, mouthOpen, mouthWidth, mouthWobble, tongue,
                 blush, sweat, lidHeaviness,
-                0, 0, 0, // reserved
+                lean, headTurn, headDrop, armRaise,
             ])
         }
         set {
@@ -128,36 +136,42 @@ extension PetRig {
             browInnerUp = v[13]; browWeight = v[14]
             mouthCurve = v[15]; mouthOpen = v[16]; mouthWidth = v[17]; mouthWobble = v[18]; tongue = v[19]
             blush = v[20]; sweat = v[21]; lidHeaviness = v[22]
+            lean = v[23]; headTurn = v[24]; headDrop = v[25]; armRaise = v[26]
         }
     }
 }
 
-/// Idle-motion parameters. These are *rates and amplitudes*, applied on top of the rig
-/// by the animation driver; they are not interpolated field-by-field.
+/// Idle-motion parameters. These are *rates and amplitudes* for scheduled gestures,
+/// applied on top of the rig by `PetAnimator`; they are not interpolated field-by-field.
 public struct PetMotionProfile: Equatable, Sendable {
     /// Breaths per second.
-    public var breathRate: Double = 0.28
+    public var breathRate: Double = 0.26
     /// Breathing scale amplitude (0.02 = 2%).
     public var breathAmount: Double = 0.02
-    /// Vertical bounce amplitude in canvas units.
-    public var bounceAmount: Double = 0
-    /// Bounces per second.
-    public var bounceRate: Double = 1.6
+    /// Hop height in canvas units (0 = never hops).
+    public var hopHeight: Double = 0
+    /// Average seconds between hops.
+    public var hopInterval: Double = 3
     /// Tail wags per second (0 = still).
     public var tailWagRate: Double = 0
     /// Tail wag amplitude 0…1.
     public var tailWagAmount: Double = 0
-    /// Random micro-shake amplitude (stress).
-    public var jitter: Double = 0
-    /// Side-to-side sway amplitude in degrees.
-    public var swayAmount: Double = 0
-    public var swayRate: Double = 0.3
+    /// Shiver amplitude in canvas units (stress). Shivers come in short bursts.
+    public var shiver: Double = 0
+    /// Slow weight-shift lean amplitude in degrees.
+    public var swayAmount: Double = 1.2
+    /// Seconds per weight shift.
+    public var swayPeriod: Double = 7
     /// Average seconds between blinks. `.infinity` disables blinking (eyes closed).
     public var blinkInterval: Double = 4.2
     /// Average seconds between gaze changes.
     public var gazeInterval: Double = 3.5
     /// Occasional ear twitch probability weight.
     public var earTwitch: Double = 0.3
+    /// Slow nodding-off head bob amplitude (tired).
+    public var nod: Double = 0
+    /// Occasional deep sigh amplitude (sad, calm).
+    public var sigh: Double = 0
 
     public init() {}
 }

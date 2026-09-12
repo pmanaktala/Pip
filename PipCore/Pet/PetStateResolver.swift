@@ -16,6 +16,8 @@ public enum PetStateResolver {
         applyPersonality(personality, mood: mood, intensity: intensity, to: &state)
         applySpecies(species, to: &state)
         clamp(&state.rig)
+        // Keep hops inside the 200-unit canvas at every intensity and personality.
+        state.motion.hopHeight = min(state.motion.hopHeight, 16)
         return state
     }
 
@@ -34,55 +36,66 @@ public enum PetStateResolver {
 
         switch mood {
         case .happy:
+            // Sitting tall, chin up, ears and tail up, small hops now and then.
             rig.mouthCurve = 0.85
-            rig.mouthOpen = 0.15
-            rig.eyeArc = 0.35
+            rig.mouthOpen = 0.12
+            rig.eyeArc = 0.3
             rig.blush = 0.55
             rig.earLift = 0.95
             rig.tailLift = 0.85
+            rig.armRaise = 0.15
             rig.squash = 1.03
-            motion.bounceAmount = 2.5
-            motion.bounceRate = 1.4
-            motion.tailWagRate = 1.2
+            rig.tilt = 3
+            motion.hopHeight = 5
+            motion.hopInterval = 4.5
+            motion.tailWagRate = 1.1
             motion.tailWagAmount = 0.6
-            motion.breathRate = 0.32
+            motion.breathRate = 0.3
             env.tintStrength = 0.5
 
         case .excited:
+            // Up on the toes, arms up, mouth open, bouncing.
             rig.mouthCurve = 1
-            rig.mouthOpen = 0.65
+            rig.mouthOpen = 0.6
             rig.mouthWidth = 1.15
-            rig.eyeScale = 1.18
-            rig.pupilScale = 1.3
+            rig.eyeScale = 1.15
+            rig.pupilScale = 1.25
             rig.blush = 0.65
             rig.earLift = 1
             rig.tailLift = 1
+            rig.armRaise = 0.9
             rig.squash = 1.06
-            rig.lift = -4
-            motion.bounceAmount = 6
-            motion.bounceRate = 2.4
-            motion.tailWagRate = 2.6
+            rig.lean = 0
+            motion.hopHeight = 12
+            motion.hopInterval = 2.2
+            motion.tailWagRate = 2.4
             motion.tailWagAmount = 1
-            motion.breathRate = 0.45
+            motion.breathRate = 0.42
             motion.gazeInterval = 1.6
+            motion.swayAmount = 0.6
             accessory = .sparkles
             env.tintStrength = 0.6
 
         case .calm:
+            // Settled: a little lower, soft eyes, slow breath and the odd sigh.
             rig.mouthCurve = 0.45
-            rig.eyeOpen = 0.78
+            rig.eyeOpen = 0.8
             rig.lidHeaviness = 0.25
             rig.eyeArc = 0.15
             rig.blush = 0.35
             rig.earLift = 0.7
-            rig.tailLift = 0.35
-            rig.squash = 0.96
+            rig.tailLift = 0.3
+            rig.squash = 0.97
+            rig.headDrop = 0.15
             motion.breathRate = 0.18
-            motion.breathAmount = 0.028
+            motion.breathAmount = 0.026
             motion.tailWagRate = 0.25
             motion.tailWagAmount = 0.2
             motion.blinkInterval = 5.5
             motion.gazeInterval = 5
+            motion.swayAmount = 0.8
+            motion.swayPeriod = 9
+            motion.sigh = 0.6
             env.tintStrength = 0.35
 
         case .neutral:
@@ -95,28 +108,32 @@ public enum PetStateResolver {
             env.tintStrength = 0.3
 
         case .tired:
+            // Slumped: lying, head sunk, heavy lids, nodding off.
             rig.mouthCurve = 0.1
             rig.eyeOpen = 0.35
             rig.lidHeaviness = 0.8
             rig.eyeSquint = 0.2
             rig.earLift = 0.35
-            rig.tailLift = 0.15
-            rig.squash = 0.9
-            rig.lying = 0.75
-            rig.lift = 6
+            rig.tailLift = 0.1
+            rig.squash = 0.92
+            rig.lying = 0.7
+            rig.headDrop = 0.6
             rig.blush = 0.2
             rig.gazeY = 0.25
             motion.breathRate = 0.14
-            motion.breathAmount = 0.035
+            motion.breathAmount = 0.032
             motion.blinkInterval = 2.5
             motion.gazeInterval = 7
             motion.earTwitch = 0.1
+            motion.swayAmount = 0.5
+            motion.nod = 4
             accessory = .zzz
             env.tintStrength = 0.3
             env.dimness = 0.35
             env.shadowSpread = 1.25
 
         case .stressed:
+            // Hunched and pulled in, wide eyes, shivering bursts.
             rig.mouthCurve = -0.25
             rig.mouthWobble = 0.8
             rig.mouthWidth = 0.85
@@ -124,24 +141,27 @@ public enum PetStateResolver {
             rig.pupilScale = 0.7
             rig.browInnerUp = 0.75
             rig.browWeight = 0.9
-            rig.earLift = 0.45
-            rig.tailLift = 0.25
-            rig.squash = 1.02
+            rig.earLift = 0.4
+            rig.tailLift = 0.2
+            rig.squash = 0.97
+            rig.headDrop = 0.45
             rig.sweat = 0.9
             rig.blush = 0.15
-            rig.tilt = -3
-            motion.jitter = 1.4
-            motion.breathRate = 0.55
+            rig.tilt = -2
+            motion.shiver = 1.6
+            motion.breathRate = 0.5
             motion.breathAmount = 0.016
             motion.blinkInterval = 1.6
             motion.gazeInterval = 0.9
-            motion.tailWagRate = 3.2
-            motion.tailWagAmount = 0.35
+            motion.tailWagRate = 3
+            motion.tailWagAmount = 0.3
             motion.earTwitch = 0.9
+            motion.swayAmount = 0.4
             accessory = .stressLines
             env.tintStrength = 0.45
 
         case .sad:
+            // Head down, ears flat, tail on the floor, slow breath with a sigh.
             rig.mouthCurve = -0.6
             rig.mouthWidth = 0.8
             rig.eyeOpen = 0.8
@@ -149,11 +169,11 @@ public enum PetStateResolver {
             rig.gazeY = 0.35
             rig.browInnerUp = 0.9
             rig.browWeight = 0.8
-            rig.earLift = 0.15
-            rig.tailLift = 0.05
-            rig.squash = 0.9
-            rig.lying = 0.2
-            rig.lift = 4
+            rig.earLift = 0.1
+            rig.tailLift = 0
+            rig.squash = 0.93
+            rig.lying = 0.15
+            rig.headDrop = 0.7
             rig.tilt = 4
             rig.blush = 0.1
             motion.breathRate = 0.16
@@ -161,29 +181,34 @@ public enum PetStateResolver {
             motion.blinkInterval = 3.2
             motion.gazeInterval = 6
             motion.tailWagRate = 0
+            motion.swayAmount = 0.5
+            motion.swayPeriod = 10
+            motion.sigh = 1
             accessory = .rainCloud
             env.tintStrength = 0.35
             env.dimness = 0.25
 
         case .frustrated:
+            // Leaning in, brows down, tail stiff and twitching, a huff of steam.
             rig.mouthCurve = -0.45
             rig.mouthWidth = 0.9
             rig.eyeSquint = 0.55
             rig.browInnerUp = -0.85
             rig.browWeight = 1
             rig.earLift = 0.3
-            rig.tailLift = 0.7
-            rig.squash = 1.04
+            rig.tailLift = 0.75
+            rig.squash = 1.03
             rig.blush = 0.45
             rig.tilt = 2
-            motion.jitter = 0.5
+            rig.lean = -2
+            motion.shiver = 0.4
             motion.tailWagRate = 2.4
             motion.tailWagAmount = 0.55
             motion.breathRate = 0.5
             motion.breathAmount = 0.03
             motion.blinkInterval = 3
-            motion.swayAmount = 1.2
-            motion.swayRate = 0.9
+            motion.swayAmount = 1
+            motion.swayPeriod = 3
             accessory = .steam
             env.tintStrength = 0.45
         }
@@ -204,11 +229,12 @@ public enum PetStateResolver {
         state.rig.squash = max(state.rig.squash, 0.88)
         state.rig.lying = min(state.rig.lying, 0.9)
 
-        state.motion.bounceAmount *= s
-        state.motion.jitter *= s
+        state.motion.hopHeight *= s
+        state.motion.shiver *= s
         state.motion.tailWagAmount *= min(s, 1.2)
-        state.motion.swayAmount *= s
         state.motion.tailWagRate *= (0.8 + 0.2 * s)
+        state.motion.nod *= s
+        state.motion.sigh *= s
 
         if intensity == .slight {
             // Slight moods keep their accessory only when it is very characteristic.
@@ -229,11 +255,11 @@ public enum PetStateResolver {
         switch personality {
         case .dramatic:
             // Everything is a little bigger; strong stress or sadness is a full flop.
-            state.motion.bounceAmount *= 1.2
+            state.motion.hopHeight *= 1.2
             state.rig.tilt *= 1.5
             if (mood == .stressed || mood == .sad) && intensity == .strong {
                 state.rig.lying = max(state.rig.lying, 0.85)
-                state.rig.lift += 6
+                state.rig.headDrop = max(state.rig.headDrop, 0.8)
                 state.rig.squash = min(state.rig.squash, 0.88)
             }
             if mood == .frustrated { state.rig.mouthCurve -= 0.15 }
@@ -248,8 +274,8 @@ public enum PetStateResolver {
 
         case .serene:
             // Slower, softer everything.
-            state.motion.bounceAmount *= 0.6
-            state.motion.jitter *= 0.5
+            state.motion.hopHeight *= 0.6
+            state.motion.shiver *= 0.5
             state.motion.breathRate *= 0.85
             state.motion.tailWagRate *= 0.7
             state.rig.mouthOpen *= 0.7
@@ -257,11 +283,12 @@ public enum PetStateResolver {
 
         case .chaotic:
             // Big reactions, quick eyes.
-            state.motion.bounceAmount *= 1.5
-            state.motion.jitter *= 1.5
+            state.motion.hopHeight *= 1.4
+            state.motion.hopInterval *= 0.8
+            state.motion.shiver *= 1.4
             state.motion.gazeInterval *= 0.6
             state.rig.eyeScale *= 1.05
-            if mood == .excited { state.rig.mouthOpen = 1; state.rig.lift -= 3 }
+            if mood == .excited { state.rig.mouthOpen = 1; state.rig.armRaise = 1 }
 
         case .sleepy:
             // Calm and neutral drift toward a nap.
@@ -269,9 +296,11 @@ public enum PetStateResolver {
                 state.rig.eyeOpen = min(state.rig.eyeOpen, 0.6)
                 state.rig.lidHeaviness = max(state.rig.lidHeaviness, 0.45)
                 state.rig.lying = max(state.rig.lying, 0.35)
+                state.rig.headDrop = max(state.rig.headDrop, 0.3)
+                state.motion.nod = max(state.motion.nod, 2)
                 if mood == .calm && state.accessory == nil { state.accessory = .zzz }
             }
-            state.motion.bounceAmount *= 0.7
+            state.motion.hopHeight *= 0.7
             state.motion.blinkInterval *= 0.8
         }
     }
@@ -288,11 +317,12 @@ public enum PetStateResolver {
                 state.rig.mouthOpen = max(state.rig.mouthOpen, 0.3)
             }
         case .penguin:
-            // No tail to speak of; flippers use tailLift. Penguins don't blush as much.
+            // Flippers carry a lot of the pose; penguins don't blush as much.
             state.rig.blush *= 0.7
+            state.rig.armRaise = max(state.rig.armRaise, state.rig.tailLift * 0.5)
         case .capybara:
             state.motion.breathAmount *= 1.2
-            state.rig.eyeScale *= 0.9
+            state.motion.hopHeight *= 0.5
         case .cat, .redPanda:
             break
         }
@@ -314,6 +344,9 @@ public enum PetStateResolver {
         rig.lidHeaviness = rig.lidHeaviness.clamped(0, 1)
         rig.browInnerUp = rig.browInnerUp.clamped(-1, 1)
         rig.browWeight = rig.browWeight.clamped(0, 1)
+        rig.headDrop = rig.headDrop.clamped(0, 1)
+        rig.armRaise = rig.armRaise.clamped(0, 1)
+        rig.headTurn = rig.headTurn.clamped(-1, 1)
     }
 }
 

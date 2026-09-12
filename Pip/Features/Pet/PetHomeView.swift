@@ -144,8 +144,8 @@ struct PetHomeView: View {
         } label: {
             HStack(spacing: 10) {
                 if let entry = appState.latestEntry, appState.hasFreshMood {
-                    PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: entry.mood, intensity: entry.intensity, identity: appState.identity), showsShadow: false, framing: .face)
-                        .frame(width: 30, height: 30)
+                    PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: entry.mood, intensity: entry.intensity, identity: appState.identity), showsShadow: false, framing: .badge)
+                        .frame(width: 32, height: 32)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(entry.intensity.phrase(for: entry.mood).capitalizedFirst)
                             .font(PipFont.headline)

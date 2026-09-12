@@ -30,13 +30,13 @@ struct PetMomentLiveActivity: Widget {
                         .frame(maxWidth: .infinity)
                 }
             } compactLeading: {
-                PetView(identity: identity, state: petState, showsShadow: false, framing: .face)
+                PetView(identity: identity, state: petState, showsShadow: false, framing: .badge)
                     .frame(width: 24, height: 24)
             } compactTrailing: {
                 Image(systemName: context.state.mood.symbolName)
                     .font(.caption)
             } minimal: {
-                PetView(identity: identity, state: petState, showsShadow: false, framing: .face)
+                PetView(identity: identity, state: petState, showsShadow: false, framing: .badge)
                     .frame(width: 22, height: 22)
             }
         }

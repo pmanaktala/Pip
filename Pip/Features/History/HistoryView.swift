@@ -175,8 +175,8 @@ struct DayCell: View {
                 RoundedRectangle(cornerRadius: large ? 14 : 10, style: .continuous)
                     .fill(stamp.map { PetPalette.ambient(for: $0.mood).opacity(0.22) } ?? Color.clear)
                 if let stamp {
-                    PetView(identity: identity, state: PetStateResolver.resolve(mood: stamp.mood, intensity: stamp.intensity, identity: identity), showsShadow: false, framing: .face)
-                        .padding(2)
+                    PetView(identity: identity, state: PetStateResolver.resolve(mood: stamp.mood, intensity: stamp.intensity, identity: identity), showsShadow: false, framing: .badge)
+                        .padding(1)
                     if !large {
                         Text(day, format: .dateTime.day())
                             .font(.system(size: 9, weight: .semibold, design: .rounded))
@@ -221,7 +221,7 @@ struct DayDetailView: View {
             List {
                 ForEach(entries) { entry in
                     HStack(alignment: .top, spacing: 12) {
-                        PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: entry.mood, intensity: entry.intensity, identity: appState.identity), showsShadow: false, framing: .face)
+                        PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: entry.mood, intensity: entry.intensity, identity: appState.identity), showsShadow: false, framing: .badge)
                             .frame(width: 48, height: 48)
                         VStack(alignment: .leading, spacing: 3) {
                             HStack {

@@ -42,6 +42,12 @@ final class AppState {
     var displayedState: PetMoodState {
         if let poke { return poke }
         if let preview { return PetStateResolver.resolve(mood: preview.mood, intensity: preview.intensity, identity: identity) }
+        #if DEBUG
+        // Screenshot automation: `PIP_MOOD=excited` forces the displayed mood.
+        if let forced = ProcessInfo.processInfo.environment["PIP_MOOD"], let mood = Mood(rawValue: forced) {
+            return PetStateResolver.resolve(mood: mood, intensity: .moderate, identity: identity)
+        }
+        #endif
         return snapshot.state()
     }
 
@@ -63,6 +69,12 @@ final class AppState {
 
     func refresh() {
         identity = PipQueries.petProfile(in: context)?.identity ?? .placeholder
+        #if DEBUG
+        // Screenshot automation: `PIP_SPECIES=penguin` overrides the stored pet.
+        if let forced = ProcessInfo.processInfo.environment["PIP_SPECIES"], let species = PetSpecies(rawValue: forced) {
+            identity = PetIdentity(species: species)
+        }
+        #endif
         latestEntry = PipQueries.latestEntry(in: context)
         todayEntries = PipQueries.entries(on: .now, in: context)
         logger.refreshSnapshot()
@@ -119,15 +131,17 @@ final class AppState {
         var state = displayedState
         state.rig.eyeArc = max(state.rig.eyeArc, 0.8)
         state.rig.mouthCurve = max(state.rig.mouthCurve, 0.6)
-        state.rig.lift -= 6
-        state.rig.squash = min(1.12, state.rig.squash + 0.08)
+        state.rig.lift -= 5
+        state.rig.squash = min(1.1, state.rig.squash + 0.06)
         state.rig.earLift = 1
-        state.motion.bounceAmount = 0
+        state.rig.armRaise = max(state.rig.armRaise, 0.6)
+        state.rig.headDrop = 0
+        state.motion.hopHeight = 0
         poke = state
         Haptics.soft()
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(0.9))
-            withAnimation(.spring(duration: 0.6, bounce: 0.3)) { poke = nil }
+            withAnimation(.smooth(duration: 0.5)) { poke = nil }
         }
     }
 
@@ -169,6 +183,7 @@ final class AppState {
 
     /// Occasional foreground moments (wind-down, company, random). Rate-limited by the scheduler.
     func evaluatePetMoments() {
+        PetMomentManager.shared.endExpired()
         guard preferences.hasCompletedOnboarding else { return }
         let scheduler = PetMomentScheduler()
         guard let d = scheduler.foreground(snapshot: snapshot, petMomentsEnabled: preferences.petMomentsEnabled) else { return }

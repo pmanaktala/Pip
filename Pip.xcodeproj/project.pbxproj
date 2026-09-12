@@ -121,14 +121,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		D3AB43293055B2690096F1AD /* Frameworks */ = {
+		A1000000000000000000C032 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A1000000000000000000C032 /* Frameworks */ = {
+		D3AB43293055B2690096F1AD /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -210,6 +210,29 @@
 			productReference = A1000000000000000000C008 /* PipTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		A1000000000000000000C037 /* PipUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1000000000000000000C038 /* Build configuration list for PBXNativeTarget "PipUITests" */;
+			buildPhases = (
+				A1000000000000000000C034 /* Sources */,
+				A1000000000000000000C032 /* Frameworks */,
+				A1000000000000000000C033 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A1000000000000000000C036 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A1000000000000000000C031 /* PipUITests */,
+			);
+			name = PipUITests;
+			packageProductDependencies = (
+			);
+			productName = PipUITests;
+			productReference = A1000000000000000000C030 /* PipUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		D3AB432B3055B2690096F1AD /* Pip */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D3AB43373055B26A0096F1AD /* Build configuration list for PBXNativeTarget "Pip" */;
@@ -234,29 +257,6 @@
 			productName = Pip;
 			productReference = D3AB432C3055B2690096F1AD /* Pip.app */;
 			productType = "com.apple.product-type.application";
-		};
-		A1000000000000000000C037 /* PipUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = A1000000000000000000C038 /* Build configuration list for PBXNativeTarget "PipUITests" */;
-			buildPhases = (
-				A1000000000000000000C034 /* Sources */,
-				A1000000000000000000C032 /* Frameworks */,
-				A1000000000000000000C033 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				A1000000000000000000C036 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				A1000000000000000000C031 /* PipUITests */,
-			);
-			name = PipUITests;
-			packageProductDependencies = (
-			);
-			productName = PipUITests;
-			productReference = A1000000000000000000C030 /* PipUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
 
@@ -321,14 +321,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		D3AB432A3055B2690096F1AD /* Resources */ = {
+		A1000000000000000000C033 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A1000000000000000000C033 /* Resources */ = {
+		D3AB432A3055B2690096F1AD /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -352,14 +352,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		D3AB43283055B2690096F1AD /* Sources */ = {
+		A1000000000000000000C034 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A1000000000000000000C034 /* Sources */ = {
+		D3AB43283055B2690096F1AD /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -452,6 +452,28 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.pmanaktala.PipTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Pip.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Pip";
+			};
+			name = Release;
+		};
+		A1000000000000000000C039 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pmanaktala.PipUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_TARGET_NAME = Pip;
+			};
+			name = Debug;
+		};
+		A1000000000000000000C03A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pmanaktala.PipUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_TARGET_NAME = Pip;
 			};
 			name = Release;
 		};
@@ -630,28 +652,6 @@
 			};
 			name = Release;
 		};
-		A1000000000000000000C039 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = com.pmanaktala.PipUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				TEST_TARGET_NAME = Pip;
-			};
-			name = Debug;
-		};
-		A1000000000000000000C03A /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = com.pmanaktala.PipUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				TEST_TARGET_NAME = Pip;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -673,6 +673,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		A1000000000000000000C038 /* Build configuration list for PBXNativeTarget "PipUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000000000000000000C039 /* Debug */,
+				A1000000000000000000C03A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		D3AB43273055B2690096F1AD /* Build configuration list for PBXProject "Pip" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -687,15 +696,6 @@
 			buildConfigurations = (
 				D3AB43383055B26A0096F1AD /* Debug */,
 				D3AB43393055B26A0096F1AD /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		A1000000000000000000C038 /* Build configuration list for PBXNativeTarget "PipUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				A1000000000000000000C039 /* Debug */,
-				A1000000000000000000C03A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

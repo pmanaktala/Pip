@@ -21,7 +21,7 @@ final class MoodLoggingUITests: XCTestCase {
         happy.tap()
 
         // The sheet morphs into the optional refinement step; nothing else is required.
-        XCTAssertTrue(app.navigationBars.staticTexts["Mochi looks happy"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars.staticTexts["Pebble looks happy"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Done"].exists)
         app.buttons["Done"].tap()
 
@@ -45,7 +45,7 @@ final class MoodLoggingUITests: XCTestCase {
     }
 
     func testPetScreenIsAccessible() {
-        let pet = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH 'Mochi looks' OR label BEGINSWITH 'Mochi is'")).firstMatch
+        let pet = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH 'Pebble looks' OR label BEGINSWITH 'Pebble is'")).firstMatch
         XCTAssertTrue(pet.waitForExistence(timeout: 5), "The pet must expose a VoiceOver label describing its mood")
     }
 }

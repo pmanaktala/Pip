@@ -43,10 +43,10 @@ public struct MoodTheme: Sendable {
         }
     }
 
-    /// Glow behind the pet, tuned per colour scheme so dark mode glows rather than washes out.
+    /// Glow behind the pet, tuned per colour scheme: additive light in the dark, a soft wash in the light.
     public func glow(for scheme: ColorScheme, radius: CGFloat) -> RadialGradient {
-        let alpha = scheme == .dark ? 0.32 * strength + 0.06 : 0.55 * strength + 0.1
-        return RadialGradient(colors: [ambient.opacity(alpha), ambient.opacity(0)], center: .center, startRadius: 0, endRadius: radius)
+        let alpha = scheme == .dark ? 0.22 * strength + 0.04 : 0.42 * strength + 0.08
+        return RadialGradient(colors: [ambient.opacity(alpha), ambient.opacity(alpha * 0.4), ambient.opacity(0)], center: .center, startRadius: 0, endRadius: radius)
     }
 }
 

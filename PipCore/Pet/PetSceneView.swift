@@ -31,56 +31,54 @@ public struct PetSceneView: View {
             let petSide = min(size.width, size.height) * petScale
             let theme = MoodTheme(mood: state.mood, intensity: state.intensity, environment: state.environment)
             let petCenter = CGPoint(x: size.width / 2, y: size.height * petVerticalPosition)
-            let horizon = petVerticalPosition + petSide * 0.58 / size.height
+            // The pet's feet are at 168/200 of its frame; the stage sits exactly there.
+            let floorY = petCenter.y - petSide / 2 + petSide * 0.84
+            let dark = scheme == .dark
 
             ZStack {
                 LinearGradient(colors: [PipColor.sceneTop, PipColor.sceneBottom], startPoint: .top, endPoint: .bottom)
 
                 if showsFloor {
-                    FloorShape(horizon: horizon)
-                        .fill(LinearGradient(colors: [PipColor.sceneFloor.opacity(0.0), PipColor.sceneFloor], startPoint: .top, endPoint: .bottom))
+                    // Ground plane: a soft gradient rising to a horizon just behind the pet, no hard edge.
+                    LinearGradient(stops: [
+                        .init(color: PipColor.sceneFloor.opacity(0), location: 0),
+                        .init(color: PipColor.sceneFloor.opacity(dark ? 0.7 : 0.55), location: 1),
+                    ], startPoint: UnitPoint(x: 0.5, y: max(0, (floorY - petSide * 0.28) / size.height)), endPoint: UnitPoint(x: 0.5, y: min(1, (floorY + petSide * 0.5) / size.height)))
                 }
 
-                // Ambient glow and dimness.
-                Circle()
-                    .fill(theme.glow(for: scheme, radius: petSide * 0.95))
-                    .frame(width: petSide * 1.9, height: petSide * 1.9)
-                    .position(petCenter)
-                    .blendMode(scheme == .dark ? .screen : .multiply)
+                // Ambient light behind the pet: additive in the dark, a warm wash in the light.
+                Ellipse()
+                    .fill(theme.glow(for: scheme, radius: petSide * 0.7))
+                    .frame(width: petSide * 1.7, height: petSide * 1.4)
+                    .position(x: petCenter.x, y: floorY - petSide * 0.42)
+                    .blendMode(dark ? .plusLighter : .normal)
                     .animation(.smooth(duration: 1.2), value: state.mood)
 
+                if showsFloor {
+                    // Stage: the pool of light on the floor the pet sits in.
+                    Ellipse()
+                        .fill(RadialGradient(colors: [PipColor.sceneFloor.opacity(dark ? 0.9 : 0.75), PipColor.sceneFloor.opacity(0)], center: .center, startRadius: 0, endRadius: petSide * 0.62))
+                        .frame(width: petSide * 1.3, height: petSide * 0.26)
+                        .position(x: petCenter.x, y: floorY + petSide * 0.015)
+                }
+
                 Color.black
-                    .opacity(state.environment.dimness * (scheme == .dark ? 0.35 : 0.08))
+                    .opacity(state.environment.dimness * (dark ? 0.3 : 0.06))
                     .animation(.smooth(duration: 1.2), value: state.environment.dimness)
 
                 PetView(identity: identity, state: state, time: time)
                     .frame(width: petSide, height: petSide)
-                    .position(x: petCenter.x, y: petCenter.y + petSide * 0.08)
+                    .position(petCenter)
 
                 if showsAccessory, let accessory = state.accessory {
                     AccessoryOverlay(kind: accessory, time: time, palette: PetPalette.palette(for: identity.species))
                         .frame(width: petSide, height: petSide)
-                        .position(x: petCenter.x, y: petCenter.y + petSide * 0.08)
+                        .position(petCenter)
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 }
             }
             .animation(.smooth(duration: 0.8), value: state.accessory)
         }
-    }
-}
-
-/// A gently curved floor.
-struct FloorShape: Shape {
-    var horizon: CGFloat
-    func path(in rect: CGRect) -> Path {
-        var p = Path()
-        let y = rect.height * horizon
-        p.move(to: CGPoint(x: 0, y: y + rect.height * 0.06))
-        p.addQuadCurve(to: CGPoint(x: rect.width, y: y + rect.height * 0.06), control: CGPoint(x: rect.width / 2, y: y - rect.height * 0.05))
-        p.addLine(to: CGPoint(x: rect.width, y: rect.height))
-        p.addLine(to: CGPoint(x: 0, y: rect.height))
-        p.closeSubpath()
-        return p
     }
 }
 
