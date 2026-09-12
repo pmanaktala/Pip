@@ -19,6 +19,8 @@ public struct PetView: View, Animatable {
         case full
         /// Zoomed on the head — for tiny widgets and mood buttons.
         case face
+        /// Head fills the frame — for the app icon.
+        case icon
     }
 
     @Environment(\.colorScheme) private var colorScheme
@@ -43,10 +45,10 @@ public struct PetView: View, Animatable {
             var ctx = context
             ctx.translateBy(x: (size.width - 200 * scale) / 2, y: (size.height - 200 * scale) / 2)
             ctx.scaleBy(x: scale, y: scale)
-            if framing == .face {
+            if framing != .full {
                 // Zoom on the head region; the pivot keeps the face centred as the body squashes.
-                let zoom: CGFloat = 1.35
-                ctx.translateBy(x: 100, y: 100)
+                let zoom: CGFloat = framing == .icon ? 1.7 : 1.35
+                ctx.translateBy(x: 100, y: framing == .icon ? 118 : 100)
                 ctx.scaleBy(x: zoom, y: zoom)
                 ctx.translateBy(x: -100, y: -94)
             }

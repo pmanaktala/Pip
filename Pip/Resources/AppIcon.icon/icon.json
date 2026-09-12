@@ -1,0 +1,33 @@
+{
+  "fill" : {
+    "linear-gradient" : [
+      "extended-srgb:0.56000,0.83000,0.76000,1.00000",
+      "extended-srgb:0.24000,0.60000,0.53000,1.00000"
+    ]
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "image-name" : "Mochi.png",
+          "name" : "Mochi"
+        }
+      ],
+      "name" : "Mochi",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.45
+      },
+      "translucency" : {
+        "enabled" : false,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}
