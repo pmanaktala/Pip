@@ -33,25 +33,42 @@ struct PetHomeView: View {
                 .padding(.horizontal, PipSpacing.m)
             }
             .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button { path.append(Destination.history) } label: { Label("History", systemImage: "calendar") }
-                    Button { path.append(Destination.pets) } label: { Label("Pets", systemImage: "pawprint") }
-                    Button { path.append(Destination.settings) } label: { Label("Settings", systemImage: "gearshape") }
+                if #available(iOS 27, *) {
+                    // iOS 27: let the system collapse the least important item first when space is tight.
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { path.append(Destination.history) } label: { Label("History", systemImage: "calendar") }
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { path.append(Destination.pets) } label: { Label("Pets", systemImage: "pawprint") }
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { path.append(Destination.settings) } label: { Label("Settings", systemImage: "gearshape") }
+                    }
+                    .visibilityPriority(.low)
+                } else {
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        Button { path.append(Destination.history) } label: { Label("History", systemImage: "calendar") }
+                        Button { path.append(Destination.pets) } label: { Label("Pets", systemImage: "pawprint") }
+                        Button { path.append(Destination.settings) } label: { Label("Settings", systemImage: "gearshape") }
+                    }
                 }
             }
             .toolbarBackground(.hidden, for: .navigationBar)
             .navigationDestination(for: Destination.self) { destination in
-                switch destination {
-                case .history: HistoryView()
-                case .pets: PetSelectorView()
-                case .settings: SettingsView()
-                case .widgets:
-                    #if DEBUG
-                    WidgetGalleryView()
-                    #else
-                    EmptyView()
-                    #endif
+                Group {
+                    switch destination {
+                    case .history: HistoryView()
+                    case .pets: PetSelectorView()
+                    case .settings: SettingsView()
+                    case .widgets:
+                        #if DEBUG
+                        WidgetGalleryView()
+                        #else
+                        EmptyView()
+                        #endif
+                    }
                 }
+                .pipNavigationTransition()
             }
             .sheet(isPresented: $showMoodPicker) {
                 MoodPickerSheet()
@@ -121,7 +138,7 @@ struct PetHomeView: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(entry.intensity.phrase(for: entry.mood).capitalizedFirst)
                             .font(PipFont.headline)
-                        Text(entry.timestamp, style: .relative)
+                        Text(entry.timestamp, format: .relative(presentation: .named))
                             .font(PipFont.caption)
                             .foregroundStyle(.secondary)
                     }

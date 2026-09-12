@@ -111,3 +111,43 @@ public struct AnimatedPetView: View {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview("All species · happy") {
+    HStack {
+        ForEach(PetSpecies.allCases) { species in
+            let id = PetIdentity(species: species)
+            AnimatedPetView(identity: id, state: PetStateResolver.resolve(mood: .happy, identity: id))
+        }
+    }
+    .padding()
+}
+
+#Preview("Cat · every mood") {
+    let id = PetIdentity(species: .cat)
+    LazyVGrid(columns: [GridItem(.adaptive(minimum: 90))]) {
+        ForEach(Mood.allCases) { mood in
+            VStack {
+                PetView(identity: id, state: PetStateResolver.resolve(mood: mood, identity: id))
+                Text(mood.displayName).font(.caption)
+            }
+        }
+    }
+    .padding()
+}
+
+#Preview("Intensity · stressed · dark") {
+    let id = PetIdentity(species: .cat)
+    HStack {
+        ForEach(MoodIntensity.allCases) { intensity in
+            PetView(identity: id, state: PetStateResolver.resolve(mood: .stressed, intensity: intensity, identity: id))
+        }
+    }
+    .padding()
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Scene") {
+    PetSceneView(identity: PetIdentity(species: .redPanda), state: PetStateResolver.resolve(mood: .excited, intensity: .strong, identity: PetIdentity(species: .redPanda)), time: 3)
+}

@@ -66,7 +66,8 @@ public struct PetSnapshot: Codable, Equatable, Sendable {
 }
 
 /// App Group backed store for the snapshot and small cross-process flags.
-public struct SharedStateStore: Sendable {
+/// `UserDefaults` is thread-safe; the conformance is unchecked only because the type is not annotated.
+public struct SharedStateStore: @unchecked Sendable {
     public static let shared = SharedStateStore()
 
     private let defaults: UserDefaults

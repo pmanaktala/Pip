@@ -24,9 +24,11 @@ final class AppState {
     var context: ModelContext { container.mainContext }
     private(set) var logger: MoodLogger
     private var remoteChangeObserver: (any NSObjectProtocol)?
+    private static var remoteChangeHandler: (@MainActor () -> Void)?
 
-    init(container: ModelContainer = PipModelContainer.shared, preferences: Preferences = .shared, sideEffects: [any MoodLogSideEffect] = []) {
+    init(container: ModelContainer = PipModelContainer.shared, preferences: Preferences? = nil, sideEffects: [any MoodLogSideEffect] = []) {
         self.container = container
+        let preferences = preferences ?? Preferences.shared
         self.preferences = preferences
         self.logger = MoodLogger(context: container.mainContext, sideEffects: sideEffects)
         Haptics.isEnabled = { [preferences] in preferences.hapticsEnabled }
@@ -67,9 +69,10 @@ final class AppState {
     }
 
     private func observeRemoteChanges() {
-        remoteChangeObserver = NotificationCenter.default.addObserver(forName: .NSPersistentStoreRemoteChange, object: nil, queue: .main) { [weak self] _ in
-            Task { @MainActor in self?.refresh() }
+        remoteChangeObserver = NotificationCenter.default.addObserver(forName: .NSPersistentStoreRemoteChange, object: nil, queue: .main) { _ in
+            Task { @MainActor in AppState.remoteChangeHandler?() }
         }
+        AppState.remoteChangeHandler = { [weak self] in self?.refresh() }
     }
 
     // MARK: Mood

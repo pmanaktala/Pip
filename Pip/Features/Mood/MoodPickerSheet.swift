@@ -9,8 +9,11 @@ struct MoodPickerSheet: View {
     @State private var contexts: Set<MoodContext> = []
     @State private var note = ""
     @FocusState private var noteFocused: Bool
+    @Environment(\.dynamicTypeSize) private var typeSize
 
-    private let columns = [GridItem(.adaptive(minimum: 72), spacing: 10)]
+    private var columns: [GridItem] {
+        [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 150 : 72), spacing: 10)]
+    }
 
     var body: some View {
         NavigationStack {
@@ -138,8 +141,9 @@ struct MoodChoice: View {
                 Text(mood.displayName)
                     .font(PipFont.caption)
                     .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.85)
             }
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity)

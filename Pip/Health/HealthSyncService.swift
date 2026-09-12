@@ -85,7 +85,8 @@ final class HealthSyncService {
 }
 
 /// Side effect registered by the app: writes to Health right after a log.
-struct HealthMoodSideEffect: MoodLogSideEffect {
+/// Main-actor bound members; the conformance is unchecked because the protocol is `Sendable`.
+struct HealthMoodSideEffect: MoodLogSideEffect, @unchecked Sendable {
     let service: HealthSyncService
     let context: ModelContext
     let preferences: Preferences
