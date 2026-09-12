@@ -53,23 +53,48 @@ jobs:
             | xcbeautify --renderer github-actions
           test -d build/DerivedData/Build/Products/Debug-iphonesimulator/Pip.app
 
-      - name: Test
+      # A cold simulator makes the XCUITest runner time out "loading Accessibility";
+      # booting it ahead of time avoids that.
+      - name: Boot simulator
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for rt in sorted(d, reverse=True) for x in d[rt] if x['name']=='${{ steps.sim.outputs.name }}'))")
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+
+      - name: Unit tests
         run: |
           set -o pipefail
           xcodebuild test \
             -project "$PROJECT" -scheme "$SCHEME" \
-            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
+            -destination "id=$UDID" \
             -derivedDataPath build/DerivedData \
             -resultBundlePath build/TestResults.xcresult \
+            -skip-testing:PipUITests \
             CODE_SIGN_IDENTITY="-" \
             | xcbeautify --renderer github-actions
+
+      - name: UI tests
+        run: |
+          set -o pipefail
+          run_ui() {
+            xcodebuild test-without-building \
+              -project "$PROJECT" -scheme "$SCHEME" \
+              -destination "id=$UDID" \
+              -derivedDataPath build/DerivedData \
+              -resultBundlePath "build/UITestResults-$1.xcresult" \
+              -only-testing:PipUITests \
+              CODE_SIGN_IDENTITY="-" \
+              | xcbeautify --renderer github-actions
+          }
+          run_ui 1 || { echo "::warning::UI tests failed once; retrying after simulator warm-up"; run_ui 2; }
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: TestResults
-          path: build/TestResults.xcresult
+          path: build/*.xcresult
           if-no-files-found: ignore
 
   privacy-audit:
