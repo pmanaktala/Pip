@@ -3,26 +3,117 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 110;
+	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A1000000000000000000C001 /* PipWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A1000000000000000000C007 /* PipWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A1000000000000000000C002 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D3AB43243055B2690096F1AD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A1000000000000000000C00E;
+			remoteInfo = PipWidgetsExtension;
+		};
+		A1000000000000000000C003 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D3AB43243055B2690096F1AD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D3AB432B3055B2690096F1AD;
+			remoteInfo = Pip;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A1000000000000000000C004 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A1000000000000000000C001 /* PipWidgetsExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		A1000000000000000000C007 /* PipWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PipWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1000000000000000000C008 /* PipTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PipTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D3AB432C3055B2690096F1AD /* Pip.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pip.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A1000000000000000000C020 /* Exceptions for "Pip" folder in "Pip" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Resources/Info.plist,
+			);
+			target = D3AB432B3055B2690096F1AD /* Pip */;
+		};
+		A1000000000000000000C021 /* Exceptions for "PipWidgets" folder in "PipWidgetsExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Resources/Info.plist,
+			);
+			target = A1000000000000000000C00E /* PipWidgetsExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		A1000000000000000000C009 /* PipCore */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PipCore;
+			sourceTree = "<group>";
+		};
+		A1000000000000000000C00A /* PipWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A1000000000000000000C021 /* Exceptions for "PipWidgets" folder in "PipWidgetsExtension" target */,
+			);
+			path = PipWidgets;
+			sourceTree = "<group>";
+		};
+		A1000000000000000000C00B /* PipTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PipTests;
+			sourceTree = "<group>";
+		};
 		D3AB432E3055B2690096F1AD /* Pip */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A1000000000000000000C020 /* Exceptions for "Pip" folder in "Pip" target */,
+			);
 			path = Pip;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		D3AB43293055B2690096F1AD /* Frameworks */ = {
+		A1000000000000000000C00C /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
 			files = (
 			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1000000000000000000C00D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D3AB43293055B2690096F1AD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
@@ -31,6 +122,9 @@
 			isa = PBXGroup;
 			children = (
 				D3AB432E3055B2690096F1AD /* Pip */,
+				A1000000000000000000C009 /* PipCore */,
+				A1000000000000000000C00A /* PipWidgets */,
+				A1000000000000000000C00B /* PipTests */,
 				D3AB432D3055B2690096F1AD /* Products */,
 			);
 			sourceTree = "<group>";
@@ -39,6 +133,8 @@
 			isa = PBXGroup;
 			children = (
 				D3AB432C3055B2690096F1AD /* Pip.app */,
+				A1000000000000000000C007 /* PipWidgetsExtension.appex */,
+				A1000000000000000000C008 /* PipTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -46,6 +142,52 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		A1000000000000000000C00E /* PipWidgetsExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1000000000000000000C014 /* Build configuration list for PBXNativeTarget "PipWidgetsExtension" */;
+			buildPhases = (
+				A1000000000000000000C010 /* Sources */,
+				A1000000000000000000C00C /* Frameworks */,
+				A1000000000000000000C011 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A1000000000000000000C009 /* PipCore */,
+				A1000000000000000000C00A /* PipWidgets */,
+			);
+			name = PipWidgetsExtension;
+			packageProductDependencies = (
+			);
+			productName = PipWidgetsExtension;
+			productReference = A1000000000000000000C007 /* PipWidgetsExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		A1000000000000000000C00F /* PipTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1000000000000000000C015 /* Build configuration list for PBXNativeTarget "PipTests" */;
+			buildPhases = (
+				A1000000000000000000C012 /* Sources */,
+				A1000000000000000000C00D /* Frameworks */,
+				A1000000000000000000C013 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A1000000000000000000C006 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A1000000000000000000C00B /* PipTests */,
+			);
+			name = PipTests;
+			packageProductDependencies = (
+			);
+			productName = PipTests;
+			productReference = A1000000000000000000C008 /* PipTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		D3AB432B3055B2690096F1AD /* Pip */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D3AB43373055B26A0096F1AD /* Build configuration list for PBXNativeTarget "Pip" */;
@@ -53,13 +195,20 @@
 				D3AB43283055B2690096F1AD /* Sources */,
 				D3AB43293055B2690096F1AD /* Frameworks */,
 				D3AB432A3055B2690096F1AD /* Resources */,
+				A1000000000000000000C004 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
+			dependencies = (
+				A1000000000000000000C005 /* PBXTargetDependency */,
+			);
 			fileSystemSynchronizedGroups = (
+				A1000000000000000000C009 /* PipCore */,
 				D3AB432E3055B2690096F1AD /* Pip */,
 			);
 			name = Pip;
+			packageProductDependencies = (
+			);
 			productName = Pip;
 			productReference = D3AB432C3055B2690096F1AD /* Pip.app */;
 			productType = "com.apple.product-type.application";
@@ -74,6 +223,13 @@
 				LastSwiftUpdateCheck = 2700;
 				LastUpgradeCheck = 2700;
 				TargetAttributes = {
+					A1000000000000000000C00E = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					A1000000000000000000C00F = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = D3AB432B3055B2690096F1AD;
+					};
 					D3AB432B3055B2690096F1AD = {
 						CreatedOnToolsVersion = 27.0;
 					};
@@ -94,28 +250,143 @@
 			projectRoot = "";
 			targets = (
 				D3AB432B3055B2690096F1AD /* Pip */,
+				A1000000000000000000C00E /* PipWidgetsExtension */,
+				A1000000000000000000C00F /* PipTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		D3AB432A3055B2690096F1AD /* Resources */ = {
+		A1000000000000000000C011 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
 			files = (
 			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1000000000000000000C013 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D3AB432A3055B2690096F1AD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		D3AB43283055B2690096F1AD /* Sources */ = {
+		A1000000000000000000C010 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
 			files = (
 			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1000000000000000000C012 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D3AB43283055B2690096F1AD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		A1000000000000000000C005 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A1000000000000000000C00E /* PipWidgetsExtension */;
+			targetProxy = A1000000000000000000C002 /* PBXContainerItemProxy */;
+		};
+		A1000000000000000000C006 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D3AB432B3055B2690096F1AD /* Pip */;
+			targetProxy = A1000000000000000000C003 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
-		D3AB43353055B26A0096F1AD /* Debug configuration for PBXProject "Pip" */ = {
+		A1000000000000000000C016 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = PipWidgets/Resources/PipWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PipWidgets/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.pmanaktala.Pip.PipWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+			};
+			name = Debug;
+		};
+		A1000000000000000000C017 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = PipWidgets/Resources/PipWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PipWidgets/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.pmanaktala.Pip.PipWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+			};
+			name = Release;
+		};
+		A1000000000000000000C018 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pmanaktala.PipTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Pip.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Pip";
+			};
+			name = Debug;
+		};
+		A1000000000000000000C019 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pmanaktala.PipTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Pip.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Pip";
+			};
+			name = Release;
+		};
+		D3AB43353055B26A0096F1AD /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -149,6 +420,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 5JW755L832;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -168,18 +440,24 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
-		D3AB43363055B26A0096F1AD /* Release configuration for PBXProject "Pip" */ = {
+		D3AB43363055B26A0096F1AD /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -213,6 +491,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 5JW755L832;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -226,101 +505,102 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
-		D3AB43383055B26A0096F1AD /* Debug configuration for PBXNativeTarget "Pip" */ = {
+		D3AB43383055B26A0096F1AD /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Pip/Resources/Pip.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 5JW755L832;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Pip/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pmanaktala.Pip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
-		D3AB43393055B26A0096F1AD /* Release configuration for PBXNativeTarget "Pip" */ = {
+		D3AB43393055B26A0096F1AD /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Pip/Resources/Pip.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 5JW755L832;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Pip/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pmanaktala.Pip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		A1000000000000000000C014 /* Build configuration list for PBXNativeTarget "PipWidgetsExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000000000000000000C016 /* Debug */,
+				A1000000000000000000C017 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1000000000000000000C015 /* Build configuration list for PBXNativeTarget "PipTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000000000000000000C018 /* Debug */,
+				A1000000000000000000C019 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		D3AB43273055B2690096F1AD /* Build configuration list for PBXProject "Pip" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D3AB43353055B26A0096F1AD /* Debug configuration for PBXProject "Pip" */,
-				D3AB43363055B26A0096F1AD /* Release configuration for PBXProject "Pip" */,
+				D3AB43353055B26A0096F1AD /* Debug */,
+				D3AB43363055B26A0096F1AD /* Release */,
 			);
+			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		D3AB43373055B26A0096F1AD /* Build configuration list for PBXNativeTarget "Pip" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D3AB43383055B26A0096F1AD /* Debug configuration for PBXNativeTarget "Pip" */,
-				D3AB43393055B26A0096F1AD /* Release configuration for PBXNativeTarget "Pip" */,
+				D3AB43383055B26A0096F1AD /* Debug */,
+				D3AB43393055B26A0096F1AD /* Release */,
 			);
+			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
 	rootObject = D3AB43243055B2690096F1AD /* Project object */;
-	validationLevel = 1;
 }

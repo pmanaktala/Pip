@@ -1,0 +1,17 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+.DS_Store
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Fastlane / signing artefacts
+*.mobileprovision
+*.p12
+*.cer
