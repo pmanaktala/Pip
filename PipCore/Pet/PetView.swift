@@ -11,15 +11,25 @@ public struct PetView: View, Animatable {
     public var motion: PetMotionProfile
     public var time: TimeInterval?
     public var showsShadow: Bool
+    public var framing: Framing
+
+    /// How much of the pet to show.
+    public enum Framing: Sendable {
+        /// Whole pet with room for the tail and shadow.
+        case full
+        /// Zoomed on the head — for tiny widgets and mood buttons.
+        case face
+    }
 
     @Environment(\.colorScheme) private var colorScheme
 
-    public init(identity: PetIdentity, state: PetMoodState, time: TimeInterval? = nil, showsShadow: Bool = true) {
+    public init(identity: PetIdentity, state: PetMoodState, time: TimeInterval? = nil, showsShadow: Bool = true, framing: Framing = .full) {
         self.identity = identity
         self.rig = state.rig
         self.motion = state.motion
         self.time = time
         self.showsShadow = showsShadow
+        self.framing = framing
     }
 
     public var animatableData: PetRig.Vector {
@@ -33,9 +43,17 @@ public struct PetView: View, Animatable {
             var ctx = context
             ctx.translateBy(x: (size.width - 200 * scale) / 2, y: (size.height - 200 * scale) / 2)
             ctx.scaleBy(x: scale, y: scale)
+            if framing == .face {
+                // Zoom on the head region; the pivot keeps the face centred as the body squashes.
+                let zoom: CGFloat = 1.35
+                ctx.translateBy(x: 100, y: 100)
+                ctx.scaleBy(x: zoom, y: zoom)
+                ctx.translateBy(x: -100, y: -94)
+            }
             Self.draw(&ctx, identity: identity, rig: rig, motion: motion, time: time, colorScheme: colorScheme, showsShadow: showsShadow)
         }
         .aspectRatio(1, contentMode: .fit)
+        .clipped()
         .accessibilityHidden(true)
     }
 
