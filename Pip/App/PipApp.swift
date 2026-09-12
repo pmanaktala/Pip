@@ -11,9 +11,12 @@ struct PipApp: App {
     init() {
         let health = HealthSyncService()
         let container = PipModelContainer.shared
-        let state = AppState(container: container, sideEffects: [
+        let effects: [any MoodLogSideEffect] = [
+            LiveActivityMoodSideEffect(preferences: .shared),
             HealthMoodSideEffect(service: health, context: container.mainContext, preferences: .shared),
-        ])
+        ]
+        MoodSideEffectRegistry.effects = effects
+        let state = AppState(container: container, sideEffects: effects)
         _appState = State(initialValue: state)
         _health = State(initialValue: health)
         #if DEBUG
@@ -28,10 +31,12 @@ struct PipApp: App {
                 .environment(health)
                 .environment(notifications)
                 .modelContainer(appState.container)
+                .onOpenURL { url in appState.handle(url: url) }
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             appState.refresh()
+            appState.evaluatePetMoments()
             Task {
                 await health.syncPending(context: appState.context, preferences: appState.preferences)
                 await notifications.refreshAuthorization()

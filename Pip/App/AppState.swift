@@ -151,6 +151,27 @@ final class AppState {
     }
     #endif
 
+    // MARK: Moments & deep links
+
+    /// Requested by a Live Activity or notification tap.
+    var pendingRoute: Route?
+    enum Route: Equatable { case sit, home }
+
+    func handle(url: URL) {
+        switch url.host() {
+        case "sit": pendingRoute = .sit
+        default: pendingRoute = .home
+        }
+    }
+
+    /// Occasional foreground moments (wind-down, company, random). Rate-limited by the scheduler.
+    func evaluatePetMoments() {
+        guard preferences.hasCompletedOnboarding else { return }
+        let scheduler = PetMomentScheduler()
+        guard let d = scheduler.foreground(snapshot: snapshot, petMomentsEnabled: preferences.petMomentsEnabled) else { return }
+        PetMomentManager.shared.start(kind: d.kind, mood: d.mood, intensity: d.intensity, message: d.message, identity: identity)
+    }
+
     // MARK: Deletion
 
     /// Deletes every local record. CloudKit mirrors the deletion through SwiftData.

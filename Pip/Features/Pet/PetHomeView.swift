@@ -7,7 +7,7 @@ struct PetHomeView: View {
     @State private var showSitWithPet = false
     @State private var path = NavigationPath()
 
-    private enum Destination: Hashable { case history, pets, settings }
+    private enum Destination: Hashable { case history, pets, settings, widgets }
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -45,6 +45,12 @@ struct PetHomeView: View {
                 case .history: HistoryView()
                 case .pets: PetSelectorView()
                 case .settings: SettingsView()
+                case .widgets:
+                    #if DEBUG
+                    WidgetGalleryView()
+                    #else
+                    EmptyView()
+                    #endif
                 }
             }
             .sheet(isPresented: $showMoodPicker) {
@@ -56,6 +62,11 @@ struct PetHomeView: View {
             .fullScreenCover(isPresented: $showSitWithPet) {
                 SitWithPetView()
             }
+            .onChange(of: appState.pendingRoute, initial: true) { _, route in
+                guard let route else { return }
+                if route == .sit { showSitWithPet = true }
+                appState.pendingRoute = nil
+            }
             #if DEBUG
             .onAppear {
                 // Screenshot automation: `PIP_DEBUG=picker` opens the picker on launch.
@@ -65,6 +76,7 @@ struct PetHomeView: View {
                 case "pets": path.append(Destination.pets)
                 case "history": path.append(Destination.history)
                 case "sit": showSitWithPet = true
+                case "widgets": path.append(Destination.widgets)
                 default: break
                 }
             }
@@ -161,6 +173,3 @@ struct PetSceneWithClock: View {
     }
 }
 
-extension String {
-    var capitalizedFirst: String { prefix(1).uppercased() + dropFirst() }
-}
