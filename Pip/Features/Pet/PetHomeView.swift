@@ -59,7 +59,14 @@ struct PetHomeView: View {
             #if DEBUG
             .onAppear {
                 // Screenshot automation: `PIP_DEBUG=picker` opens the picker on launch.
-                if ProcessInfo.processInfo.environment["PIP_DEBUG"] == "picker" { showMoodPicker = true }
+                switch ProcessInfo.processInfo.environment["PIP_DEBUG"] {
+                case "picker": showMoodPicker = true
+                case "settings": path.append(Destination.settings)
+                case "pets": path.append(Destination.pets)
+                case "history": path.append(Destination.history)
+                case "sit": showSitWithPet = true
+                default: break
+                }
             }
             #endif
         }

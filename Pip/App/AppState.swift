@@ -128,6 +128,29 @@ final class AppState {
         }
     }
 
+    #if DEBUG
+    /// Fills two weeks of plausible entries for screenshots and previews.
+    func seedDemoData() {
+        guard PipQueries.allEntries(in: context).isEmpty else { return }
+        let cal = Calendar.current
+        let moods: [Mood] = [.calm, .happy, .tired, .stressed, .excited, .neutral, .sad, .frustrated, .happy, .calm]
+        for dayOffset in 0..<14 {
+            let day = cal.date(byAdding: .day, value: -dayOffset, to: .now)!
+            let count = Int(PetAnimator.hash01(Double(dayOffset)) * 3) + (dayOffset % 4 == 3 ? 0 : 1)
+            for i in 0..<count {
+                let hour = [9, 14, 20][i % 3]
+                let mood = moods[(dayOffset * 3 + i) % moods.count]
+                let t = cal.date(bySettingHour: hour, minute: 12 * i, second: 0, of: day)!
+                let note = (dayOffset == 0 && i == 1) ? "Deployment broke again." : nil
+                let contexts: [MoodContext] = mood == .stressed ? [.work] : (mood == .happy ? [.friends] : [])
+                context.insert(MoodEntry(mood: mood, intensity: MoodIntensity(rawValue: 1 + (i + dayOffset) % 3)!, contexts: contexts, note: note, timestamp: t))
+            }
+        }
+        try? context.save()
+        refresh()
+    }
+    #endif
+
     // MARK: Deletion
 
     /// Deletes every local record. CloudKit mirrors the deletion through SwiftData.

@@ -8,6 +8,8 @@ struct RootView: View {
         Group {
             if ProcessInfo.processInfo.environment["PIP_DEBUG"] == "gallery" {
                 PetGalleryView()
+            } else if ProcessInfo.processInfo.environment["PIP_DEBUG"] == "onboarding" {
+                OnboardingView()
             } else if appState.preferences.hasCompletedOnboarding {
                 PetHomeView()
             } else {
