@@ -60,7 +60,8 @@ public struct PetView: View, Animatable {
     /// Draws the pet in a 200×200 design space. Shared by the view and any offscreen rendering.
     public static func draw(_ ctx: inout GraphicsContext, identity: PetIdentity, rig base: PetRig, motion: PetMotionProfile, time: TimeInterval?, colorScheme: ColorScheme, showsShadow: Bool) {
         let (rig, live) = PetAnimator.animate(rig: base, motion: motion, time: time)
-        let p = PetPaintContext(rig: rig, live: live, palette: PetPalette.palette(for: identity.species), colorScheme: colorScheme)
+        let size = identity.species.bodySize
+        let p = PetPaintContext(rig: rig, live: live, palette: PetPalette.palette(for: identity.species), colorScheme: colorScheme, bodyWidth: size.width, bodyHeight: size.height)
 
         if showsShadow { PetDraw.floorShadow(&ctx, p) }
 

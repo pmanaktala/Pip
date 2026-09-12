@@ -6,7 +6,9 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if appState.preferences.hasCompletedOnboarding {
+            if ProcessInfo.processInfo.environment["PIP_DEBUG"] == "gallery" {
+                PetGalleryView()
+            } else if appState.preferences.hasCompletedOnboarding {
                 PetHomeView()
             } else {
                 OnboardingView()

@@ -300,13 +300,13 @@ public enum PetDraw {
                 for i in 1...n {
                     let t = CGFloat(i) / CGFloat(n)
                     let x = mx - half + 2 * half * t
-                    let base = my - curve * half * 0.9 * sin(t * .pi)
+                    let base = my + curve * half * 0.9 * sin(t * .pi)
                     let wob = sin(t * .pi * 5) * half * 0.22 * CGFloat(rig.mouthWobble)
                     path.addLine(to: CGPoint(x: x, y: base + wob))
                 }
             } else {
                 path.move(to: CGPoint(x: mx - half, y: my))
-                path.addQuadCurve(to: CGPoint(x: mx + half, y: my), control: CGPoint(x: mx, y: my - curve * half * 1.5))
+                path.addQuadCurve(to: CGPoint(x: mx + half, y: my), control: CGPoint(x: mx, y: my + curve * half * 1.5))
             }
         case .beak:
             return // drawn by the species painter
@@ -374,6 +374,8 @@ public enum PetDraw {
     public static func tail(_ ctx: inout GraphicsContext, _ p: PetPaintContext, start: CGPoint, length: CGFloat, width: CGFloat, color: Color, tip: Color? = nil, curl: CGFloat = 1) {
         let lift = CGFloat(p.rig.tailLift)
         let wag = CGFloat(p.live.tailWag)
+        // A lying pet's tail tucks in so it stays inside the canvas.
+        let length = length * (1 - 0.35 * CGFloat(p.rig.lying))
         // Base angle: 0 = pointing right along the floor, -π/2 = straight up.
         let angle = -lift * 1.25 + wag * 0.45
         let end = CGPoint(x: start.x + cos(angle) * length, y: start.y + sin(angle) * length)

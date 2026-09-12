@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 
 /// The pets available in v1. Kept deliberately small.
@@ -33,6 +34,17 @@ public enum PetSpecies: String, Codable, CaseIterable, Sendable, Identifiable, H
         case .capybara: .serene
         case .penguin: .chaotic
         case .redPanda: .sleepy
+        }
+    }
+
+    /// Base body proportions in the 200×200 design space.
+    public var bodySize: CGSize {
+        switch self {
+        case .cat: CGSize(width: 118, height: 106)
+        case .dog: CGSize(width: 116, height: 108)
+        case .capybara: CGSize(width: 134, height: 96)
+        case .penguin: CGSize(width: 104, height: 118)
+        case .redPanda: CGSize(width: 116, height: 104)
         }
     }
 
