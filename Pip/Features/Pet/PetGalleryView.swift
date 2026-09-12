@@ -1,3 +1,4 @@
+#if DEBUG
 import SwiftUI
 
 /// Developer gallery: every mood × intensity for a species. Used to tune artwork.
@@ -53,3 +54,4 @@ struct PetGalleryView: View {
 #Preview {
     PetGalleryView()
 }
+#endif
