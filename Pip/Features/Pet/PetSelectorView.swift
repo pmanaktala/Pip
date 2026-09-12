@@ -3,7 +3,7 @@ import SwiftUI
 /// Swipe between pets; each one previews its personality. Choosing takes effect immediately.
 struct PetSelectorView: View {
     @Environment(AppState.self) private var appState
-    @State private var selection: PetSpecies = .cat
+    @State private var selection: PetSpecies = .penguin
     @State private var name = ""
     @State private var greeting: [PetSpecies: PetMoodState] = [:]
 

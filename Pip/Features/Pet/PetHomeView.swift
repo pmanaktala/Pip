@@ -13,7 +13,7 @@ struct PetHomeView: View {
         NavigationStack(path: $path) {
             ZStack {
                 PetSceneWithClock(identity: appState.identity, state: appState.displayedState,
-                                  petScale: showMoodPicker ? 0.5 : 0.62,
+                                  petScale: showMoodPicker ? 0.58 : 0.76,
                                   petVerticalPosition: showMoodPicker ? 0.3 : 0.49)
                     .animation(.spring(duration: 0.55, bounce: 0.15), value: showMoodPicker)
                     .ignoresSafeArea()

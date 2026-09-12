@@ -1,54 +1,51 @@
 import SwiftUI
 
-/// Juniper — a wide, unbothered capybara.
+/// Juniper — a barrel-bodied capybara with a long, boxy snout and tiny ears.
 public enum CapybaraPainter: PetPainter {
     public static func paint(_ ctx: inout GraphicsContext, _ p: PetPaintContext) {
-        let b = p.body
-        let body = PetDraw.blobPath(b)
+        PetDraw.body(&ctx, p, chestPatch: true, pawColor: p.palette.bodyBottom)
 
-        // Tiny round ears on the top corners.
+        var hc = PetDraw.headContext(ctx, p)
+        let h = p.head
+
+        // Tiny ears behind the head.
         let lift = CGFloat(p.rig.earLift) + CGFloat(p.live.earTwitch)
         for side: CGFloat in [-1, 1] {
-            let c = b.point(side * 0.33, -0.43 + (1 - lift) * 0.05)
-            PetDraw.roundEar(&ctx, p, center: c, radius: b.width * 0.075, innerRatio: 0.5)
+            PetDraw.roundEar(&hc, p, center: h.point(side * 0.36, -0.42 + (1 - lift) * 0.06), radius: h.width * 0.075, innerRatio: 0.5)
         }
 
-        PetDraw.fillBody(&ctx, p, path: body)
-        PetDraw.belly(&ctx, p, path: body, widthFraction: 0.6, heightFraction: 0.36, yOffset: 0.34, opacity: 0.55)
+        let head = PetDraw.headPath(h)
+        PetDraw.fillFur(&hc, p, path: head, rect: h.rect)
 
-        // Long muzzle: a rounded block on the lower face.
-        let mw = b.width * 0.46, mh = b.height * 0.34
-        let muzzle = CGRect(x: b.center.x - mw / 2, y: b.center.y - b.height * 0.02, width: mw, height: mh)
-        var mz = ctx
-        mz.clip(to: body)
-        mz.fill(Path(roundedRect: muzzle, cornerRadius: mh * 0.45), with: .color(p.palette.belly.opacity(0.75)))
+        // Boxy snout: a wide rounded block hanging off the front of the head.
+        let sw = h.width * 0.72, sh = h.height * 0.58
+        let snout = CGRect(x: h.center.x - sw / 2, y: h.center.y + h.height * 0.02, width: sw, height: sh)
+        let snoutPath = Path(roundedRect: snout, cornerRadius: sh * 0.38)
+        hc.fill(snoutPath, with: .linearGradient(Gradient(colors: [p.palette.bodyBottom, p.palette.marking]), startPoint: CGPoint(x: snout.midX, y: snout.minY), endPoint: CGPoint(x: snout.midX, y: snout.maxY)))
+        var lighter = hc
+        lighter.clip(to: snoutPath)
+        lighter.fill(Path(ellipseIn: CGRect(x: snout.minX + sw * 0.1, y: snout.minY + sh * 0.3, width: sw * 0.8, height: sh * 0.75)), with: .color(p.palette.belly.opacity(0.28)))
 
-        // Wide nose with two nostrils.
-        let nx = b.center.x, ny = muzzle.minY + mh * 0.22
-        let nw = b.width * 0.16, nh = b.height * 0.07
-        ctx.fill(Path(roundedRect: CGRect(x: nx - nw / 2, y: ny - nh / 2, width: nw, height: nh), cornerRadius: nh / 2), with: .color(p.palette.nose))
+        // Wide nose with nostrils on the top edge of the snout.
+        let nx = h.center.x, ny = snout.minY + sh * 0.2
+        let nw = h.width * 0.26, nh = h.height * 0.09
+        hc.fill(Path(roundedRect: CGRect(x: nx - nw / 2, y: ny - nh / 2, width: nw, height: nh), cornerRadius: nh / 2), with: .color(p.palette.nose))
         for side: CGFloat in [-1, 1] {
-            ctx.fill(Path(ellipseIn: CGRect(x: nx + side * nw * 0.22 - 1.6, y: ny - 1.4, width: 3.2, height: 2.6)), with: .color(.black.opacity(0.3)))
-        }
-
-        // Stubby legs.
-        for side: CGFloat in [-1, 1] {
-            let paw = CGRect(x: b.center.x + side * b.width * 0.24 - b.width * 0.1, y: b.bottom - b.height * 0.11, width: b.width * 0.2, height: b.height * 0.11)
-            ctx.fill(Path(ellipseIn: paw), with: .color(p.palette.bodyBottom))
+            hc.fill(Path(ellipseIn: CGRect(x: nx + side * nw * 0.24 - 1.8, y: ny - 1.5, width: 3.6, height: 2.8)), with: .color(.black.opacity(0.3)))
         }
 
         var layout = PetDraw.FaceLayout()
-        layout.eyeSpacing = 0.27
-        layout.eyeY = -0.16
-        layout.eyeRadius = 0.062
-        layout.mouthY = 0.2
-        layout.mouthWidth = 0.1
-        layout.blushX = 0.4
-        layout.blushY = -0.02
-        PetDraw.blush(&ctx, p, layout: layout)
-        PetDraw.eyes(&ctx, p, layout: layout, lidColor: p.palette.bodyTop)
-        PetDraw.brows(&ctx, p, layout: layout)
-        PetDraw.mouth(&ctx, p, style: .simple, layout: layout)
-        PetDraw.sweat(&ctx, p)
+        layout.eyeSpacing = 0.34
+        layout.eyeY = -0.14
+        layout.eyeRadius = 0.06
+        layout.mouthY = 0.46
+        layout.mouthWidth = 0.14
+        layout.blushX = 0.44
+        layout.blushY = 0.05
+        PetDraw.blush(&hc, p, layout: layout)
+        PetDraw.eyes(&hc, p, layout: layout)
+        PetDraw.brows(&hc, p, layout: layout)
+        PetDraw.mouth(&hc, p, style: .simple, layout: layout)
+        PetDraw.sweat(&hc, p)
     }
 }

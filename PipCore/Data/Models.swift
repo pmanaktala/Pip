@@ -61,9 +61,9 @@ public final class MoodEntry {
 @Model
 public final class PetProfile {
     public var id: UUID = UUID()
-    public var speciesRaw: String = PetSpecies.cat.rawValue
-    public var name: String = PetSpecies.cat.defaultName
-    public var personalityRaw: String = PetPersonality.dramatic.rawValue
+    public var speciesRaw: String = PetSpecies.penguin.rawValue
+    public var name: String = PetSpecies.penguin.defaultName
+    public var personalityRaw: String = PetPersonality.chaotic.rawValue
     /// Comma-separated accessory identifiers for future customisation.
     public var accessoriesRaw: String = ""
     public var createdAt: Date = Date.now
@@ -79,7 +79,7 @@ public final class PetProfile {
     }
 
     public var species: PetSpecies {
-        get { PetSpecies(rawValue: speciesRaw) ?? .cat }
+        get { PetSpecies(rawValue: speciesRaw) ?? .penguin }
         set { speciesRaw = newValue.rawValue }
     }
 

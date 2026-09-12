@@ -10,7 +10,7 @@ struct OnboardingView: View {
     private enum Step: Int, CaseIterable { case welcome, pet, name, health, notifications }
 
     @State private var step: Step = .welcome
-    @State private var species: PetSpecies = .cat
+    @State private var species: PetSpecies = .penguin
     @State private var name = ""
     @State private var wave = false
     @FocusState private var nameFocused: Bool
@@ -41,7 +41,7 @@ struct OnboardingView: View {
         switch step {
         case .welcome:
             VStack(spacing: PipSpacing.m) {
-                AnimatedPetView(identity: PetIdentity(species: .cat), state: PetStateResolver.resolve(mood: wave ? .happy : .calm, identity: PetIdentity(species: .cat)))
+                AnimatedPetView(identity: PetIdentity(species: .penguin), state: PetStateResolver.resolve(mood: wave ? .happy : .calm, identity: PetIdentity(species: .penguin)))
                     .frame(width: 240, height: 240)
                 Text("Meet your mood companion")
                     .font(PipFont.display)

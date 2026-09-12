@@ -3,7 +3,7 @@ import SwiftUI
 
 /// Developer gallery: every mood × intensity for a species. Used to tune artwork.
 struct PetGalleryView: View {
-    @State private var species: PetSpecies = PetSpecies(rawValue: ProcessInfo.processInfo.environment["PIP_GALLERY_SPECIES"] ?? "") ?? .cat
+    @State private var species: PetSpecies = PetSpecies(rawValue: ProcessInfo.processInfo.environment["PIP_GALLERY_SPECIES"] ?? "") ?? .penguin
     @State private var animated = true
 
     private struct Cell { let mood: Mood; let intensity: MoodIntensity; var id: String { "\(mood.rawValue)-\(intensity.rawValue)" } }

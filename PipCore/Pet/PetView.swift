@@ -47,10 +47,10 @@ public struct PetView: View, Animatable {
             ctx.scaleBy(x: scale, y: scale)
             if framing != .full {
                 // Zoom on the head region; the pivot keeps the face centred as the body squashes.
-                let zoom: CGFloat = framing == .icon ? 1.7 : 1.35
-                ctx.translateBy(x: 100, y: framing == .icon ? 118 : 100)
+                let zoom: CGFloat = framing == .icon ? 1.45 : 1.5
+                ctx.translateBy(x: 100, y: framing == .icon ? 104 : 100)
                 ctx.scaleBy(x: zoom, y: zoom)
-                ctx.translateBy(x: -100, y: -94)
+                ctx.translateBy(x: -100, y: framing == .icon ? -112 : -74)
             }
             Self.draw(&ctx, identity: identity, rig: rig, motion: motion, time: time, colorScheme: colorScheme, showsShadow: showsShadow)
         }
@@ -62,16 +62,16 @@ public struct PetView: View, Animatable {
     /// Draws the pet in a 200×200 design space. Shared by the view and any offscreen rendering.
     public static func draw(_ ctx: inout GraphicsContext, identity: PetIdentity, rig base: PetRig, motion: PetMotionProfile, time: TimeInterval?, colorScheme: ColorScheme, showsShadow: Bool) {
         let (rig, live) = PetAnimator.animate(rig: base, motion: motion, time: time)
-        let size = identity.species.bodySize
-        let p = PetPaintContext(rig: rig, live: live, palette: PetPalette.palette(for: identity.species), colorScheme: colorScheme, bodyWidth: size.width, bodyHeight: size.height)
+        let p = PetPaintContext(rig: rig, live: live, palette: PetPalette.palette(for: identity.species), colorScheme: colorScheme, anatomy: identity.species.anatomy)
 
         if showsShadow { PetDraw.floorShadow(&ctx, p) }
 
-        // Body transform: bounce / lift / jitter, then tilt+sway and breathing about the feet.
-        let pivot = CGPoint(x: 100, y: 168)
+        // Body transform: bounce / lift / jitter, then sway and breathing about the feet.
+        // Head tilt is applied by each painter about the neck.
+        let pivot = CGPoint(x: 100, y: p.floor)
         ctx.translateBy(x: CGFloat(live.jitterX), y: CGFloat(live.bounce + rig.lift + live.jitterY))
         ctx.translateBy(x: pivot.x, y: pivot.y)
-        ctx.rotate(by: .degrees(rig.tilt + live.sway))
+        ctx.rotate(by: .degrees(live.sway))
         ctx.scaleBy(x: 1 / sqrt(live.breathScale), y: live.breathScale)
         ctx.translateBy(x: -pivot.x, y: -pivot.y)
 

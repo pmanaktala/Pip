@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The app icon, drawn from the same artwork as the pet. Rendered to PNG by
+/// The app icon: Pebble, drawn from the same artwork as the pet. Rendered to PNG by
 /// `AppIconRenderTests` and used as the fallback for the layered Icon Composer icon.
 public struct AppIconView: View {
     /// When false, only the pet is drawn on a transparent background (Icon Composer layer).
@@ -11,11 +11,12 @@ public struct AppIconView: View {
     }
 
     public var body: some View {
-        let identity = PetIdentity(species: .cat)
+        let identity = PetIdentity(species: .penguin)
         var state = PetStateResolver.resolve(mood: .happy, intensity: .slight, identity: identity)
         state.rig.eyeArc = 0
-        state.rig.mouthOpen = 0
-        state.rig.mouthCurve = 0.6
+        state.rig.mouthOpen = 0.35
+        state.rig.mouthCurve = 0.8
+        state.rig.tailLift = 0.75
         state.rig.blush = 0.6
         state.rig.gazeX = 0
         state.rig.gazeY = 0

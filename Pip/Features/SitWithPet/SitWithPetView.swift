@@ -18,7 +18,7 @@ struct SitWithPetView: View {
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            PetSceneWithClock(identity: appState.identity, state: state, petScale: 0.7, petVerticalPosition: 0.5)
+            PetSceneWithClock(identity: appState.identity, state: state, petScale: 0.8, petVerticalPosition: 0.5)
                 .ignoresSafeArea()
                 .overlay(alignment: .bottom) {
                     Text("Just sitting.")

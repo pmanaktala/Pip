@@ -9,11 +9,11 @@
     {
       "layers" : [
         {
-          "image-name" : "Mochi.png",
-          "name" : "Mochi"
+          "image-name" : "Pebble.png",
+          "name" : "Pebble"
         }
       ],
-      "name" : "Mochi",
+      "name" : "Pebble",
       "shadow" : {
         "kind" : "neutral",
         "opacity" : 0.45

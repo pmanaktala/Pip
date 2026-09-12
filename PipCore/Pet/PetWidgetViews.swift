@@ -29,13 +29,13 @@ public struct PetHomeWidgetView: View {
 
     // Small: just the pet. In StandBy (no container background) it sits on a desk-like floor.
     private var small: some View {
-        PetSceneView(identity: identity, state: state, time: nil, petScale: 0.9, petVerticalPosition: 0.5, showsFloor: true, showsAccessory: showsBackground)
+        PetSceneView(identity: identity, state: state, time: nil, petScale: 1.0, petVerticalPosition: 0.5, showsFloor: true, showsAccessory: showsBackground)
             .accessibilityLabel(accessibilityLabel)
     }
 
     private var medium: some View {
         HStack(spacing: 0) {
-            PetSceneView(identity: identity, state: state, time: nil, petScale: 0.8, petVerticalPosition: 0.5)
+            PetSceneView(identity: identity, state: state, time: nil, petScale: 0.92, petVerticalPosition: 0.5)
                 .frame(width: 150)
             VStack(alignment: .leading, spacing: 8) {
                 Text(identity.name)
@@ -66,7 +66,7 @@ public struct PetHomeWidgetView: View {
 
     private var large: some View {
         VStack(spacing: 0) {
-            PetSceneView(identity: identity, state: state, time: nil, petScale: 0.62, petVerticalPosition: 0.5)
+            PetSceneView(identity: identity, state: state, time: nil, petScale: 0.72, petVerticalPosition: 0.5)
             VStack(alignment: .leading, spacing: 6) {
                 Text(snapshot.today.isEmpty ? "Today, so far: nothing yet." : "Today, so far")
                     .font(PipFont.caption)

@@ -47,7 +47,7 @@ Regenerate the app icon from the artwork:
 TEST_RUNNER_PIP_ICON_OUTPUT=/tmp/icon.png xcodebuild test -project Pip.xcodeproj -scheme Pip -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:PipTests/AppIconRenderTests
 ```
 
-Then copy `/tmp/icon.png` to `Pip/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png` and `/tmp/icon-layer.png` to `Pip/Resources/AppIcon.icon/Assets/Mochi.png`.
+Then copy `/tmp/icon.png` to `Pip/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png` and `/tmp/icon-layer.png` to `Pip/Resources/AppIcon.icon/Assets/Pebble.png`.
 
 ## Planning
 
