@@ -65,7 +65,7 @@ public struct PetRig: Equatable, Sendable {
     public var tongue: Double = 0
 
     // MARK: Face details
-    public var blush: Double = 0.25
+    public var blush: Double = 0.2
     public var sweat: Double = 0
     /// 0 = none, 1 = eyelids heavy (tired).
     public var lidHeaviness: Double = 0

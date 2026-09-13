@@ -1,22 +1,33 @@
 import SwiftUI
 
-/// The main screen: the pet, its room, and one floating way to say how you feel.
+/// The Pet tab: your pet, large, on a canvas tinted by how you feel, with one primary action.
 struct PetHomeView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var scheme
     @State private var showMoodPicker = false
     @State private var showSitWithPet = false
-    @State private var path = NavigationPath()
+    @State private var showPets = false
+    @State private var showWidgets = false
 
-    private enum Destination: Hashable { case history, pets, settings, widgets }
+    private var mood: Mood? { appState.hasFreshMood ? appState.latestEntry?.mood : nil }
 
     var body: some View {
-        NavigationStack(path: $path) {
+        NavigationStack {
             ZStack {
+                canvas
+
+                VStack(spacing: 0) {
+                    header
+                        .padding(.horizontal, PipSpacing.l)
+                        .padding(.top, PipSpacing.s)
+                    Spacer(minLength: 0)
+                }
+
                 PetSceneWithClock(identity: appState.identity, state: appState.displayedState,
-                                  petScale: showMoodPicker ? 0.58 : 0.76,
-                                  petVerticalPosition: showMoodPicker ? 0.3 : 0.49)
-                    .animation(.spring(duration: 0.55, bounce: 0.15), value: showMoodPicker)
-                    .ignoresSafeArea()
+                                  petScale: 0.86, petVerticalPosition: 0.5, showsFloor: true)
+                    .frame(maxWidth: 440)
+                    .padding(.top, 40)
+                    .padding(.bottom, 120)
                     .contentShape(Rectangle())
                     .onTapGesture { appState.pokePet() }
                     .accessibilityElement()
@@ -25,35 +36,20 @@ struct PetHomeView: View {
                     .accessibilityAddTraits(.isImage)
 
                 VStack {
-                    nameTag
                     Spacer()
                     moodButton
+                        .padding(.horizontal, PipSpacing.l)
                         .padding(.bottom, PipSpacing.m)
                 }
-                .padding(.horizontal, PipSpacing.m)
             }
-            .toolbar { homeToolbar }
-            .toolbarBackground(.hidden, for: .navigationBar)
-            .navigationDestination(for: Destination.self) { destination in
-                Group {
-                    switch destination {
-                    case .history: HistoryView()
-                    case .pets: PetSelectorView()
-                    case .settings: SettingsView()
-                    case .widgets:
-                        #if DEBUG
-                        WidgetGalleryView()
-                        #else
-                        EmptyView()
-                        #endif
-                    }
-                }
-                .pipNavigationTransition()
-            }
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(isPresented: $showPets) { PetSelectorView() }
+            #if DEBUG
+            .navigationDestination(isPresented: $showWidgets) { WidgetGalleryView() }
+            #endif
             .sheet(isPresented: $showMoodPicker) {
                 MoodPickerSheet()
-                    .presentationDetents([.fraction(0.46), .large])
-                    .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.46)))
+                    .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
             .fullScreenCover(isPresented: $showSitWithPet) {
@@ -66,14 +62,11 @@ struct PetHomeView: View {
             }
             #if DEBUG
             .onAppear {
-                // Screenshot automation: `PIP_DEBUG=picker` opens the picker on launch.
                 switch ProcessInfo.processInfo.environment["PIP_DEBUG"] {
                 case "picker": showMoodPicker = true
-                case "settings": path.append(Destination.settings)
-                case "pets": path.append(Destination.pets)
-                case "history": path.append(Destination.history)
+                case "pets": showPets = true
                 case "sit": showSitWithPet = true
-                case "widgets": path.append(Destination.widgets)
+                case "widgets": showWidgets = true
                 default: break
                 }
             }
@@ -81,102 +74,114 @@ struct PetHomeView: View {
         }
     }
 
-    /// iOS 27 lets the system collapse the least important item first when space is tight.
-    @ToolbarContentBuilder
-    private var homeToolbar: some ToolbarContent {
-        #if swift(>=6.4)
-        if #available(iOS 27, *) {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { path.append(Destination.history) } label: { Label("History", systemImage: "calendar") }
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { path.append(Destination.pets) } label: { Label("Pets", systemImage: "pawprint") }
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { path.append(Destination.settings) } label: { Label("Settings", systemImage: "gearshape") }
-            }
-            .visibilityPriority(.low)
-        } else {
-            legacyToolbar
+    // MARK: Canvas
+
+    /// The whole tab takes on the current mood, gently: a wash from the top that fades into the floor.
+    private var canvas: some View {
+        ZStack {
+            Color(.systemBackground)
+            LinearGradient(colors: [
+                mood.map { MoodColor.bold($0).opacity(scheme == .dark ? 0.28 : 0.22) } ?? PipColor.sceneTop.opacity(scheme == .dark ? 0.6 : 1),
+                mood.map { MoodColor.bold($0).opacity(scheme == .dark ? 0.06 : 0.05) } ?? PipColor.sceneBottom.opacity(scheme == .dark ? 0.5 : 0.6),
+            ], startPoint: .top, endPoint: .bottom)
         }
-        #else
-        legacyToolbar
-        #endif
+        .ignoresSafeArea()
+        .animation(.smooth(duration: 1.0), value: mood)
     }
 
-    private var legacyToolbar: some ToolbarContent {
-        ToolbarItemGroup(placement: .topBarTrailing) {
-            Button { path.append(Destination.history) } label: { Label("History", systemImage: "calendar") }
-            Button { path.append(Destination.pets) } label: { Label("Pets", systemImage: "pawprint") }
-            Button { path.append(Destination.settings) } label: { Label("Settings", systemImage: "gearshape") }
-        }
-    }
+    // MARK: Header
 
-    private var nameTag: some View {
-        HStack {
+    private var header: some View {
+        HStack(alignment: .top, spacing: PipSpacing.m) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(appState.identity.name)
+                    .font(PipFont.display)
+                Text(statusLine)
+                    .font(PipFont.callout)
+                    .foregroundStyle(.secondary)
+                    .contentTransition(.numericText())
+            }
+            .accessibilityElement(children: .combine)
+            Spacer()
             Button {
+                Haptics.light()
                 showSitWithPet = true
             } label: {
-                HStack(spacing: 6) {
-                    Text(appState.identity.name)
-                        .font(PipFont.headline)
-                    if let mood = appState.latestEntry?.mood, appState.hasFreshMood {
-                        Image(systemName: mood.symbolName)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .accessibilityHidden(true)
-                    }
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
+                Image(systemName: "sofa.fill")
+                    .font(.title3.weight(.semibold))
+                    .frame(width: 44, height: 44)
             }
             .buttonStyle(.glass)
-            .tint(PipColor.ink)
-            .accessibilityLabel("\(appState.identity.name). Sit together.")
-            Spacer()
+            .accessibilityLabel("Sit with \(appState.identity.name)")
         }
     }
+
+    private var statusLine: String {
+        if let entry = appState.latestEntry, appState.hasFreshMood {
+            return "\(entry.mood.petDescription.capitalizedFirst) · \(entry.timestamp.formatted(.relative(presentation: .named)))"
+        }
+        return "Ready when you are."
+    }
+
+    // MARK: Primary action
 
     private var moodButton: some View {
         Button {
             Haptics.light()
             showMoodPicker = true
         } label: {
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
                 if let entry = appState.latestEntry, appState.hasFreshMood {
                     PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: entry.mood, intensity: entry.intensity, identity: appState.identity), showsShadow: false, framing: .badge)
-                        .frame(width: 32, height: 32)
-                    VStack(alignment: .leading, spacing: 1) {
+                        .frame(width: 40, height: 40)
+                        .background(.white.opacity(0.25), in: Circle())
+                    VStack(alignment: .leading, spacing: 0) {
                         Text(entry.intensity.phrase(for: entry.mood).capitalizedFirst)
                             .font(PipFont.headline)
-                        Text(entry.timestamp, format: .relative(presentation: .named))
+                        Text("Tap to update")
                             .font(PipFont.caption)
-                            .foregroundStyle(.secondary)
+                            .opacity(0.8)
                     }
                     Spacer(minLength: 0)
-                    Image(systemName: "plus")
-                        .font(.headline)
-                        .foregroundStyle(.secondary)
+                    Image(systemName: "arrow.up.right")
+                        .font(.headline.weight(.bold))
                 } else {
-                    Image(systemName: "face.smiling")
-                        .font(.title3)
+                    Image(systemName: "face.smiling.inverse")
+                        .font(.title2)
                     Text("How are you feeling?")
                         .font(PipFont.headline)
                     Spacer(minLength: 0)
+                    Image(systemName: "arrow.up.right")
+                        .font(.headline.weight(.bold))
                 }
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 12)
-            .frame(maxWidth: 360)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .frame(maxWidth: 420)
+            .background(buttonColor, in: RoundedRectangle(cornerRadius: PipRadius.card, style: .continuous))
+            .shadow(color: buttonColor.opacity(0.35), radius: 16, y: 8)
         }
-        .buttonStyle(.glass)
-        .tint(PipColor.ink)
+        .buttonStyle(PressableButtonStyle())
         .accessibilityLabel(appState.hasFreshMood ? "Update your mood" : "Log your mood")
+        .animation(.smooth(duration: 0.6), value: mood)
+    }
+
+    private var buttonColor: Color {
+        mood.map(MoodColor.bold) ?? Color.accentColor
     }
 
     private var petAccessibilityLabel: String {
-        let mood = appState.displayedState.mood
-        return "\(appState.identity.name) \(mood.petDescription)."
+        "\(appState.identity.name) \(appState.displayedState.mood.petDescription)."
+    }
+}
+
+/// A button that squishes under the finger — every primary action in Pip should feel physical.
+struct PressableButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.spring(duration: 0.3, bounce: 0.4), value: configuration.isPressed)
     }
 }
 
@@ -186,18 +191,18 @@ struct PetSceneWithClock: View {
     var state: PetMoodState
     var petScale: CGFloat = 0.62
     var petVerticalPosition: CGFloat = 0.49
+    var showsFloor = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         if reduceMotion {
-            PetSceneView(identity: identity, state: state, time: nil, petScale: petScale, petVerticalPosition: petVerticalPosition)
+            PetSceneView(identity: identity, state: state, time: nil, petScale: petScale, petVerticalPosition: petVerticalPosition, showsFloor: showsFloor, showsBackground: false)
                 .animation(.smooth(duration: 0.6), value: state.rig)
         } else {
             TimelineView(.animation(minimumInterval: 1.0 / 60)) { context in
-                PetSceneView(identity: identity, state: state, time: context.date.timeIntervalSinceReferenceDate, petScale: petScale, petVerticalPosition: petVerticalPosition)
-                    .animation(.spring(duration: 0.75, bounce: 0.25), value: state.rig)
+                PetSceneView(identity: identity, state: state, time: context.date.timeIntervalSinceReferenceDate, petScale: petScale, petVerticalPosition: petVerticalPosition, showsFloor: showsFloor, showsBackground: false)
+                    .animation(.smooth(duration: 0.7), value: state.rig)
             }
         }
     }
 }
-

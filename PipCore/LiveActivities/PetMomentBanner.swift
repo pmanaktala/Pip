@@ -1,7 +1,10 @@
+import AppIntents
 import SwiftUI
 import WidgetKit
 
-/// Lock Screen banner for a pet moment. Shared so the app can preview it.
+/// Lock Screen / StandBy banner for a pet moment. The pet sits on a mood-coloured disc, the
+/// message is the headline, a live timer keeps the card moving, and a wave button lets the
+/// user poke back. Pose changes arrive as state updates and are animated by the system.
 public struct PetMomentBanner: View {
     public var identity: PetIdentity
     public var state: PetMomentAttributes.ContentState
@@ -11,33 +14,59 @@ public struct PetMomentBanner: View {
         self.state = state
     }
 
+    private var color: Color { MoodColor.bold(state.mood) }
+    private var sitting: Bool { state.kind == .company || state.kind == .breather || state.kind == .windDown }
+
     public var body: some View {
-        let petState = PetStateResolver.resolve(mood: state.mood, intensity: state.intensity, identity: identity)
-        HStack(spacing: 12) {
+        let petState = state.petState(identity: identity)
+        HStack(spacing: 14) {
             ZStack {
-                Circle().fill(PetPalette.ambient(for: state.mood).opacity(0.3))
+                Circle().fill(color.opacity(0.22))
                 PetView(identity: identity, state: petState, showsShadow: false)
-                    .padding(2)
+                    .padding(4)
+                    .id(state.pose)
+                    .transition(.scale(scale: 0.9).combined(with: .opacity))
                 if let accessory = petState.accessory, state.kind != .breather {
-                    AccessoryOverlay(kind: accessory, time: nil, palette: PetPalette.palette(for: identity.species))
+                    AccessoryOverlay(kind: accessory, time: Double(state.pose) * 1.3, palette: PetPalette.palette(for: identity.species))
+                        .padding(4)
                 }
             }
-            .frame(width: 84, height: 84)
+            .frame(width: 88, height: 88)
+            .animation(.spring(duration: 0.5, bounce: 0.3), value: state.pose)
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(state.message)
-                    .font(.system(.headline, design: .rounded))
+                    .font(.system(.headline, design: .rounded, weight: .bold))
                     .lineLimit(2)
-                if state.kind == .company || state.kind == .breather {
-                    Text("Tap to sit together")
-                        .font(.system(.caption, design: .rounded))
-                        .foregroundStyle(.tertiary)
+                if sitting {
+                    HStack(spacing: 4) {
+                        Text("With you for")
+                        Text(timerInterval: state.startedAt...state.endsAt, countsDown: false, showsHours: false)
+                            .monospacedDigit()
+                    }
+                    .font(.system(.caption, design: .rounded, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                } else {
+                    Text(state.startedAt, style: .relative)
+                        .font(.system(.caption, design: .rounded, weight: .semibold))
+                        .foregroundStyle(.secondary)
                 }
             }
             Spacer(minLength: 0)
+
+            Button(intent: WaveAtPetIntent()) {
+                Image(systemName: "hand.wave.fill")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(color, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Wave at \(identity.name)")
         }
         .padding(14)
-        .widgetURL(URL(string: state.kind == .company || state.kind == .breather ? "pip://sit" : "pip://home"))
-        .accessibilityElement(children: .combine)
+        .widgetURL(URL(string: sitting ? "pip://sit" : "pip://home"))
+        .accessibilityElement(children: .contain)
         .accessibilityLabel("\(identity.name): \(state.message)")
     }
 }

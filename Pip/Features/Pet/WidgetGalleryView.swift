@@ -19,9 +19,9 @@ struct WidgetGalleryView: View {
                 .padding(12)
                 .background(.black.opacity(0.85), in: RoundedRectangle(cornerRadius: 16))
                 .environment(\.colorScheme, .dark)
-                PetMomentBanner(identity: snapshot.identity, state: .init(kind: .breather, mood: .stressed, intensity: .moderate, message: "\(snapshot.identity.name) is sitting with you.", endsAt: .now))
+                PetMomentBanner(identity: snapshot.identity, state: .init(kind: .breather, mood: .calm, intensity: .slight, message: "\(snapshot.identity.name) is sitting with you.", endsAt: .now.addingTimeInterval(1500), startedAt: .now.addingTimeInterval(-252), pose: 4))
                     .frame(width: 358)
-                    .background(PipColor.sceneBottom.opacity(0.9), in: RoundedRectangle(cornerRadius: 24))
+                    .background(Color(.systemBackground).opacity(0.9), in: RoundedRectangle(cornerRadius: 24))
                 HStack(spacing: 16) {
                     widget(PetHomeWidgetView(snapshot: snapshot, family: .systemSmall), width: 158, height: 158)
                     widget(PetHomeWidgetView(snapshot: snapshot, family: .systemSmall, showsBackground: false), width: 158, height: 158)
@@ -38,9 +38,28 @@ struct WidgetGalleryView: View {
     private func widget(_ content: some View, width: CGFloat, height: CGFloat) -> some View {
         content
             .frame(width: width, height: height)
-            .background(LinearGradient(colors: [PipColor.sceneTop, PipColor.sceneBottom], startPoint: .top, endPoint: .bottom))
+            .background(WidgetCanvasPreview(snapshot: appState.snapshot))
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
+    }
+}
+
+/// Mirrors the widget extension's container background for the gallery.
+private struct WidgetCanvasPreview: View {
+    var snapshot: PetSnapshot
+    @Environment(\.colorScheme) private var scheme
+    var body: some View {
+        let mood: Mood? = {
+            guard let m = snapshot.mood, let at = snapshot.loggedAt, Date.now.timeIntervalSince(at) < PetSnapshot.freshness else { return nil }
+            return m
+        }()
+        ZStack {
+            Color(.systemBackground)
+            LinearGradient(colors: [
+                (mood.map(MoodColor.bold) ?? PipColor.sceneTop).opacity(mood == nil ? (scheme == .dark ? 0.5 : 1) : (scheme == .dark ? 0.3 : 0.22)),
+                (mood.map(MoodColor.bold) ?? PipColor.sceneBottom).opacity(mood == nil ? (scheme == .dark ? 0.4 : 0.7) : 0.06),
+            ], startPoint: .top, endPoint: .bottom)
+        }
     }
 }
 #endif

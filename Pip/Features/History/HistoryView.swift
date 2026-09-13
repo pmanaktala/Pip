@@ -1,18 +1,13 @@
 import SwiftData
 import SwiftUI
 
-/// Lightweight history: a month of tiny pet faces, a week strip, and a recap. No charts.
+/// History: this week as a strip of colour tiles, the month as a grid, and a recap of the
+/// selected day. Colour is the mood; the pet's face confirms it. No charts.
 struct HistoryView: View {
     @Environment(AppState.self) private var appState
     @Query(sort: \MoodEntry.timestamp, order: .reverse) private var entries: [MoodEntry]
     @State private var month: Date = .now
     @State private var selectedDay: Date?
-    @State private var scope: Scope = .month
-
-    private enum Scope: String, CaseIterable, Identifiable {
-        case month = "Month", week = "Week"
-        var id: String { rawValue }
-    }
 
     private var stamps: [MoodStamp] {
         entries.map { MoodStamp(id: $0.id, mood: $0.mood, intensity: $0.intensity, time: $0.timestamp) }
@@ -22,54 +17,82 @@ struct HistoryView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: PipSpacing.l) {
-                scopePicker
-                    .padding(.horizontal, PipSpacing.m)
-
-                if scope == .month {
-                    monthHeader
-                    monthGrid
-                } else {
-                    weekStrip
-                }
-
+            VStack(alignment: .leading, spacing: PipSpacing.l) {
+                section("This week") { weekStrip }
+                section(month.formatted(.dateTime.month(.wide).year()), trailing: { monthControls }) { monthGrid }
                 recapCard(for: selectedDay ?? .now)
             }
-            .padding(.vertical, PipSpacing.m)
+            .padding(.horizontal, PipSpacing.m)
+            .padding(.bottom, PipSpacing.xl)
         }
-        .scrollContentBackground(.hidden)
-        .background(LinearGradient(colors: [PipColor.sceneTop, PipColor.sceneBottom], startPoint: .top, endPoint: .bottom).ignoresSafeArea())
+        .background(Color(.systemGroupedBackground))
         .navigationTitle("History")
-        .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $selectedDay) { day in
             DayDetailView(day: day, entries: entries.filter { Calendar.current.isDate($0.timestamp, inSameDayAs: day) })
                 .presentationDetents([.medium, .large])
         }
     }
 
-    private var scopePicker: some View {
-        Picker("Scope", selection: $scope) {
-            ForEach(Scope.allCases) { Text($0.rawValue).tag($0) }
+    private func section<Content: View, Trailing: View>(_ title: String, @ViewBuilder trailing: () -> Trailing = { EmptyView() }, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: PipSpacing.s) {
+            HStack {
+                Text(title).font(PipFont.title2)
+                Spacer()
+                trailing()
+            }
+            content()
         }
-        .pipTabsPickerStyle()
+    }
+
+    // MARK: Week
+
+    private var weekStrip: some View {
+        let cal = Calendar.current
+        return HStack(spacing: 6) {
+            ForEach(MoodHistory.recentDays(count: 7), id: \.self) { day in
+                let stamp = MoodHistory.dominant(days[day] ?? [])
+                Button {
+                    if stamp != nil { selectedDay = day }
+                } label: {
+                    VStack(spacing: 4) {
+                        if let stamp {
+                            PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: stamp.mood, intensity: stamp.intensity, identity: appState.identity), showsShadow: false, framing: .badge)
+                                .frame(width: 36, height: 36)
+                        } else {
+                            Circle().fill(.white.opacity(0.35)).frame(width: 10, height: 10).frame(height: 36)
+                        }
+                        Text(day, format: .dateTime.weekday(.narrow))
+                            .font(PipFont.caption)
+                    }
+                    .foregroundStyle(stamp == nil ? Color.secondary : .white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(stamp.map { MoodColor.bold($0.mood) } ?? Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: PipRadius.chip, style: .continuous))
+                    .overlay {
+                        if cal.isDateInToday(day) {
+                            RoundedRectangle(cornerRadius: PipRadius.chip, style: .continuous).strokeBorder(Color.primary.opacity(0.35), lineWidth: 2)
+                        }
+                    }
+                }
+                .buttonStyle(PressableButtonStyle())
+                .disabled(stamp == nil)
+                .accessibilityLabel(dayLabel(day, stamp))
+            }
+        }
     }
 
     // MARK: Month
 
-    private var monthHeader: some View {
-        HStack {
-            Button { shiftMonth(-1) } label: { Image(systemName: "chevron.left") }
+    private var monthControls: some View {
+        HStack(spacing: 4) {
+            Button { shiftMonth(-1) } label: { Image(systemName: "chevron.left").frame(width: 32, height: 32) }
                 .accessibilityLabel("Previous month")
-            Spacer()
-            Text(month, format: .dateTime.month(.wide).year())
-                .font(PipFont.headline)
-            Spacer()
-            Button { shiftMonth(1) } label: { Image(systemName: "chevron.right") }
+            Button { shiftMonth(1) } label: { Image(systemName: "chevron.right").frame(width: 32, height: 32) }
                 .disabled(Calendar.current.isDate(month, equalTo: .now, toGranularity: .month))
                 .accessibilityLabel("Next month")
         }
-        .buttonStyle(.glass)
-        .padding(.horizontal, PipSpacing.m)
+        .font(.headline.weight(.bold))
+        .buttonStyle(.plain)
     }
 
     private var monthGrid: some View {
@@ -82,11 +105,12 @@ struct HistoryView: View {
                     Text(s).font(PipFont.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity)
                 }
             }
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 5), count: 7), spacing: 5) {
                 ForEach(Array(MoodHistory.monthGrid(for: month).enumerated()), id: \.offset) { _, day in
                     if let day {
-                        DayCell(day: day, stamp: MoodHistory.dominant(days[cal.startOfDay(for: day)] ?? []), identity: appState.identity, isSelected: selectedDay.map { cal.isDate($0, inSameDayAs: day) } ?? false) {
-                            if !(days[cal.startOfDay(for: day)] ?? []).isEmpty { selectedDay = day }
+                        let stamp = MoodHistory.dominant(days[cal.startOfDay(for: day)] ?? [])
+                        DayCell(day: day, stamp: stamp, identity: appState.identity, isSelected: selectedDay.map { cal.isDate($0, inSameDayAs: day) } ?? false) {
+                            if stamp != nil { selectedDay = day }
                         }
                     } else {
                         Color.clear.frame(height: 44)
@@ -94,30 +118,18 @@ struct HistoryView: View {
                 }
             }
         }
-        .padding(.horizontal, PipSpacing.m)
+        .padding(PipSpacing.s)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: PipRadius.card, style: .continuous))
     }
 
     private func shiftMonth(_ delta: Int) {
         if let m = Calendar.current.date(byAdding: .month, value: delta, to: month) { month = m }
     }
 
-    // MARK: Week
-
-    private var weekStrip: some View {
-        let cal = Calendar.current
-        return HStack(spacing: 6) {
-            ForEach(MoodHistory.recentDays(count: 7), id: \.self) { day in
-                VStack(spacing: 4) {
-                    DayCell(day: day, stamp: MoodHistory.dominant(days[day] ?? []), identity: appState.identity, isSelected: false, large: true) {
-                        if !(days[day] ?? []).isEmpty { selectedDay = day }
-                    }
-                    Text(day, format: .dateTime.weekday(.narrow))
-                        .font(PipFont.caption)
-                        .foregroundStyle(cal.isDateInToday(day) ? Color.accentColor : .secondary)
-                }
-            }
-        }
-        .padding(.horizontal, PipSpacing.m)
+    private func dayLabel(_ day: Date, _ stamp: MoodStamp?) -> String {
+        let date = day.formatted(.dateTime.weekday(.wide).month().day())
+        if let stamp { return "\(date): \(stamp.intensity.phrase(for: stamp.mood))" }
+        return "\(date): nothing logged"
     }
 
     // MARK: Recap
@@ -125,16 +137,17 @@ struct HistoryView: View {
     @ViewBuilder
     private func recapCard(for day: Date) -> some View {
         if let recap = MoodHistory.recap(for: day, stamps: stamps, petName: appState.identity.name) {
+            let mood = MoodHistory.dominant(days[Calendar.current.startOfDay(for: day)] ?? [])?.mood ?? .neutral
             VStack(alignment: .leading, spacing: PipSpacing.m) {
                 Text(recap.title)
-                    .font(PipFont.title)
+                    .font(PipFont.title2)
                 HStack(spacing: PipSpacing.m) {
                     ForEach(recap.scenes, id: \.stamp.id) { scene in
                         VStack(spacing: 2) {
                             PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: scene.stamp.mood, intensity: scene.stamp.intensity, identity: appState.identity), showsShadow: false)
                                 .frame(width: 84, height: 84)
-                            Text(scene.part.displayName).font(PipFont.caption).foregroundStyle(.secondary)
-                            Text(scene.stamp.mood.displayName).font(PipFont.footnote)
+                            Text(scene.part.displayName).font(PipFont.caption).opacity(0.8)
+                            Text(scene.stamp.mood.displayName).font(PipFont.headline)
                         }
                         .accessibilityElement(children: .combine)
                         .accessibilityLabel("\(scene.part.displayName): \(scene.stamp.intensity.phrase(for: scene.stamp.mood))")
@@ -142,10 +155,10 @@ struct HistoryView: View {
                     Spacer(minLength: 0)
                 }
             }
+            .foregroundStyle(.white)
             .padding(PipSpacing.m)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.fill.quaternary, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .padding(.horizontal, PipSpacing.m)
+            .background(MoodColor.bold(mood), in: RoundedRectangle(cornerRadius: PipRadius.card, style: .continuous))
         } else if entries.isEmpty {
             VStack(spacing: PipSpacing.s) {
                 PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: .calm, intensity: .slight, identity: appState.identity))
@@ -155,46 +168,44 @@ struct HistoryView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
+            .frame(maxWidth: .infinity)
             .padding(.top, PipSpacing.l)
         }
     }
 }
 
-/// One day: a tiny pet face for the dominant mood, or a soft dot.
+/// One day in the month grid: a mood-coloured tile with the pet's face, or a quiet number.
 struct DayCell: View {
     var day: Date
     var stamp: MoodStamp?
     var identity: PetIdentity
     var isSelected: Bool
-    var large = false
     var action: () -> Void
 
     var body: some View {
         Button(action: action) {
             ZStack {
-                RoundedRectangle(cornerRadius: large ? 14 : 10, style: .continuous)
-                    .fill(stamp.map { PetPalette.ambient(for: $0.mood).opacity(0.22) } ?? Color.clear)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(stamp.map { MoodColor.bold($0.mood) } ?? Color.clear)
                 if let stamp {
                     PetView(identity: identity, state: PetStateResolver.resolve(mood: stamp.mood, intensity: stamp.intensity, identity: identity), showsShadow: false, framing: .badge)
-                        .padding(1)
-                    if !large {
-                        Text(day, format: .dateTime.day())
-                            .font(.system(size: 9, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                            .padding(3)
-                    }
+                        .padding(3)
+                    Text(day, format: .dateTime.day())
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .padding(4)
                 } else {
                     Text(day, format: .dateTime.day())
                         .font(PipFont.caption)
                         .foregroundStyle(Calendar.current.isDateInToday(day) ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.tertiary))
                 }
             }
-            .frame(height: large ? 52 : 44)
+            .frame(height: 44)
             .overlay {
                 if isSelected {
-                    RoundedRectangle(cornerRadius: large ? 14 : 10, style: .continuous)
-                        .strokeBorder(Color.accentColor, lineWidth: 2)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(Color.primary, lineWidth: 2)
                 }
             }
         }

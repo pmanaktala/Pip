@@ -3,11 +3,10 @@ import SwiftUI
 /// Shared drawing vocabulary for all species painters. See `Docs/CharacterSpec.md`.
 ///
 /// Painters draw into a 200×200 "design canvas"; `PetView` scales it to fit. Every pet
-/// is a sitting animal built from the same parts — head, bean torso, haunches, front
-/// legs — with species parts (ears, tail, markings, flippers) on top of one face system.
-/// The rig decides the pose; painters only draw. Paired parts are drawn once and
-/// mirrored, every form is lit by the same key light, and stroke weights come from the
-/// context so they hold up at badge size.
+/// follows one construction: a single flat silhouette (head merged into a sitting body,
+/// species features part of the outline), a lighter belly, small eyes, a tiny nose or
+/// beak, paws or feet, and one prop. Feeling comes from pose and glyphs, not rendering.
+/// Paired parts are drawn once and mirrored; nothing is shaded.
 public struct PetPaintContext {
     public var rig: PetRig
     public var live: LiveMotion
@@ -30,11 +29,17 @@ public struct PetPaintContext {
     public var torso: Torso
 
     /// Ink stroke width for mouths, brows and closed eyes.
-    public var inkWidth: CGFloat { detail == .small ? 3.6 : 2.2 }
+    public var inkWidth: CGFloat { detail == .small ? 3.2 : 2.0 }
     public var ink: Color { palette.ink }
 
     /// Horizontal shift applied to every facial feature when the head turns.
     public var faceShift: CGFloat { CGFloat(rig.headTurn) * head.width * 0.07 }
+
+    /// Transform that tilts the head about the neck (applied to head-part paths drawn in body space).
+    public var headTilt: CGAffineTransform {
+        let neck = CGPoint(x: head.center.x, y: head.bottom - 8)
+        return CGAffineTransform(translationX: neck.x, y: neck.y).rotated(by: CGFloat(rig.tilt) * .pi / 180).translatedBy(x: -neck.x, y: -neck.y)
+    }
 
     public struct Blob {
         public var center: CGPoint
@@ -78,12 +83,12 @@ public struct PetPaintContext {
         let drop = CGFloat(rig.headDrop)
 
         // Torso: sits on the floor; flattens and widens when lying.
-        let torsoHeight = (anatomy.torsoHeight - 24 * lying) * squash
-        let hip = anatomy.hipWidth + 30 * lying
-        let chest = anatomy.chestWidth + 26 * lying
+        let torsoHeight = (anatomy.torsoHeight - 22 * lying) * squash
+        let hip = anatomy.hipWidth + 28 * lying
+        let chest = anatomy.chestWidth + 24 * lying
         torso = Torso(centerX: 100, top: 168 - torsoHeight, bottom: 168, chestWidth: chest, hipWidth: hip)
 
-        // Head: sits on the chest with a short neck; sinks into the shoulders when dropped or lying.
+        // Head: merges into the chest; sinks into the shoulders when dropped or lying.
         let headW = anatomy.headWidth / sqrt(squash)
         let headH = anatomy.headHeight * (0.94 + 0.06 * squash)
         let overlap = anatomy.headOverlap + 10 * drop + 6 * lying
@@ -96,17 +101,16 @@ public struct PetPaintContext {
 public struct PetAnatomy: Sendable {
     public var headWidth: CGFloat
     public var headHeight: CGFloat
-    /// How far the head sinks into the chest (a short neck).
+    /// How far the head sinks into the chest (a short neck). Large values merge head and body.
     public var headOverlap: CGFloat
     public var cheekSquareness: CGFloat
     public var torsoHeight: CGFloat
     public var chestWidth: CGFloat
     public var hipWidth: CGFloat
-    public var legWidth: CGFloat
     /// Eye radius as a fraction of head width.
     public var eyeRadius: CGFloat
 
-    public init(headWidth: CGFloat, headHeight: CGFloat, headOverlap: CGFloat, cheekSquareness: CGFloat, torsoHeight: CGFloat, chestWidth: CGFloat, hipWidth: CGFloat, legWidth: CGFloat, eyeRadius: CGFloat = 0.083) {
+    public init(headWidth: CGFloat, headHeight: CGFloat, headOverlap: CGFloat, cheekSquareness: CGFloat, torsoHeight: CGFloat, chestWidth: CGFloat, hipWidth: CGFloat, eyeRadius: CGFloat = 0.055) {
         self.headWidth = headWidth
         self.headHeight = headHeight
         self.headOverlap = headOverlap
@@ -114,7 +118,6 @@ public struct PetAnatomy: Sendable {
         self.torsoHeight = torsoHeight
         self.chestWidth = chestWidth
         self.hipWidth = hipWidth
-        self.legWidth = legWidth
         self.eyeRadius = eyeRadius
     }
 }
@@ -142,41 +145,22 @@ public enum PetDraw {
         part(&flipped, -1)
     }
 
-    // MARK: Lighting
+    /// Builds a symmetric path from right-side geometry: the path and its mirror, unioned.
+    public static func symmetric(_ right: Path, axis: CGFloat = 100) -> Path {
+        right.union(right.applying(CGAffineTransform(translationX: axis, y: 0).scaledBy(x: -1, y: 1).translatedBy(x: -axis, y: 0)))
+    }
 
-    /// Fills a form with its base colour, then a soft core shadow (bottom-right) and a rim light
-    /// (top-left). Every solid part of every pet goes through here so the lighting agrees.
+    // MARK: Fills
+
+    /// Flat fill. The signature keeps `shade`/`light`/`strength` so callers read the same, but the
+    /// style is flat: no gradients, no cel shade. Separation between parts comes from colour choice.
     public static func form(_ ctx: inout GraphicsContext, _ path: Path, in rect: CGRect, base: Color, shade: Color, light: Color, strength: CGFloat = 1) {
         ctx.fill(path, with: .color(base))
-        guard strength > 0 else { return }
-        var inner = ctx
-        inner.clip(to: path)
-        let d = max(rect.width, rect.height)
-        // Inside a mirrored context the x axis is flipped; keep the key light top-left on screen.
-        let flipped = ctx.transform.a < 0
-        let lx: CGFloat = flipped ? 0.64 : 0.36
-        let shadowCenter = CGPoint(x: rect.minX + rect.width * lx, y: rect.minY + rect.height * 0.32)
-        inner.fill(path, with: .radialGradient(
-            Gradient(stops: [.init(color: shade.opacity(0), location: 0), .init(color: shade.opacity(0), location: 0.55), .init(color: shade.opacity(0.42 * strength), location: 1)]),
-            center: shadowCenter, startRadius: 0, endRadius: d * 0.82))
-        let lightCenter = CGPoint(x: rect.minX + rect.width * (flipped ? 0.66 : 0.34), y: rect.minY + rect.height * 0.24)
-        inner.fill(path, with: .radialGradient(
-            Gradient(colors: [light.opacity(0.55 * strength), light.opacity(0)]),
-            center: lightCenter, startRadius: 0, endRadius: d * 0.42))
     }
 
-    /// Convenience: `form` with the palette's fur tones.
-    public static func fur(_ ctx: inout GraphicsContext, _ p: PetPaintContext, _ path: Path, in rect: CGRect, strength: CGFloat = 1) {
-        form(&ctx, path, in: rect, base: p.palette.base, shade: p.palette.shade, light: p.palette.light, strength: strength)
-    }
-
-    /// A soft dark ellipse clipped to `within` — where one part rests on another.
-    public static func contactShadow(_ ctx: inout GraphicsContext, _ p: PetPaintContext, ellipse: CGRect, within: Path, opacity: Double = 0.22) {
-        var inner = ctx
-        inner.clip(to: within)
-        inner.fill(Path(ellipseIn: ellipse), with: .radialGradient(
-            Gradient(colors: [p.palette.shade.opacity(opacity), p.palette.shade.opacity(0)]),
-            center: CGPoint(x: ellipse.midX, y: ellipse.midY), startRadius: 0, endRadius: ellipse.width * 0.52))
+    /// Convenience: flat fill with the palette's fur colour.
+    public static func fur(_ ctx: inout GraphicsContext, _ p: PetPaintContext, _ path: Path, in rect: CGRect = .zero, strength: CGFloat = 1) {
+        ctx.fill(path, with: .color(p.palette.base))
     }
 
     // MARK: Head & body shapes
@@ -199,32 +183,30 @@ public enum PetDraw {
         return p
     }
 
-    /// Torso: a bean — narrow shoulders, a slight waist, wide haunches, flat on the floor.
+    /// Torso: a bean — narrow shoulders, wide haunches, flat on the floor with rounded corners.
     public static func torsoPath(_ t: PetPaintContext.Torso) -> Path {
         let cx = t.centerX, h = t.height
         let shoulderY = t.top + h * 0.2
-        let hipY = t.bottom - h * 0.26
-        let cornerX = t.hipWidth * 0.36
+        let hipY = t.bottom - h * 0.3
+        let cornerX = t.hipWidth * 0.34
         var p = Path()
         p.move(to: CGPoint(x: cx, y: t.top))
-        // Right side, top to bottom.
         p.addCurve(to: CGPoint(x: cx + t.chestWidth / 2, y: shoulderY),
                    control1: CGPoint(x: cx + t.chestWidth * 0.36, y: t.top),
                    control2: CGPoint(x: cx + t.chestWidth / 2, y: t.top + h * 0.06))
         p.addCurve(to: CGPoint(x: cx + t.hipWidth / 2, y: hipY),
-                   control1: CGPoint(x: cx + t.chestWidth / 2, y: t.top + h * 0.48),
-                   control2: CGPoint(x: cx + t.hipWidth / 2, y: hipY - h * 0.22))
+                   control1: CGPoint(x: cx + t.chestWidth / 2, y: t.top + h * 0.5),
+                   control2: CGPoint(x: cx + t.hipWidth / 2, y: hipY - h * 0.24))
         p.addCurve(to: CGPoint(x: cx + cornerX, y: t.bottom),
                    control1: CGPoint(x: cx + t.hipWidth / 2, y: t.bottom - h * 0.02),
                    control2: CGPoint(x: cx + cornerX + 10, y: t.bottom))
         p.addLine(to: CGPoint(x: cx - cornerX, y: t.bottom))
-        // Left side, bottom to top (mirror of the above).
         p.addCurve(to: CGPoint(x: cx - t.hipWidth / 2, y: hipY),
                    control1: CGPoint(x: cx - cornerX - 10, y: t.bottom),
                    control2: CGPoint(x: cx - t.hipWidth / 2, y: t.bottom - h * 0.02))
         p.addCurve(to: CGPoint(x: cx - t.chestWidth / 2, y: shoulderY),
-                   control1: CGPoint(x: cx - t.hipWidth / 2, y: hipY - h * 0.22),
-                   control2: CGPoint(x: cx - t.chestWidth / 2, y: t.top + h * 0.48))
+                   control1: CGPoint(x: cx - t.hipWidth / 2, y: hipY - h * 0.24),
+                   control2: CGPoint(x: cx - t.chestWidth / 2, y: t.top + h * 0.5))
         p.addCurve(to: CGPoint(x: cx, y: t.top),
                    control1: CGPoint(x: cx - t.chestWidth / 2, y: t.top + h * 0.06),
                    control2: CGPoint(x: cx - t.chestWidth * 0.36, y: t.top))
@@ -232,65 +214,37 @@ public enum PetDraw {
         return p
     }
 
-    /// Haunches + torso + belly patch + front legs. Species call this, then add parts.
-    public static func body(_ ctx: inout GraphicsContext, _ p: PetPaintContext, belly: Bool = true, pawColor: Color? = nil, legColor: Color? = nil) {
-        let t = p.torso
-        let lying = CGFloat(p.rig.lying)
-        let torso = torsoPath(t)
-
-        // Haunches: rounded mounds behind the torso, bottoms on the floor.
-        mirrored(&ctx) { ctx, _ in
-            let hw = t.hipWidth * 0.42, hh = t.height * (0.42 - 0.12 * lying)
-            let r = CGRect(x: t.centerX + t.hipWidth * 0.3 - hw / 2, y: t.bottom - hh, width: hw, height: hh)
-            form(&ctx, Path(ellipseIn: r), in: r, base: p.palette.base, shade: p.palette.shade, light: p.palette.light, strength: 1.2)
-        }
-
-        fur(&ctx, p, torso, in: t.rect)
-
-        if belly {
-            // Chest patch: a soft-edged oval low on the chest, between the front legs.
-            var inner = ctx
-            inner.clip(to: torso)
-            let bw = t.chestWidth * 0.58, bh = t.height * 0.5
-            let r = CGRect(x: t.centerX - bw / 2, y: t.bottom - bh - 6, width: bw, height: bh)
-            inner.fill(Path(ellipseIn: r), with: .radialGradient(
-                Gradient(stops: [.init(color: p.palette.belly.opacity(0.95), location: 0), .init(color: p.palette.belly.opacity(0.9), location: 0.7), .init(color: p.palette.belly.opacity(0), location: 1)]),
-                center: CGPoint(x: r.midX, y: r.midY), startRadius: 0, endRadius: max(bw, bh) * 0.55))
-        }
-
-        legs(&ctx, p, pawColor: pawColor ?? p.palette.base, legColor: legColor ?? p.palette.base)
+    /// The one silhouette: torso + tilted head + any extra outline parts (ears, snout), unioned.
+    public static func silhouette(_ p: PetPaintContext, extras: [Path] = []) -> Path {
+        var shape = torsoPath(p.torso).union(headPath(p.head).applying(p.headTilt))
+        for extra in extras { shape = shape.union(extra.applying(p.headTilt)) }
+        return shape
     }
 
-    /// Two front legs with paws, in front of the torso. Stretch forward when lying.
-    public static func legs(_ ctx: inout GraphicsContext, _ p: PetPaintContext, pawColor: Color, legColor: Color) {
+    /// A lighter chest patch, clipped to the silhouette.
+    public static func belly(_ ctx: inout GraphicsContext, _ p: PetPaintContext, within: Path, widthFraction: CGFloat = 0.56, heightFraction: CGFloat = 0.55, color: Color? = nil) {
+        let t = p.torso
+        var inner = ctx
+        inner.clip(to: within)
+        let bw = t.hipWidth * widthFraction, bh = t.height * heightFraction
+        inner.fill(Path(ellipseIn: CGRect(x: t.centerX - bw / 2, y: t.bottom - bh - 4, width: bw, height: bh)), with: .color(color ?? p.palette.belly))
+    }
+
+    /// Two small paws at the bottom front, mirrored.
+    public static func paws(_ ctx: inout GraphicsContext, _ p: PetPaintContext, color: Color, spread: CGFloat = 0.2, width: CGFloat = 24, height: CGFloat = 12) {
         let t = p.torso
         let lying = CGFloat(p.rig.lying)
-        let legW = p.anatomy.legWidth
-        guard legW > 0 else { return }
-        let legH = t.height * (0.46 - 0.26 * lying)
-        let legShade = p.palette.shade
         mirrored(&ctx) { ctx, _ in
-            let x = t.centerX + t.chestWidth * 0.26 + lying * 6
-            let legRect = CGRect(x: x - legW / 2, y: t.bottom - legH, width: legW, height: legH)
-            let leg = Path(roundedRect: legRect, cornerRadius: legW / 2)
-            form(&ctx, leg, in: legRect, base: legColor, shade: legShade, light: p.palette.light, strength: 0.9)
-            // Where the leg leaves the chest.
-            var inner = ctx
-            inner.clip(to: leg)
-            inner.fill(leg, with: .linearGradient(Gradient(colors: [legShade.opacity(0.3), legShade.opacity(0)]),
-                                                  startPoint: CGPoint(x: x, y: legRect.minY), endPoint: CGPoint(x: x, y: legRect.minY + legH * 0.45)))
-            // Paw: a soft oval on the floor with two toe lines.
-            let pawW = legW * (1.35 + 0.45 * lying), pawH = legW * 0.68
-            let pawRect = CGRect(x: x - pawW / 2 + lying * 5, y: t.bottom - pawH, width: pawW, height: pawH)
-            ctx.fill(Path(ellipseIn: pawRect), with: .color(pawColor))
+            let x = t.centerX + t.hipWidth * spread + lying * 8
+            let r = CGRect(x: x - width / 2, y: t.bottom - height + 2, width: width * (1 + 0.3 * lying), height: height)
+            ctx.fill(Path(ellipseIn: r), with: .color(color))
             if p.detail == .full {
                 var toes = Path()
-                for tx in [-0.2, 0.2] {
-                    let px = pawRect.midX + CGFloat(tx) * pawW
-                    toes.move(to: CGPoint(x: px, y: pawRect.midY + 1))
-                    toes.addLine(to: CGPoint(x: px, y: pawRect.maxY - 1.4))
+                for tx in [-0.18, 0.18] {
+                    toes.move(to: CGPoint(x: r.midX + CGFloat(tx) * r.width, y: r.midY + 1.5))
+                    toes.addLine(to: CGPoint(x: r.midX + CGFloat(tx) * r.width, y: r.maxY - 1.5))
                 }
-                ctx.stroke(toes, with: .color(legShade.opacity(0.5)), style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
+                ctx.stroke(toes, with: .color(p.palette.shade.opacity(0.55)), style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
             }
         }
     }
@@ -299,46 +253,38 @@ public enum PetDraw {
     public static func floorShadow(_ ctx: inout GraphicsContext, _ p: PetPaintContext, spread: Double = 1) {
         let lift = CGFloat(p.live.hop) - CGFloat(min(0, p.rig.lift))
         let k = max(0.55, 1 - lift / 45)
-        let w = (p.torso.hipWidth + 28) * k * spread
-        let h = 13 * k
+        let w = (p.torso.hipWidth + 20) * k * spread
+        let h = 10 * k
         let lean = CGFloat(p.rig.lean + p.live.lean)
         let r = CGRect(x: p.axis - w / 2 + lean * 0.6, y: p.floor - h / 2 + 4, width: w, height: h)
         let shade: Color = p.colorScheme == .dark ? .black : Color(red: 0.30, green: 0.22, blue: 0.18)
-        ctx.fill(Path(ellipseIn: r), with: .radialGradient(
-            Gradient(colors: [shade.opacity(0.26 * k), shade.opacity(0.14 * k), shade.opacity(0)]),
-            center: CGPoint(x: r.midX, y: r.midY), startRadius: 0, endRadius: w * 0.5))
-    }
-
-    /// Soft shadow on the torso under the chin, so the head sits *on* the body.
-    public static func neckShadow(_ ctx: inout GraphicsContext, _ p: PetPaintContext, within: Path) {
-        let h = p.head
-        let r = CGRect(x: h.center.x - h.width * 0.42, y: h.bottom - h.height * 0.14, width: h.width * 0.84, height: h.height * 0.3)
-        contactShadow(&ctx, p, ellipse: r, within: within, opacity: 0.3)
+        ctx.fill(Path(ellipseIn: r), with: .color(shade.opacity(0.14 * k)))
     }
 
     // MARK: Face (positions are fractions of the head)
 
     public struct FaceLayout {
         /// Eye centre offset from the head centre, as a fraction of head width.
-        public var eyeSpacing: CGFloat = 0.21
+        public var eyeSpacing: CGFloat = 0.19
         /// Eye line as a fraction of head height from the centre (negative = above).
         public var eyeY: CGFloat = -0.02
-        public var eyeRadius: CGFloat = 0.083
-        public var mouthY: CGFloat = 0.22
-        public var mouthWidth: CGFloat = 0.13
-        public var blushX: CGFloat = 0.36
-        public var blushY: CGFloat = 0.14
+        public var eyeRadius: CGFloat = 0.055
+        public var mouthY: CGFloat = 0.2
+        public var mouthWidth: CGFloat = 0.1
+        public var blushX: CGFloat = 0.33
+        public var blushY: CGFloat = 0.12
         public init() {}
     }
 
     public static func eyeCenter(_ p: PetPaintContext, layout: FaceLayout, side: CGFloat) -> CGPoint {
         let h = p.head
         let r = h.width * layout.eyeRadius
-        return CGPoint(x: h.center.x + p.faceShift + side * h.width * layout.eyeSpacing + CGFloat(p.rig.gazeX) * r * 0.2,
-                       y: h.center.y + h.height * layout.eyeY + CGFloat(p.rig.gazeY) * r * 0.15)
+        return CGPoint(x: h.center.x + p.faceShift + side * h.width * layout.eyeSpacing + CGFloat(p.rig.gazeX) * r * 0.5,
+                       y: h.center.y + h.height * layout.eyeY + CGFloat(p.rig.gazeY) * r * 0.4)
     }
 
-    /// Both eyes. Highlights stay top-left on both (key light), so eyes are drawn explicitly, not mirrored.
+    /// Both eyes: small ink ovals with one highlight. Drawn explicitly (not mirrored) so the
+    /// highlight stays top-left on both.
     public static func eyes(_ ctx: inout GraphicsContext, _ p: PetPaintContext, layout: FaceLayout = FaceLayout(), lidColor: Color? = nil) {
         let r = p.head.width * layout.eyeRadius * CGFloat(p.rig.eyeScale)
         let lid = lidColor ?? p.palette.base
@@ -351,40 +297,37 @@ public enum PetDraw {
         let rig = p.rig
         let open = CGFloat(rig.eyeOpen)
         let arc = CGFloat(rig.eyeArc)
-        let inkStyle = StrokeStyle(lineWidth: max(p.inkWidth, r * 0.36), lineCap: .round)
+        let inkStyle = StrokeStyle(lineWidth: max(p.inkWidth, r * 0.5), lineCap: .round)
 
-        // Closed: a single curved line. Curves up (^) when happy, down when resting.
+        // Closed: a short line, curving down at rest and up (^) when happy.
         if open < 0.12 {
             var path = Path()
             let dir: CGFloat = arc > 0.3 ? -1 : 1
-            path.move(to: CGPoint(x: c.x - r * 0.95, y: c.y))
-            path.addQuadCurve(to: CGPoint(x: c.x + r * 0.95, y: c.y), control: CGPoint(x: c.x, y: c.y + dir * r * 0.9))
+            path.move(to: CGPoint(x: c.x - r * 1.1, y: c.y))
+            path.addQuadCurve(to: CGPoint(x: c.x + r * 1.1, y: c.y), control: CGPoint(x: c.x, y: c.y + dir * r * 1.0))
             ctx.stroke(path, with: .color(p.ink), style: inkStyle)
             return
         }
-
         // Happy arc replaces the eye entirely once it is strong enough.
         if arc > 0.55 {
             var path = Path()
-            path.move(to: CGPoint(x: c.x - r * 1.0, y: c.y + r * 0.3))
-            path.addQuadCurve(to: CGPoint(x: c.x + r * 1.0, y: c.y + r * 0.3), control: CGPoint(x: c.x, y: c.y - r * 1.2))
+            path.move(to: CGPoint(x: c.x - r * 1.2, y: c.y + r * 0.4))
+            path.addQuadCurve(to: CGPoint(x: c.x + r * 1.2, y: c.y + r * 0.4), control: CGPoint(x: c.x, y: c.y - r * 1.3))
             ctx.stroke(path, with: .color(p.ink), style: inkStyle)
             return
         }
 
-        let height = 2 * r * (0.3 + 0.7 * open) * (1 - 0.3 * arc)
+        let height = 2 * r * 1.15 * (0.35 + 0.65 * open) * (1 - 0.25 * arc)
         let rect = CGRect(x: c.x - r, y: c.y - height / 2, width: 2 * r, height: height)
         let eyePath = Path(ellipseIn: rect)
-
         var eyeCtx = ctx
         eyeCtx.clip(to: eyePath)
         eyeCtx.fill(eyePath, with: .color(p.ink))
 
         // Upper lid: squint / heavy lids cover from the top.
-        let cover = max(CGFloat(rig.eyeSquint) * 0.42, CGFloat(rig.lidHeaviness) * 0.5)
+        let cover = max(CGFloat(rig.eyeSquint) * 0.45, CGFloat(rig.lidHeaviness) * 0.5)
         if cover > 0.01 {
-            let lidRect = rect.offsetBy(dx: 0, dy: -height * (1 - cover))
-            eyeCtx.fill(Path(ellipseIn: lidRect), with: .color(lidColor))
+            eyeCtx.fill(Path(ellipseIn: rect.offsetBy(dx: 0, dy: -height * (1 - cover))), with: .color(lidColor))
         }
         // Angry: the inner corner of the lid comes down in a wedge.
         if rig.browInnerUp < -0.2 {
@@ -392,27 +335,19 @@ public enum PetDraw {
             var wedge = Path()
             let innerX = c.x - side * r
             wedge.move(to: CGPoint(x: innerX, y: c.y - height * 0.7))
-            wedge.addLine(to: CGPoint(x: innerX, y: c.y - height * (0.7 - 0.6 * k)))
+            wedge.addLine(to: CGPoint(x: innerX, y: c.y - height * (0.7 - 0.65 * k)))
             wedge.addLine(to: CGPoint(x: c.x + side * r * 1.05, y: c.y - height * 0.7))
             wedge.closeSubpath()
             eyeCtx.fill(wedge, with: .color(lidColor))
         }
         // Lower lid lifts a little for a soft smile.
         if arc > 0.01 {
-            let lower = rect.offsetBy(dx: 0, dy: height * (1 - arc * 0.55))
-            eyeCtx.fill(Path(ellipseIn: lower), with: .color(lidColor))
+            eyeCtx.fill(Path(ellipseIn: rect.offsetBy(dx: 0, dy: height * (1 - arc * 0.5))), with: .color(lidColor))
         }
-
-        // Highlights: key light top-left on both eyes; a small secondary catch bottom-right.
-        let gx = CGFloat(rig.gazeX) * r * 0.25, gy = CGFloat(rig.gazeY) * r * 0.25
-        let ps = CGFloat(rig.pupilScale)
-        let alpha = Double(min(1, open * 1.5))
-        let big = r * 0.62 * ps
-        eyeCtx.fill(Path(ellipseIn: CGRect(x: c.x - r * 0.38 + gx - big / 2, y: c.y - r * 0.4 + gy - big / 2, width: big, height: big)), with: .color(.white.opacity(0.95 * alpha)))
-        if p.detail == .full {
-            let small = r * 0.26
-            eyeCtx.fill(Path(ellipseIn: CGRect(x: c.x + r * 0.32 + gx - small / 2, y: c.y + r * 0.34 + gy - small / 2, width: small, height: small)), with: .color(.white.opacity(0.7 * alpha)))
-        }
+        // One highlight, top-left, key light.
+        let hl = r * 0.55 * CGFloat(rig.pupilScale)
+        let gx = CGFloat(rig.gazeX) * r * 0.2, gy = CGFloat(rig.gazeY) * r * 0.2
+        eyeCtx.fill(Path(ellipseIn: CGRect(x: c.x - r * 0.42 + gx - hl / 2, y: c.y - r * 0.5 + gy - hl / 2, width: hl, height: hl)), with: .color(.white.opacity(0.95 * Double(min(1, open * 1.5)))))
     }
 
     public static func brows(_ ctx: inout GraphicsContext, _ p: PetPaintContext, layout: FaceLayout = FaceLayout()) {
@@ -422,10 +357,10 @@ public enum PetDraw {
         let r = h.width * layout.eyeRadius * CGFloat(rig.eyeScale)
         for side: CGFloat in [-1, 1] {
             let c = eyeCenter(p, layout: layout, side: side)
-            let cy = c.y - r * 1.55
-            let innerLift = CGFloat(rig.browInnerUp) * r * 0.55
-            let outer = CGPoint(x: c.x + side * r * 0.9, y: cy + innerLift * 0.35)
-            let inner = CGPoint(x: c.x - side * r * 0.7, y: cy - innerLift)
+            let cy = c.y - r * 2.2
+            let innerLift = CGFloat(rig.browInnerUp) * r * 0.8
+            let outer = CGPoint(x: c.x + side * r * 1.2, y: cy + innerLift * 0.35)
+            let inner = CGPoint(x: c.x - side * r * 0.9, y: cy - innerLift)
             var path = Path()
             path.move(to: outer)
             path.addQuadCurve(to: inner, control: CGPoint(x: c.x, y: cy - r * 0.2))
@@ -433,17 +368,16 @@ public enum PetDraw {
         }
     }
 
+    /// Blush shows only when a mood asks for it (happy, excited); neutral pets have none.
     public static func blush(_ ctx: inout GraphicsContext, _ p: PetPaintContext, layout: FaceLayout = FaceLayout()) {
-        guard p.rig.blush > 0.02 else { return }
+        guard p.rig.blush > 0.4 else { return }
         let h = p.head
-        let w = h.width * 0.17, hh = h.height * 0.09
+        let w = h.width * 0.14, hh = h.height * 0.07
+        let alpha = min(1, (p.rig.blush - 0.4) / 0.4)
         for side: CGFloat in [-1, 1] {
             let cx = h.center.x + p.faceShift * 0.6 + side * h.width * layout.blushX
             let cy = h.center.y + h.height * layout.blushY
-            let r = CGRect(x: cx - w / 2, y: cy - hh / 2, width: w, height: hh)
-            ctx.fill(Path(ellipseIn: r), with: .radialGradient(
-                Gradient(colors: [p.palette.blush.opacity(0.5 * p.rig.blush), p.palette.blush.opacity(0)]),
-                center: CGPoint(x: cx, y: cy), startRadius: 0, endRadius: w * 0.55))
+            ctx.fill(Path(ellipseIn: CGRect(x: cx - w / 2, y: cy - hh / 2, width: w, height: hh)), with: .color(p.palette.blush.opacity(0.55 * alpha)))
         }
     }
 
@@ -463,21 +397,19 @@ public enum PetDraw {
         let curve = CGFloat(rig.mouthCurve)
         let open = CGFloat(rig.mouthOpen)
         let line = StrokeStyle(lineWidth: p.inkWidth, lineCap: .round, lineJoin: .round)
-        let inkColor = p.ink
 
-        // Open mouth: a rounded shape with a tongue.
-        if open > 0.08 {
-            let depth = half * (0.8 + 1.5 * open)
+        // Open mouth: a small rounded shape with a tongue.
+        if open > 0.15 {
+            let depth = half * (0.8 + 1.4 * open)
             var m = Path()
             m.move(to: CGPoint(x: mx - half, y: my))
-            m.addQuadCurve(to: CGPoint(x: mx + half, y: my), control: CGPoint(x: mx, y: my - curve * half * 0.5))
+            m.addQuadCurve(to: CGPoint(x: mx + half, y: my), control: CGPoint(x: mx, y: my - curve * half * 0.4))
             m.addQuadCurve(to: CGPoint(x: mx - half, y: my), control: CGPoint(x: mx, y: my + depth * 1.8))
             m.closeSubpath()
             ctx.fill(m, with: .color(Color(red: 0.42, green: 0.16, blue: 0.19)))
             var inner = ctx
             inner.clip(to: m)
-            let tongueH = depth * (0.55 + 0.4 * CGFloat(rig.tongue))
-            inner.fill(Path(ellipseIn: CGRect(x: mx - half * 0.6, y: my + depth * 0.5 - CGFloat(rig.tongue) * depth * 0.25, width: half * 1.2, height: tongueH)), with: .color(Color(red: 0.98, green: 0.56, blue: 0.6)))
+            inner.fill(Path(ellipseIn: CGRect(x: mx - half * 0.6, y: my + depth * 0.5 - CGFloat(rig.tongue) * depth * 0.25, width: half * 1.2, height: depth * (0.55 + 0.4 * CGFloat(rig.tongue)))), with: .color(Color(red: 0.98, green: 0.56, blue: 0.6)))
             return
         }
 
@@ -504,10 +436,10 @@ public enum PetDraw {
                 }
             } else {
                 path.move(to: CGPoint(x: mx - half, y: my))
-                path.addQuadCurve(to: CGPoint(x: mx + half, y: my), control: CGPoint(x: mx, y: my + curve * half * 1.5))
+                path.addQuadCurve(to: CGPoint(x: mx + half, y: my), control: CGPoint(x: mx, y: my + curve * half * 1.6))
             }
         }
-        ctx.stroke(path, with: .color(inkColor), style: line)
+        ctx.stroke(path, with: .color(p.ink), style: line)
 
         if rig.tongue > 0.05 && style != .cat {
             let tw = half * 0.7, th = half * 0.9 * CGFloat(rig.tongue)
@@ -515,70 +447,60 @@ public enum PetDraw {
         }
     }
 
+    /// A sweat drop beside the head (stressed).
     public static func sweat(_ ctx: inout GraphicsContext, _ p: PetPaintContext) {
         guard p.rig.sweat > 0.03 else { return }
         let h = p.head
-        let c = CGPoint(x: h.center.x + h.width * 0.44, y: h.top + h.height * 0.2)
-        let s = h.width * 0.06
+        let c = CGPoint(x: h.center.x + h.width * 0.5, y: h.top + h.height * 0.16)
+        let s = h.width * 0.055
         var drop = Path()
-        drop.move(to: CGPoint(x: c.x, y: c.y - s * 1.4))
+        drop.move(to: CGPoint(x: c.x, y: c.y - s * 1.5))
         drop.addQuadCurve(to: CGPoint(x: c.x + s, y: c.y + s * 0.4), control: CGPoint(x: c.x + s * 1.1, y: c.y - s * 0.6))
         drop.addArc(center: CGPoint(x: c.x, y: c.y + s * 0.4), radius: s, startAngle: .degrees(0), endAngle: .degrees(180), clockwise: false)
-        drop.addQuadCurve(to: CGPoint(x: c.x, y: c.y - s * 1.4), control: CGPoint(x: c.x - s * 1.1, y: c.y - s * 0.6))
-        let blue = Color(red: 0.55, green: 0.78, blue: 0.98)
-        ctx.fill(drop, with: .color(blue.opacity(0.9 * p.rig.sweat)))
-        ctx.fill(Path(ellipseIn: CGRect(x: c.x - s * 0.5, y: c.y - s * 0.3, width: s * 0.4, height: s * 0.5)), with: .color(.white.opacity(0.7 * p.rig.sweat)))
+        drop.addQuadCurve(to: CGPoint(x: c.x, y: c.y - s * 1.5), control: CGPoint(x: c.x - s * 1.1, y: c.y - s * 0.6))
+        ctx.fill(drop, with: .color(Color(red: 0.42, green: 0.72, blue: 0.98).opacity(0.95 * p.rig.sweat)))
     }
 
-    // MARK: Ears & tails (right-side geometry; call inside `mirrored`)
+    // MARK: Ears & tails (right-side geometry)
 
-    /// Pointed ear on the right side of the head. `lift` 0…1 rotates from flattened-out to perked.
-    public static func pointedEar(_ ctx: inout GraphicsContext, _ p: PetPaintContext, side: CGFloat, baseInner: CGPoint, baseOuter: CGPoint, length: CGFloat, innerInset: CGFloat = 0.3) {
-        let twitch = side == 1 ? CGFloat(p.live.earTwitch) * 0.25 : 0
-        let lift = (CGFloat(p.rig.earLift) + twitch).clamped(0, 1.1)
+    /// Pointed ear outline on the right side of the head, in body space (tilt is applied by `silhouette`).
+    public static func pointedEarPath(_ p: PetPaintContext, baseInner: CGPoint, baseOuter: CGPoint, length: CGFloat) -> Path {
+        let lift = (CGFloat(p.rig.earLift) + CGFloat(p.live.earTwitch) * 0.2).clamped(0, 1.1)
         let mid = CGPoint(x: (baseInner.x + baseOuter.x) / 2, y: (baseInner.y + baseOuter.y) / 2)
-        let angle = 0.32 + (1 - lift) * 1.15
+        let angle = 0.3 + (1 - lift) * 1.1
         let tip = CGPoint(x: mid.x + sin(angle) * length, y: mid.y - cos(angle) * length)
         var ear = Path()
         ear.move(to: baseInner)
-        ear.addQuadCurve(to: tip, control: CGPoint(x: (baseInner.x + tip.x) / 2 - length * 0.1, y: (baseInner.y + tip.y) / 2))
-        ear.addQuadCurve(to: baseOuter, control: CGPoint(x: (baseOuter.x + tip.x) / 2 + length * 0.08, y: (baseOuter.y + tip.y) / 2))
+        ear.addQuadCurve(to: tip, control: CGPoint(x: (baseInner.x + tip.x) / 2 - length * 0.08, y: (baseInner.y + tip.y) / 2))
+        ear.addQuadCurve(to: baseOuter, control: CGPoint(x: (baseOuter.x + tip.x) / 2 + length * 0.1, y: (baseOuter.y + tip.y) / 2))
+        // Close along the head so the union has no seam.
+        ear.addLine(to: CGPoint(x: mid.x, y: mid.y + length * 0.3))
         ear.closeSubpath()
-        let bounds = ear.boundingRect
-        fur(&ctx, p, ear, in: bounds, strength: 0.8)
-        let innerTip = lerp(mid, tip, 1 - innerInset)
-        let iFrom = lerp(baseInner, mid, innerInset * 1.1)
-        let iTo = lerp(baseOuter, mid, innerInset * 1.1)
+        return ear
+    }
+
+    /// Inner ear for a pointed ear: a smaller triangle inset from the outline.
+    public static func innerEar(_ ctx: inout GraphicsContext, _ p: PetPaintContext, baseInner: CGPoint, baseOuter: CGPoint, length: CGFloat, color: Color) {
+        let lift = (CGFloat(p.rig.earLift) + CGFloat(p.live.earTwitch) * 0.2).clamped(0, 1.1)
+        let mid = CGPoint(x: (baseInner.x + baseOuter.x) / 2, y: (baseInner.y + baseOuter.y) / 2)
+        let angle = 0.3 + (1 - lift) * 1.1
+        let tip = CGPoint(x: mid.x + sin(angle) * length, y: mid.y - cos(angle) * length)
+        let iFrom = lerp(baseInner, mid, 0.4), iTo = lerp(baseOuter, mid, 0.4), iTip = lerp(mid, tip, 0.72)
         var inner = Path()
         inner.move(to: iFrom)
-        inner.addQuadCurve(to: innerTip, control: CGPoint(x: (iFrom.x + innerTip.x) / 2 - length * 0.08, y: (iFrom.y + innerTip.y) / 2))
-        inner.addQuadCurve(to: iTo, control: CGPoint(x: (iTo.x + innerTip.x) / 2 + length * 0.04, y: (iTo.y + innerTip.y) / 2))
+        inner.addQuadCurve(to: iTip, control: CGPoint(x: (iFrom.x + iTip.x) / 2 - length * 0.05, y: (iFrom.y + iTip.y) / 2))
+        inner.addQuadCurve(to: iTo, control: CGPoint(x: (iTo.x + iTip.x) / 2 + length * 0.05, y: (iTo.y + iTip.y) / 2))
         inner.closeSubpath()
-        ctx.fill(inner, with: .color(p.palette.earInner.opacity(0.9)))
+        ctx.fill(inner.applying(p.headTilt), with: .color(color))
     }
 
-    /// Round ear.
-    public static func roundEar(_ ctx: inout GraphicsContext, _ p: PetPaintContext, center: CGPoint, radius: CGFloat, innerRatio: CGFloat = 0.55, rim: Color? = nil) {
-        let r = CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
-        if let rim {
-            let rr = r.insetBy(dx: -radius * 0.1, dy: -radius * 0.1)
-            ctx.fill(Path(ellipseIn: rr), with: .color(rim))
-        }
-        fur(&ctx, p, Path(ellipseIn: r), in: r, strength: 0.8)
-        let ir = radius * innerRatio
-        ctx.fill(Path(ellipseIn: CGRect(x: center.x - ir, y: center.y - ir + radius * 0.1, width: ir * 2, height: ir * 2)), with: .color(p.palette.earInner.opacity(0.95)))
-    }
-
-    /// A tail that wraps around the front of the haunch along the floor when down and
-    /// rises beside the body when lifted. Returns the path so painters can add rings.
+    /// A tail that wraps around the front of the haunch when down and rises beside the body when up.
     @discardableResult
     public static func tail(_ ctx: inout GraphicsContext, _ p: PetPaintContext, width: CGFloat, length: CGFloat, color: Color, tip: Color? = nil) -> (path: Path, end: CGPoint) {
         let t = p.torso
         let lift = CGFloat(p.rig.tailLift)
         let wag = CGFloat(p.live.tailWag)
         let start = CGPoint(x: t.centerX + t.hipWidth * 0.3, y: t.bottom - width * 0.6)
-        // Down: sweeps along the floor to the right and curls up at the tip.
-        // Up: rises beside the body and curls inward.
         let downEnd = CGPoint(x: start.x + length * 0.72, y: t.bottom - width * 0.55 - length * 0.12)
         let upEnd = CGPoint(x: start.x + length * 0.42 + wag * 10, y: t.bottom - length * 0.95)
         let end = lerp(downEnd, upEnd, lift)
@@ -590,12 +512,11 @@ public enum PetDraw {
         path.move(to: start)
         path.addCurve(to: end, control1: lerp(downC1, upC1, lift), control2: lerp(downC2, upC2, lift))
         let stroked = path.strokedPath(StrokeStyle(lineWidth: width, lineCap: .round))
-        form(&ctx, stroked, in: stroked.boundingRect, base: color, shade: p.palette.shade, light: p.palette.light, strength: 0.9)
+        ctx.fill(stroked, with: .color(color))
         if let tip {
-            let tr = CGRect(x: end.x - width * 0.5, y: end.y - width * 0.5, width: width, height: width)
             var inner = ctx
             inner.clip(to: stroked)
-            inner.fill(Path(ellipseIn: tr.insetBy(dx: -width * 0.2, dy: -width * 0.2)), with: .color(tip))
+            inner.fill(Path(ellipseIn: CGRect(x: end.x - width * 0.7, y: end.y - width * 0.7, width: width * 1.4, height: width * 1.4)), with: .color(tip))
         }
         return (path, end)
     }
@@ -622,15 +543,15 @@ public extension PetSpecies {
     var anatomy: PetAnatomy {
         switch self {
         case .cat:
-            PetAnatomy(headWidth: 90, headHeight: 76, headOverlap: 16, cheekSquareness: 0.35, torsoHeight: 84, chestWidth: 64, hipWidth: 104, legWidth: 15)
+            PetAnatomy(headWidth: 96, headHeight: 82, headOverlap: 30, cheekSquareness: 0.35, torsoHeight: 76, chestWidth: 74, hipWidth: 100)
         case .dog:
-            PetAnatomy(headWidth: 92, headHeight: 78, headOverlap: 16, cheekSquareness: 0.3, torsoHeight: 86, chestWidth: 68, hipWidth: 106, legWidth: 16)
+            PetAnatomy(headWidth: 98, headHeight: 84, headOverlap: 30, cheekSquareness: 0.3, torsoHeight: 78, chestWidth: 76, hipWidth: 102)
         case .capybara:
-            PetAnatomy(headWidth: 96, headHeight: 66, headOverlap: 14, cheekSquareness: 0.75, torsoHeight: 80, chestWidth: 86, hipWidth: 118, legWidth: 17, eyeRadius: 0.058)
+            PetAnatomy(headWidth: 100, headHeight: 74, headOverlap: 24, cheekSquareness: 0.8, torsoHeight: 74, chestWidth: 88, hipWidth: 112, eyeRadius: 0.045)
         case .penguin:
-            PetAnatomy(headWidth: 78, headHeight: 70, headOverlap: 30, cheekSquareness: 0.2, torsoHeight: 104, chestWidth: 78, hipWidth: 96, legWidth: 0, eyeRadius: 0.09)
+            PetAnatomy(headWidth: 84, headHeight: 78, headOverlap: 34, cheekSquareness: 0.2, torsoHeight: 96, chestWidth: 82, hipWidth: 100, eyeRadius: 0.06)
         case .redPanda:
-            PetAnatomy(headWidth: 92, headHeight: 76, headOverlap: 16, cheekSquareness: 0.4, torsoHeight: 82, chestWidth: 66, hipWidth: 108, legWidth: 16)
+            PetAnatomy(headWidth: 98, headHeight: 82, headOverlap: 30, cheekSquareness: 0.4, torsoHeight: 76, chestWidth: 74, hipWidth: 104)
         }
     }
 }
@@ -639,10 +560,7 @@ public extension PetDraw {
     /// A context rotated by the rig's head tilt about the neck. Draw head parts through it.
     static func headContext(_ ctx: GraphicsContext, _ p: PetPaintContext) -> GraphicsContext {
         var hc = ctx
-        let neck = CGPoint(x: p.head.center.x, y: p.head.bottom - 6)
-        hc.translateBy(x: neck.x, y: neck.y)
-        hc.rotate(by: .degrees(p.rig.tilt))
-        hc.translateBy(x: -neck.x, y: -neck.y)
+        hc.concatenate(p.headTilt)
         return hc
     }
 }

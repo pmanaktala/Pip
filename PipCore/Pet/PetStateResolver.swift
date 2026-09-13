@@ -45,7 +45,7 @@ public enum PetStateResolver {
             rig.tailLift = 0.85
             rig.armRaise = 0.15
             rig.squash = 1.03
-            rig.tilt = 3
+            rig.tilt = 5
             motion.hopHeight = 5
             motion.hopInterval = 4.5
             motion.tailWagRate = 1.1
@@ -66,6 +66,7 @@ public enum PetStateResolver {
             rig.armRaise = 0.9
             rig.squash = 1.06
             rig.lean = 0
+            rig.tilt = -4
             motion.hopHeight = 12
             motion.hopInterval = 2.2
             motion.tailWagRate = 2.4
@@ -87,6 +88,7 @@ public enum PetStateResolver {
             rig.tailLift = 0.3
             rig.squash = 0.97
             rig.headDrop = 0.15
+            rig.tilt = 4
             motion.breathRate = 0.18
             motion.breathAmount = 0.026
             motion.tailWagRate = 0.25
@@ -99,8 +101,9 @@ public enum PetStateResolver {
             env.tintStrength = 0.35
 
         case .neutral:
-            rig.mouthCurve = 0.3
-            rig.blush = 0.25
+            rig.mouthCurve = 0.35
+            rig.blush = 0.2
+            rig.tilt = 3
             rig.earLift = 0.8
             rig.tailLift = 0.5
             motion.tailWagRate = 0.4
@@ -118,8 +121,9 @@ public enum PetStateResolver {
             rig.squash = 0.92
             rig.lying = 0.7
             rig.headDrop = 0.6
-            rig.blush = 0.2
+            rig.blush = 0.3
             rig.gazeY = 0.25
+            rig.tilt = 6
             motion.breathRate = 0.14
             motion.breathAmount = 0.032
             motion.blinkInterval = 2.5
@@ -165,6 +169,7 @@ public enum PetStateResolver {
             rig.mouthCurve = -0.6
             rig.mouthWidth = 0.8
             rig.eyeOpen = 0.8
+            rig.lidHeaviness = 0.35
             rig.pupilScale = 1.1
             rig.gazeY = 0.35
             rig.browInnerUp = 0.9

@@ -52,7 +52,9 @@ struct PetSelectorView: View {
                             .padding(.horizontal, 24)
                             .padding(.vertical, 12)
                     }
-                    .buttonStyle(.glassProminent)
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.capsule)
+                    .controlSize(.large)
                     Text("Your mood history stays with you.")
                         .font(PipFont.footnote)
                         .foregroundStyle(.secondary)
@@ -61,7 +63,7 @@ struct PetSelectorView: View {
             .padding(.bottom, PipSpacing.xl)
             .animation(.smooth, value: selection == appState.identity.species)
         }
-        .background(LinearGradient(colors: [PipColor.sceneTop, PipColor.sceneBottom], startPoint: .top, endPoint: .bottom).ignoresSafeArea())
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("Pets")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
@@ -102,11 +104,11 @@ struct PetCard: View {
                 .font(PipFont.title)
             Text(species.displayName)
                 .font(PipFont.caption)
-                .foregroundStyle(.secondary)
+                .opacity(0.7)
                 .textCase(.uppercase)
             Text(species.blurb)
                 .font(PipFont.body)
-                .foregroundStyle(.secondary)
+                .opacity(0.8)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, PipSpacing.l)
             Spacer(minLength: 0)

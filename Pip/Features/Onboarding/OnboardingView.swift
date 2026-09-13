@@ -17,8 +17,9 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [PipColor.sceneTop, PipColor.sceneBottom], startPoint: .top, endPoint: .bottom)
+            pageColor
                 .ignoresSafeArea()
+                .animation(.smooth(duration: 0.6), value: step)
 
             VStack(spacing: PipSpacing.l) {
                 Spacer(minLength: 0)
@@ -29,9 +30,21 @@ struct OnboardingView: View {
                 controls
             }
             .padding(PipSpacing.l)
+            .foregroundStyle(.white)
         }
         .animation(.spring(duration: 0.5, bounce: 0.1), value: step)
         .onAppear { wave = true }
+    }
+
+    /// Each step has its own colour; text is white on it.
+    private var pageColor: Color {
+        switch step {
+        case .welcome: MoodColor.bold(.calm)
+        case .pet: MoodColor.bold(.happy)
+        case .name: MoodColor.bold(.excited)
+        case .health: MoodColor.bold(.sad)
+        case .notifications: MoodColor.bold(.neutral)
+        }
     }
 
     // MARK: Steps
@@ -48,7 +61,7 @@ struct OnboardingView: View {
                     .multilineTextAlignment(.center)
                 Text("Tell Pip how you feel. Your pet feels it with you, lives on your Home Screen, and keeps everything on your device.")
                     .font(PipFont.body)
-                    .foregroundStyle(.secondary)
+                    .opacity(0.9)
                     .multilineTextAlignment(.center)
             }
         case .pet:
@@ -80,11 +93,11 @@ struct OnboardingView: View {
                     .focused($nameFocused)
                     .padding(.vertical, 14)
                     .padding(.horizontal, 24)
-                    .glassEffect(.regular, in: .capsule)
+                    .background(.white.opacity(0.22), in: Capsule())
                     .onSubmit { advance() }
                 Text("Or keep \(species.defaultName). Either is lovely.")
                     .font(PipFont.footnote)
-                    .foregroundStyle(.secondary)
+                    .opacity(0.85)
             }
         case .health:
             permissionStep(
@@ -105,13 +118,12 @@ struct OnboardingView: View {
                 .frame(width: 180, height: 180)
             Image(systemName: symbol)
                 .font(.title)
-                .foregroundStyle(Color.accentColor)
             Text(title)
                 .font(PipFont.title)
                 .multilineTextAlignment(.center)
             Text(body)
                 .font(PipFont.body)
-                .foregroundStyle(.secondary)
+                .opacity(0.9)
                 .multilineTextAlignment(.center)
         }
     }
@@ -158,17 +170,19 @@ struct OnboardingView: View {
         Button(action: action) {
             Text(title)
                 .font(PipFont.headline)
-                .frame(maxWidth: 320)
-                .padding(.vertical, 8)
+                .foregroundStyle(pageColor)
+                .frame(maxWidth: 360)
+                .padding(.vertical, 16)
+                .background(.white, in: RoundedRectangle(cornerRadius: PipRadius.card, style: .continuous))
         }
-        .buttonStyle(.glassProminent)
-        .controlSize(.large)
+        .buttonStyle(PressableButtonStyle())
     }
 
     private func secondary(_ title: String, action: @escaping () -> Void) -> some View {
         Button(title, action: action)
-            .font(PipFont.callout)
-            .foregroundStyle(.secondary)
+            .font(PipFont.headline)
+            .foregroundStyle(.white.opacity(0.85))
+            .padding(.vertical, 8)
     }
 
     private var displayName: String { name.trimmingCharacters(in: .whitespaces).isEmpty ? species.defaultName : name }

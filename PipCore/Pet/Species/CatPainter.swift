@@ -1,93 +1,64 @@
 import SwiftUI
 
-/// Mochi — a sitting orange tabby. Tall triangular ears, forehead stripes, a pale
-/// muzzle with an ω mouth, and a tail that wraps around the front paws when relaxed.
+/// Mochi — a sitting orange tabby. One silhouette with triangular ears, a pale chest,
+/// three forehead stripes, small eyes, a tiny nose and ω mouth, a wrapping tail, a bell collar.
 public enum CatPainter: PetPainter {
     public static func paint(_ ctx: inout GraphicsContext, _ p: PetPaintContext) {
-        PetDraw.body(&ctx, p, pawColor: p.palette.light)
+        let h = p.head
+        let earInner = h.point(0.14, -0.44), earOuter = h.point(0.44, -0.16)
+        let earLen: CGFloat = 34
+        let ear = PetDraw.pointedEarPath(p, baseInner: earInner, baseOuter: earOuter, length: earLen)
+        let silhouette = PetDraw.silhouette(p, extras: [PetDraw.symmetric(ear)])
+        ctx.fill(silhouette, with: .color(p.palette.base))
+
+        PetDraw.belly(&ctx, p, within: silhouette, widthFraction: 0.5, heightFraction: 0.5)
 
         // Tail in front of the haunch, wrapping around the paws when down.
-        PetDraw.tail(&ctx, p, width: 14, length: 64, color: p.palette.base, tip: p.palette.marking)
+        PetDraw.tail(&ctx, p, width: 13, length: 62, color: p.palette.base, tip: p.palette.marking)
+        PetDraw.paws(&ctx, p, color: p.palette.light)
+
+        // Inner ears.
+        PetDraw.mirrored(&ctx) { ctx, _ in
+            PetDraw.innerEar(&ctx, p, baseInner: earInner, baseOuter: earOuter, length: earLen, color: p.palette.earInner)
+        }
 
         var hc = PetDraw.headContext(ctx, p)
-        let h = p.head
-        let head = PetDraw.headPath(h)
 
-        // Ears sit behind the head.
-        PetDraw.mirrored(&hc) { ctx, side in
-            PetDraw.pointedEar(&ctx, p, side: side, baseInner: h.point(0.16, -0.46), baseOuter: h.point(0.44, -0.2), length: 32)
-        }
-
-        PetDraw.neckShadow(&ctx, p, within: PetDraw.torsoPath(p.torso))
-        PetDraw.fur(&hc, p, head, in: h.rect)
-
-        // Tabby stripes: an "M" on the forehead and one bar on each cheek.
+        // Three short forehead stripes.
         if p.detail == .full {
-            var stripes = hc
-            stripes.clip(to: head)
-            let stripeStyle = StrokeStyle(lineWidth: 3.4, lineCap: .round)
-            let stripeColor = p.palette.marking.opacity(0.55)
-            var mid = Path()
-            mid.move(to: CGPoint(x: h.center.x, y: h.top + 2))
-            mid.addLine(to: CGPoint(x: h.center.x, y: h.top + h.height * 0.2))
-            stripes.stroke(mid, with: .color(stripeColor), style: stripeStyle)
-            PetDraw.mirrored(&stripes) { ctx, _ in
-                var s = Path()
-                s.move(to: CGPoint(x: h.center.x + h.width * 0.11, y: h.top + 1))
-                s.addQuadCurve(to: CGPoint(x: h.center.x + h.width * 0.13, y: h.top + h.height * 0.17), control: CGPoint(x: h.center.x + h.width * 0.1, y: h.top + h.height * 0.08))
-                ctx.stroke(s, with: .color(stripeColor), style: stripeStyle)
-                var cheek = Path()
-                cheek.move(to: CGPoint(x: h.center.x + h.width * 0.5, y: h.center.y - 1))
-                cheek.addLine(to: CGPoint(x: h.center.x + h.width * 0.4, y: h.center.y + 3))
-                ctx.stroke(cheek, with: .color(stripeColor.opacity(0.8)), style: stripeStyle)
+            var stripes = Path()
+            for i in -1...1 {
+                let x = h.center.x + CGFloat(i) * h.width * 0.1
+                stripes.move(to: CGPoint(x: x, y: h.top + h.height * 0.04))
+                stripes.addLine(to: CGPoint(x: x, y: h.top + h.height * (0.16 - 0.03 * CGFloat(abs(i)))))
             }
+            hc.stroke(stripes, with: .color(p.palette.marking), style: StrokeStyle(lineWidth: 3.2, lineCap: .round))
         }
-
-        // Muzzle: a paler patch around nose and mouth.
-        let mz = CGRect(x: h.center.x + p.faceShift - h.width * 0.2, y: h.center.y + h.height * 0.1, width: h.width * 0.4, height: h.height * 0.26)
-        hc.fill(Path(ellipseIn: mz), with: .color(p.palette.belly.opacity(0.7)))
 
         var layout = PetDraw.FaceLayout()
-        layout.eyeSpacing = 0.21
-        layout.eyeY = -0.02
+        layout.eyeSpacing = 0.2
+        layout.eyeY = 0.0
         layout.eyeRadius = p.anatomy.eyeRadius
-        layout.mouthY = 0.24
-        layout.mouthWidth = 0.14
-        layout.blushX = 0.37
+        layout.mouthY = 0.22
+        layout.mouthWidth = 0.1
+        layout.blushX = 0.34
         layout.blushY = 0.13
         PetDraw.blush(&hc, p, layout: layout)
         PetDraw.eyes(&hc, p, layout: layout)
         PetDraw.brows(&hc, p, layout: layout)
 
-        // Nose: a small rounded triangle just above the mouth.
+        // Tiny nose.
         let a = PetDraw.mouthAnchor(p, layout: layout)
-        let ns = h.width * 0.034
-        let ny = a.y - ns * 1.4
+        let ns = h.width * 0.03
         var nose = Path()
-        nose.move(to: CGPoint(x: a.x - ns, y: ny - ns * 0.5))
-        nose.addLine(to: CGPoint(x: a.x + ns, y: ny - ns * 0.5))
-        nose.addQuadCurve(to: CGPoint(x: a.x, y: ny + ns * 0.9), control: CGPoint(x: a.x + ns * 0.8, y: ny + ns * 0.7))
-        nose.addQuadCurve(to: CGPoint(x: a.x - ns, y: ny - ns * 0.5), control: CGPoint(x: a.x - ns * 0.8, y: ny + ns * 0.7))
+        nose.move(to: CGPoint(x: a.x - ns, y: a.y - ns * 2.2))
+        nose.addLine(to: CGPoint(x: a.x + ns, y: a.y - ns * 2.2))
+        nose.addQuadCurve(to: CGPoint(x: a.x, y: a.y - ns * 0.8), control: CGPoint(x: a.x + ns * 0.6, y: a.y - ns * 0.9))
+        nose.addQuadCurve(to: CGPoint(x: a.x - ns, y: a.y - ns * 2.2), control: CGPoint(x: a.x - ns * 0.6, y: a.y - ns * 0.9))
         hc.fill(nose, with: .color(p.palette.nose))
 
         PetDraw.mouth(&hc, p, style: .cat, layout: layout)
-
-        // Whiskers: three per side, mirrored, fading toward the tips.
-        if p.detail == .full {
-            PetDraw.mirrored(&hc) { ctx, _ in
-                var whiskers = Path()
-                for (i, dy) in [-0.03, 0.03, 0.09].enumerated() {
-                    let x0 = h.center.x + h.width * 0.3
-                    let y0 = h.center.y + h.height * (0.17 + dy)
-                    let angle = CGFloat(i - 1) * 0.17
-                    let len = h.width * 0.24
-                    whiskers.move(to: CGPoint(x: x0, y: y0))
-                    whiskers.addLine(to: CGPoint(x: x0 + cos(angle) * len, y: y0 + sin(angle) * len))
-                }
-                ctx.stroke(whiskers, with: .color(p.palette.shade.opacity(0.45)), style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
-            }
-        }
-
+        PetProps.collar(&hc, p)
         PetDraw.sweat(&hc, p)
     }
 }

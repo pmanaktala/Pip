@@ -10,13 +10,34 @@ struct PetHomeWidget: Widget {
         StaticConfiguration(kind: "com.pmanaktala.Pip.pet", provider: PetTimelineProvider()) { entry in
             PetHomeWidgetEntryView(entry: entry)
                 .containerBackground(for: .widget) {
-                    LinearGradient(colors: [PipColor.sceneTop, PipColor.sceneBottom], startPoint: .top, endPoint: .bottom)
+                    WidgetCanvas(snapshot: entry.snapshot, date: entry.date)
                 }
         }
         .configurationDisplayName("Pip")
         .description("Your pet, right here on your Home Screen.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
         .contentMarginsDisabled()
+    }
+}
+
+/// The widget's ground: system background washed with the current mood's colour.
+struct WidgetCanvas: View {
+    var snapshot: PetSnapshot
+    var date: Date
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        let mood: Mood? = {
+            guard let m = snapshot.mood, let at = snapshot.loggedAt, date.timeIntervalSince(at) < PetSnapshot.freshness else { return nil }
+            return m
+        }()
+        ZStack {
+            Color(.systemBackground)
+            LinearGradient(colors: [
+                (mood.map(MoodColor.bold) ?? PipColor.sceneTop).opacity(mood == nil ? (scheme == .dark ? 0.5 : 1) : (scheme == .dark ? 0.3 : 0.22)),
+                (mood.map(MoodColor.bold) ?? PipColor.sceneBottom).opacity(mood == nil ? (scheme == .dark ? 0.4 : 0.7) : 0.06),
+            ], startPoint: .top, endPoint: .bottom)
+        }
     }
 }
 

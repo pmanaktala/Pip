@@ -24,8 +24,8 @@ public struct PetPalette: Sendable {
         switch species {
         case .cat:
             PetPalette(
-                base: Color(red: 0.96, green: 0.72, blue: 0.42),
-                shade: Color(red: 0.84, green: 0.54, blue: 0.27),
+                base: Color(red: 0.98, green: 0.70, blue: 0.34),
+                shade: Color(red: 0.88, green: 0.52, blue: 0.20),
                 light: Color(red: 0.99, green: 0.85, blue: 0.62),
                 belly: Color(red: 1.0, green: 0.95, blue: 0.87),
                 earInner: Color(red: 0.98, green: 0.74, blue: 0.70),
@@ -36,8 +36,8 @@ public struct PetPalette: Sendable {
             )
         case .dog:
             PetPalette(
-                base: Color(red: 0.94, green: 0.85, blue: 0.70),
-                shade: Color(red: 0.80, green: 0.66, blue: 0.48),
+                base: Color(red: 0.98, green: 0.88, blue: 0.72),
+                shade: Color(red: 0.86, green: 0.70, blue: 0.50),
                 light: Color(red: 0.99, green: 0.94, blue: 0.84),
                 belly: Color(red: 1.0, green: 0.97, blue: 0.92),
                 earInner: Color(red: 0.52, green: 0.35, blue: 0.24),
@@ -48,8 +48,8 @@ public struct PetPalette: Sendable {
             )
         case .capybara:
             PetPalette(
-                base: Color(red: 0.77, green: 0.58, blue: 0.40),
-                shade: Color(red: 0.58, green: 0.41, blue: 0.27),
+                base: Color(red: 0.80, green: 0.60, blue: 0.40),
+                shade: Color(red: 0.62, green: 0.44, blue: 0.27),
                 light: Color(red: 0.88, green: 0.72, blue: 0.54),
                 belly: Color(red: 0.88, green: 0.75, blue: 0.58),
                 earInner: Color(red: 0.52, green: 0.36, blue: 0.24),
@@ -60,9 +60,9 @@ public struct PetPalette: Sendable {
             )
         case .penguin:
             PetPalette(
-                base: Color(red: 0.25, green: 0.30, blue: 0.41),
-                shade: Color(red: 0.15, green: 0.18, blue: 0.27),
-                light: Color(red: 0.38, green: 0.44, blue: 0.57),
+                base: Color(red: 0.20, green: 0.22, blue: 0.26),
+                shade: Color(red: 0.12, green: 0.13, blue: 0.16),
+                light: Color(red: 0.32, green: 0.34, blue: 0.40),
                 belly: Color(red: 0.98, green: 0.97, blue: 0.94),
                 earInner: Color(red: 0.98, green: 0.80, blue: 0.40),
                 marking: Color(red: 0.98, green: 0.80, blue: 0.40),
@@ -72,8 +72,8 @@ public struct PetPalette: Sendable {
             )
         case .redPanda:
             PetPalette(
-                base: Color(red: 0.87, green: 0.46, blue: 0.22),
-                shade: Color(red: 0.67, green: 0.30, blue: 0.13),
+                base: Color(red: 0.93, green: 0.49, blue: 0.21),
+                shade: Color(red: 0.74, green: 0.32, blue: 0.11),
                 light: Color(red: 0.96, green: 0.62, blue: 0.36),
                 belly: Color(red: 0.31, green: 0.20, blue: 0.15),
                 earInner: Color(red: 0.98, green: 0.93, blue: 0.86),
@@ -86,16 +86,5 @@ public struct PetPalette: Sendable {
     }
 
     /// Ambient colour associated with a mood; always paired with shape/pose so colour is never the sole cue.
-    public static func ambient(for mood: Mood) -> Color {
-        switch mood {
-        case .happy: Color(red: 1.0, green: 0.80, blue: 0.50)
-        case .excited: Color(red: 1.0, green: 0.66, blue: 0.56)
-        case .calm: Color(red: 0.56, green: 0.84, blue: 0.76)
-        case .neutral: Color(red: 0.78, green: 0.80, blue: 0.86)
-        case .tired: Color(red: 0.60, green: 0.60, blue: 0.88)
-        case .stressed: Color(red: 0.98, green: 0.68, blue: 0.40)
-        case .sad: Color(red: 0.55, green: 0.70, blue: 0.92)
-        case .frustrated: Color(red: 0.96, green: 0.55, blue: 0.48)
-        }
-    }
+    public static func ambient(for mood: Mood) -> Color { MoodColor.bold(mood) }
 }

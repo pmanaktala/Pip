@@ -12,7 +12,7 @@ struct MoodPickerSheet: View {
     @Environment(\.dynamicTypeSize) private var typeSize
 
     private var columns: [GridItem] {
-        [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 150 : 72), spacing: 10)]
+        Array(repeating: GridItem(.flexible(), spacing: 12), count: typeSize.isAccessibilitySize ? 1 : 2)
     }
 
     var body: some View {
@@ -20,22 +20,26 @@ struct MoodPickerSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: PipSpacing.l) {
                     if let logged {
+                        loggedHeader(for: logged)
                         refinement(for: logged)
                     } else {
+                        Text("How are you feeling?")
+                            .font(PipFont.title)
+                            .padding(.top, PipSpacing.s)
                         picker
                     }
                 }
                 .padding(.horizontal, PipSpacing.m)
-                .padding(.top, PipSpacing.s)
                 .padding(.bottom, PipSpacing.xl)
             }
             .scrollDismissesKeyboard(.interactively)
-            .navigationTitle(logged == nil ? "How are you feeling?" : "\(appState.identity.name) \(logged!.mood.petDescription)")
+            .navigationTitle(logged == nil ? "" : "\(appState.identity.name) \(logged!.mood.petDescription)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if logged != nil {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Done") { dismiss() }
+                            .font(PipFont.headline)
                     }
                 }
             }
@@ -46,7 +50,7 @@ struct MoodPickerSheet: View {
     // MARK: Step 1
 
     private var picker: some View {
-        LazyVGrid(columns: columns, spacing: 10) {
+        LazyVGrid(columns: columns, spacing: 12) {
             ForEach(Mood.allCases) { mood in
                 MoodChoice(mood: mood, identity: appState.identity) {
                     choose(mood)
@@ -60,6 +64,28 @@ struct MoodPickerSheet: View {
         withAnimation(.spring(duration: 0.7, bounce: 0.3)) {
             logged = appState.log(mood: mood, intensity: intensity)
         }
+    }
+
+    /// The pet, reacting, on a card in the mood's colour. This is the reward for logging.
+    private func loggedHeader(for entry: MoodEntry) -> some View {
+        HStack(spacing: PipSpacing.m) {
+            AnimatedPetView(identity: appState.identity, state: PetStateResolver.resolve(mood: entry.mood, intensity: intensity, identity: appState.identity), showsShadow: false)
+                .frame(width: 120, height: 120)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(entry.mood.displayName)
+                    .font(PipFont.title)
+                Text("\(appState.identity.name) \(entry.mood.petDescription).")
+                    .font(PipFont.callout)
+                    .opacity(0.9)
+            }
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(.white)
+        .padding(PipSpacing.m)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(MoodColor.bold(entry.mood), in: RoundedRectangle(cornerRadius: PipRadius.card, style: .continuous))
+        .transition(.scale(scale: 0.92).combined(with: .opacity))
+        .accessibilityHidden(true)
     }
 
     // MARK: Step 2 (optional)
@@ -99,9 +125,10 @@ struct MoodPickerSheet: View {
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
                     }
-                    .buttonStyle(.glass)
-                    .tint(on ? Color.accentColor : nil)
-                    .glassEffect(on ? .regular.tint(Color.accentColor.opacity(0.35)) : .identity, in: .capsule)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(on ? .white : .primary)
+                    .background(on ? MoodColor.bold(entry.mood) : Color(.secondarySystemFill), in: Capsule())
+                    .animation(.smooth(duration: 0.2), value: on)
                     .accessibilityAddTraits(on ? .isSelected : [])
                 }
             }
@@ -127,7 +154,7 @@ struct MoodPickerSheet: View {
     }
 }
 
-/// One large, visual mood choice: a tiny pet face in that mood plus its name.
+/// One mood: a colour card with the pet's face in that mood and the name. Colour and face together.
 struct MoodChoice: View {
     var mood: Mood
     var identity: PetIdentity
@@ -135,21 +162,23 @@ struct MoodChoice: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 4) {
+            HStack(spacing: 10) {
                 PetView(identity: identity, state: PetStateResolver.resolve(mood: mood, identity: identity), showsShadow: false, framing: .badge)
-                    .frame(width: 56, height: 56)
+                    .frame(width: 52, height: 52)
+                    .background(.white.opacity(0.28), in: Circle())
                 Text(mood.displayName)
-                    .font(PipFont.caption)
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
-                    .minimumScaleFactor(0.85)
+                    .font(PipFont.headline)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Spacer(minLength: 0)
             }
-            .padding(.vertical, 8)
-            .frame(maxWidth: .infinity)
-            .background(PetPalette.ambient(for: mood).opacity(0.18), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(MoodColor.bold(mood), in: RoundedRectangle(cornerRadius: PipRadius.tile, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableButtonStyle())
         .accessibilityLabel(mood.displayName)
         .accessibilityHint("Logs this mood.")
     }

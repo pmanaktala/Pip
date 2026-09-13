@@ -57,3 +57,18 @@ public struct OpenPetIntent: AppIntent {
         .result()
     }
 }
+
+/// Wave at the pet from a Live Activity. Runs in the app's process and updates the moment's pose.
+public struct WaveAtPetIntent: AppIntent, LiveActivityIntent {
+    public static let title: LocalizedStringResource = "Wave"
+    public static let description = IntentDescription("Say hi to your pet.")
+    public static let openAppWhenRun = false
+
+    public init() {}
+
+    @MainActor
+    public func perform() async throws -> some IntentResult {
+        await PetMomentManager.shared.wave()
+        return .result()
+    }
+}

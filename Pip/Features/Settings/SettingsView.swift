@@ -17,17 +17,21 @@ struct SettingsView: View {
                 NavigationLink {
                     PetSelectorView()
                 } label: {
-                    HStack(spacing: 12) {
-                        PetView(identity: appState.identity, state: PetStateResolver.resting(identity: appState.identity), showsShadow: false, framing: .badge)
-                            .frame(width: 44, height: 44)
-                        VStack(alignment: .leading) {
-                            Text(appState.identity.name).font(PipFont.headline)
-                            Text(appState.identity.species.displayName).font(PipFont.caption).foregroundStyle(.secondary)
+                    HStack(spacing: PipSpacing.m) {
+                        PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: .happy, intensity: .slight, identity: appState.identity), showsShadow: false, framing: .face)
+                            .frame(width: 84, height: 84)
+                            .background(.white.opacity(0.28), in: Circle())
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(appState.identity.name).font(PipFont.title2)
+                            Text("\(appState.identity.species.displayName) · \(appState.identity.personality.displayName)").font(PipFont.callout).opacity(0.85)
+                            Text("Change pet or name").font(PipFont.caption).opacity(0.7).padding(.top, 4)
                         }
+                        Spacer(minLength: 0)
                     }
+                    .foregroundStyle(.white)
+                    .padding(.vertical, 6)
                 }
-            } header: {
-                Text("Pet")
+                .listRowBackground(PetPalette.palette(for: appState.identity.species).base)
             }
 
             Section {
@@ -113,10 +117,7 @@ struct SettingsView: View {
                 Text("About")
             }
         }
-        .scrollContentBackground(.hidden)
-        .background(LinearGradient(colors: [PipColor.sceneTop, PipColor.sceneBottom], startPoint: .top, endPoint: .bottom).ignoresSafeArea())
-        .navigationTitle("Settings")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("You")
         .confirmationDialog("Delete all app data?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
             Button("Delete Everything", role: .destructive) { appState.deleteAllData() }
             Button("Cancel", role: .cancel) {}

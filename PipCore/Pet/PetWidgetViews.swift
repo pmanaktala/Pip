@@ -27,34 +27,40 @@ public struct PetHomeWidgetView: View {
         }
     }
 
-    // Small: just the pet. In StandBy (no container background) it sits on a desk-like floor.
+    private var mood: Mood? {
+        guard let m = snapshot.mood, let at = snapshot.loggedAt, date.timeIntervalSince(at) < PetSnapshot.freshness else { return nil }
+        return m
+    }
+
+    // Small: just the pet, big.
     private var small: some View {
-        PetSceneView(identity: identity, state: state, time: nil, petScale: 1.0, petVerticalPosition: 0.5, showsFloor: true, showsAccessory: showsBackground)
+        PetSceneView(identity: identity, state: state, time: nil, petScale: 1.0, petVerticalPosition: 0.5, showsFloor: true, showsAccessory: showsBackground, showsBackground: false)
             .accessibilityLabel(accessibilityLabel)
     }
 
+    // Medium: pet, name and status, three quick-log buttons in their mood colours.
     private var medium: some View {
         HStack(spacing: 0) {
-            PetSceneView(identity: identity, state: state, time: nil, petScale: 0.92, petVerticalPosition: 0.5)
-                .frame(width: 150)
-            VStack(alignment: .leading, spacing: 8) {
+            PetSceneView(identity: identity, state: state, time: nil, petScale: 0.96, petVerticalPosition: 0.5, showsBackground: false)
+                .frame(width: 140)
+            VStack(alignment: .leading, spacing: 6) {
                 Text(identity.name)
-                    .font(PipFont.headline)
+                    .font(PipFont.title2)
                 Text(statusLine)
                     .font(PipFont.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
                 Spacer(minLength: 0)
                 HStack(spacing: 8) {
-                    ForEach([Mood.happy, .calm, .stressed], id: \.self) { mood in
-                        Button(intent: LogMoodIntent(mood: mood)) {
-                            PetView(identity: identity, state: PetStateResolver.resolve(mood: mood, identity: identity), showsShadow: false, framing: .badge)
-                                .frame(width: 36, height: 36)
-                                .padding(3)
-                                .background(PetPalette.ambient(for: mood).opacity(0.25), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    ForEach([Mood.happy, .calm, .stressed], id: \.self) { m in
+                        Button(intent: LogMoodIntent(mood: m)) {
+                            PetView(identity: identity, state: PetStateResolver.resolve(mood: m, identity: identity), showsShadow: false, framing: .badge)
+                                .frame(width: 34, height: 34)
+                                .padding(4)
+                                .background(MoodColor.bold(m), in: Circle())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Log \(mood.displayName)")
+                        .accessibilityLabel("Log \(m.displayName)")
                     }
                 }
             }
@@ -64,21 +70,28 @@ public struct PetHomeWidgetView: View {
         .accessibilityElement(children: .contain)
     }
 
+    // Large: the pet, then today as a row of mood-coloured chips.
     private var large: some View {
         VStack(spacing: 0) {
-            PetSceneView(identity: identity, state: state, time: nil, petScale: 0.72, petVerticalPosition: 0.5)
-            VStack(alignment: .leading, spacing: 6) {
-                Text(snapshot.today.isEmpty ? "Today, so far: nothing yet." : "Today, so far")
-                    .font(PipFont.caption)
-                    .foregroundStyle(.secondary)
+            PetSceneView(identity: identity, state: state, time: nil, petScale: 0.74, petVerticalPosition: 0.5, showsBackground: false)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(identity.name).font(PipFont.title2)
+                    Spacer()
+                    Text(snapshot.today.isEmpty ? "Nothing yet today" : "Today")
+                        .font(PipFont.caption)
+                        .foregroundStyle(.secondary)
+                }
                 if !snapshot.today.isEmpty {
                     HStack(spacing: 6) {
                         ForEach(snapshot.today.suffix(6)) { stamp in
-                            VStack(spacing: 1) {
+                            VStack(spacing: 2) {
                                 PetView(identity: identity, state: PetStateResolver.resolve(mood: stamp.mood, intensity: stamp.intensity, identity: identity), showsShadow: false, framing: .badge)
-                                    .frame(width: 40, height: 40)
+                                    .frame(width: 36, height: 36)
+                                    .padding(3)
+                                    .background(MoodColor.bold(stamp.mood), in: Circle())
                                 Text(stamp.time, style: .time)
-                                    .font(.system(size: 9, design: .rounded))
+                                    .font(.system(size: 9, weight: .semibold, design: .rounded))
                                     .foregroundStyle(.secondary)
                             }
                             .accessibilityLabel("\(stamp.time.formatted(date: .omitted, time: .shortened)): \(stamp.mood.displayName)")

@@ -10,12 +10,15 @@ public struct PetSceneView: View {
     public var petScale: CGFloat
     public var showsFloor: Bool
     public var showsAccessory: Bool
+    /// Paint the scene's own background gradient. Off when the host paints the canvas.
+    public var showsBackground: Bool
     /// Vertical position of the pet's centre as a fraction of the scene height.
     public var petVerticalPosition: CGFloat
 
     @Environment(\.colorScheme) private var scheme
 
-    public init(identity: PetIdentity, state: PetMoodState, time: TimeInterval? = nil, petScale: CGFloat = 0.62, petVerticalPosition: CGFloat = 0.49, showsFloor: Bool = true, showsAccessory: Bool = true) {
+    public init(identity: PetIdentity, state: PetMoodState, time: TimeInterval? = nil, petScale: CGFloat = 0.62, petVerticalPosition: CGFloat = 0.49, showsFloor: Bool = true, showsAccessory: Bool = true, showsBackground: Bool = true) {
+        self.showsBackground = showsBackground
         self.identity = identity
         self.state = state
         self.time = time
@@ -36,14 +39,8 @@ public struct PetSceneView: View {
             let dark = scheme == .dark
 
             ZStack {
-                LinearGradient(colors: [PipColor.sceneTop, PipColor.sceneBottom], startPoint: .top, endPoint: .bottom)
-
-                if showsFloor {
-                    // Ground plane: a soft gradient rising to a horizon just behind the pet, no hard edge.
-                    LinearGradient(stops: [
-                        .init(color: PipColor.sceneFloor.opacity(0), location: 0),
-                        .init(color: PipColor.sceneFloor.opacity(dark ? 0.7 : 0.55), location: 1),
-                    ], startPoint: UnitPoint(x: 0.5, y: max(0, (floorY - petSide * 0.28) / size.height)), endPoint: UnitPoint(x: 0.5, y: min(1, (floorY + petSide * 0.5) / size.height)))
+                if showsBackground {
+                    LinearGradient(colors: [PipColor.sceneTop, PipColor.sceneBottom], startPoint: .top, endPoint: .bottom)
                 }
 
                 // Ambient light behind the pet: additive in the dark, a warm wash in the light.
@@ -51,7 +48,7 @@ public struct PetSceneView: View {
                     .fill(theme.glow(for: scheme, radius: petSide * 0.7))
                     .frame(width: petSide * 1.7, height: petSide * 1.4)
                     .position(x: petCenter.x, y: floorY - petSide * 0.42)
-                    .blendMode(dark ? .plusLighter : .normal)
+                    .modifier(AdditiveInDark(enabled: dark))
                     .animation(.smooth(duration: 1.2), value: state.mood)
 
                 if showsFloor {
@@ -79,6 +76,15 @@ public struct PetSceneView: View {
             }
             .animation(.smooth(duration: 0.8), value: state.accessory)
         }
+    }
+}
+
+/// Additive blending only in dark mode; in light mode a blend mode would force an offscreen
+/// group and leave a visible edge around the scene.
+private struct AdditiveInDark: ViewModifier {
+    var enabled: Bool
+    func body(content: Content) -> some View {
+        if enabled { content.blendMode(.plusLighter) } else { content }
     }
 }
 

@@ -13,6 +13,9 @@ public final class PetMomentManager {
     public static let shared = PetMomentManager()
     private let log = Logger(subsystem: "com.pmanaktala.Pip", category: "LiveActivity")
     private var expiry: Task<Void, Never>?
+    private var cycling: Task<Void, Never>?
+    /// Seconds between pose changes while the app is running.
+    public var poseInterval: TimeInterval = 20
 
     public var isAvailable: Bool { ActivityAuthorizationInfo().areActivitiesEnabled }
 
@@ -20,11 +23,13 @@ public final class PetMomentManager {
         guard isAvailable else { return }
         endAll()
         let endsAt = now.addingTimeInterval(kind.duration)
-        let state = PetMomentAttributes.ContentState(kind: kind, mood: mood, intensity: intensity, message: message, endsAt: endsAt)
+        let state = PetMomentAttributes.ContentState(kind: kind, mood: mood, intensity: intensity, message: message, endsAt: endsAt, startedAt: now,
+                                                     pose: PetPose.next(after: -1, seed: now.timeIntervalSinceReferenceDate))
         let content = ActivityContent(state: state, staleDate: endsAt, relevanceScore: kind == .celebration ? 100 : 50)
         do {
             let activity = try Activity.request(attributes: PetMomentAttributes(identity: identity), content: content, pushType: nil)
             log.info("Started pet moment \(kind.rawValue)")
+            startCycling(activity)
             expiry = Task { [weak self] in
                 try? await Task.sleep(for: .seconds(max(1, endsAt.timeIntervalSince(now))))
                 guard !Task.isCancelled else { return }
@@ -36,15 +41,47 @@ public final class PetMomentManager {
         }
     }
 
-    /// Ends any moment whose time has passed — call when the app becomes active.
+    /// Ends any moment whose time has passed — call when the app becomes active. Also resumes
+    /// pose cycling for a moment that is still running.
     public func endExpired(now: Date = .now) {
-        for activity in Activity<PetMomentAttributes>.activities where activity.content.state.endsAt <= now {
-            Task { await activity.end(nil, dismissalPolicy: .immediate) }
+        for activity in Activity<PetMomentAttributes>.activities {
+            if activity.content.state.endsAt <= now {
+                Task { await activity.end(nil, dismissalPolicy: .immediate) }
+            } else if cycling == nil {
+                startCycling(activity)
+            }
+        }
+    }
+
+    /// The pet waves back — used by the Live Activity's quick action.
+    public func wave() async {
+        guard let activity = Activity<PetMomentAttributes>.activities.first else { return }
+        var state = activity.content.state
+        state.pose = PetPose.wave
+        await activity.update(ActivityContent(state: state, staleDate: state.endsAt))
+    }
+
+    /// While the app runs, change the pose every `poseInterval` so the moment feels alive.
+    /// The system animates each change; nothing runs when the app is suspended.
+    private func startCycling(_ activity: Activity<PetMomentAttributes>) {
+        cycling?.cancel()
+        cycling = Task { [poseInterval, weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(poseInterval))
+                guard !Task.isCancelled, activity.activityState == .active else { break }
+                var state = activity.content.state
+                guard state.endsAt > .now else { break }
+                state.pose = PetPose.next(after: state.pose, seed: Date.now.timeIntervalSinceReferenceDate)
+                await activity.update(ActivityContent(state: state, staleDate: state.endsAt))
+            }
+            self?.cycling = nil
         }
     }
 
     public func endAll() {
         expiry?.cancel()
+        cycling?.cancel()
+        cycling = nil
         for activity in Activity<PetMomentAttributes>.activities {
             Task { await activity.end(nil, dismissalPolicy: .immediate) }
         }
