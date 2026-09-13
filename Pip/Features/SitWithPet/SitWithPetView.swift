@@ -1,11 +1,14 @@
 import SwiftUI
 
 /// Sit with your pet. Nothing to complete. Stay two seconds or ten minutes.
+/// The light drifts slowly through the calm colours; a quiet timer counts the time together.
 struct SitWithPetView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var scheme
     @State private var ambience = AmbientSound()
+    @State private var startedAt = Date.now
 
     private var state: PetMoodState {
         var s = PetStateResolver.resolve(mood: .calm, intensity: .moderate, identity: appState.identity)
@@ -17,29 +20,67 @@ struct SitWithPetView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            PetSceneWithClock(identity: appState.identity, state: state, petScale: 0.8, petVerticalPosition: 0.5)
+        ZStack {
+            Color(.systemBackground).ignoresSafeArea()
+            ambientLight
+
+            PetSceneWithClock(identity: appState.identity, state: state, petScale: 0.8, petVerticalPosition: 0.5, showsFloor: true)
                 .ignoresSafeArea()
-                .overlay(alignment: .bottom) {
+                .accessibilityElement()
+                .accessibilityLabel("\(appState.identity.name) is sitting with you.")
+
+            VStack {
+                HStack {
+                    Spacer()
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.headline.weight(.semibold))
+                            .frame(width: 44, height: 44)
+                    }
+                    .buttonStyle(.glass)
+                    .accessibilityLabel("Close")
+                }
+                .padding(.horizontal, PipSpacing.m)
+                Spacer()
+                VStack(spacing: 6) {
                     Text("Just sitting.")
+                        .font(PipFont.title2)
+                    Text(timerInterval: startedAt...startedAt.addingTimeInterval(24 * 3600), countsDown: false, showsHours: false)
+                        .monospacedDigit()
                         .font(PipFont.callout)
                         .foregroundStyle(.secondary)
-                        .padding(.bottom, PipSpacing.xl)
-                        .accessibilityLabel("\(appState.identity.name) is sitting with you.")
                 }
-
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.headline)
-                    .padding(6)
+                .padding(.bottom, PipSpacing.xl)
             }
-            .buttonStyle(.glass)
-            .padding(PipSpacing.m)
-            .accessibilityLabel("Close")
         }
         .onAppear { if appState.preferences.soundEnabled { ambience.start() } }
         .onDisappear { ambience.stop() }
+    }
+
+    /// A slow drift between the calm hues, like light moving across a room over a few minutes.
+    private var ambientLight: some View {
+        TimelineView(.animation(minimumInterval: reduceMotion ? 60 : 1 / 20)) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            let phase = reduceMotion ? 0 : (t / 90).truncatingRemainder(dividingBy: 1) * 2 * Double.pi
+            let hues: [Color] = [MoodColor.bold(.calm), MoodColor.bold(.sad), MoodColor.bold(.tired), MoodColor.bold(.calm)]
+            let k = (sin(phase) + 1) / 2
+            let color = k < 0.5 ? blend(hues[0], hues[1], k * 2) : blend(hues[1], hues[2], (k - 0.5) * 2)
+            RadialGradient(colors: [color.opacity(scheme == .dark ? 0.35 : 0.22), color.opacity(0)],
+                           center: UnitPoint(x: 0.5 + 0.08 * sin(phase * 0.7), y: 0.42),
+                           startRadius: 0, endRadius: 420)
+                .ignoresSafeArea()
+        }
+    }
+
+    private func blend(_ a: Color, _ b: Color, _ t: Double) -> Color {
+        let ca = UIColor(a), cb = UIColor(b)
+        var (r1, g1, b1, a1): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
+        var (r2, g2, b2, a2): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
+        ca.getRed(&r1, green: &g1, blue: &b1, alpha: &a1)
+        cb.getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
+        let u = CGFloat(t)
+        return Color(red: r1 + (r2 - r1) * u, green: g1 + (g2 - g1) * u, blue: b1 + (b2 - b1) * u)
     }
 }

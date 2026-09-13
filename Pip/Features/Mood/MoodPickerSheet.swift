@@ -10,6 +10,7 @@ struct MoodPickerSheet: View {
     @State private var note = ""
     @FocusState private var noteFocused: Bool
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.colorScheme) private var scheme
 
     private var columns: [GridItem] {
         Array(repeating: GridItem(.flexible(), spacing: 12), count: typeSize.isAccessibilitySize ? 1 : 2)
@@ -67,25 +68,24 @@ struct MoodPickerSheet: View {
         }
     }
 
-    /// The pet, reacting, on a card in the mood's colour. This is the reward for logging.
+    /// After logging, the pet reacts on the Pet tab above the sheet; here a single line confirms it.
     private func loggedHeader(for entry: MoodEntry) -> some View {
-        HStack(spacing: PipSpacing.m) {
-            AnimatedPetView(identity: appState.identity, state: PetStateResolver.resolve(mood: entry.mood, intensity: intensity, identity: appState.identity), showsShadow: false)
-                .frame(width: 120, height: 120)
-            VStack(alignment: .leading, spacing: 4) {
+        HStack(spacing: 12) {
+            PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: entry.mood, intensity: intensity, identity: appState.identity), showsShadow: false, framing: .badge)
+                .frame(width: 44, height: 44)
+                .padding(4)
+                .background(MoodColor.soft(entry.mood, scheme: scheme), in: Circle())
+            VStack(alignment: .leading, spacing: 2) {
                 Text(entry.mood.displayName)
-                    .font(PipFont.title)
+                    .font(PipFont.title2)
                 Text("\(appState.identity.name) \(entry.mood.petDescription).")
                     .font(PipFont.callout)
-                    .opacity(0.9)
+                    .foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
         }
-        .foregroundStyle(.white)
-        .padding(PipSpacing.m)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MoodColor.bold(entry.mood), in: RoundedRectangle(cornerRadius: PipRadius.card, style: .continuous))
-        .transition(.scale(scale: 0.92).combined(with: .opacity))
+        .padding(.top, PipSpacing.s)
+        .transition(.move(edge: .top).combined(with: .opacity))
         .accessibilityHidden(true)
     }
 

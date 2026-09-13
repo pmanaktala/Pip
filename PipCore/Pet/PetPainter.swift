@@ -547,7 +547,7 @@ public extension PetSpecies {
         case .dog:
             PetAnatomy(headWidth: 98, headHeight: 84, headOverlap: 30, cheekSquareness: 0.3, torsoHeight: 78, chestWidth: 76, hipWidth: 102)
         case .capybara:
-            PetAnatomy(headWidth: 100, headHeight: 74, headOverlap: 24, cheekSquareness: 0.8, torsoHeight: 74, chestWidth: 88, hipWidth: 112, eyeRadius: 0.045)
+            PetAnatomy(headWidth: 108, headHeight: 72, headOverlap: 26, cheekSquareness: 0.95, torsoHeight: 70, chestWidth: 100, hipWidth: 120, eyeRadius: 0.042)
         case .penguin:
             PetAnatomy(headWidth: 84, headHeight: 78, headOverlap: 34, cheekSquareness: 0.2, torsoHeight: 96, chestWidth: 82, hipWidth: 100, eyeRadius: 0.06)
         case .redPanda:

@@ -48,13 +48,13 @@ public struct PetPalette: Sendable {
             )
         case .capybara:
             PetPalette(
-                base: Color(red: 0.80, green: 0.60, blue: 0.40),
-                shade: Color(red: 0.62, green: 0.44, blue: 0.27),
+                base: Color(red: 0.78, green: 0.58, blue: 0.38),
+                shade: Color(red: 0.58, green: 0.40, blue: 0.24),
                 light: Color(red: 0.88, green: 0.72, blue: 0.54),
-                belly: Color(red: 0.88, green: 0.75, blue: 0.58),
-                earInner: Color(red: 0.52, green: 0.36, blue: 0.24),
+                belly: Color(red: 0.90, green: 0.75, blue: 0.56),
+                earInner: Color(red: 0.56, green: 0.38, blue: 0.24),
                 marking: Color(red: 0.50, green: 0.35, blue: 0.23),
-                nose: Color(red: 0.34, green: 0.24, blue: 0.18),
+                nose: Color(red: 0.36, green: 0.25, blue: 0.18),
                 ink: Color(red: 0.19, green: 0.13, blue: 0.11),
                 blush: Color(red: 0.96, green: 0.55, blue: 0.48)
             )

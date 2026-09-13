@@ -24,10 +24,11 @@ struct PetHomeView: View {
                 }
 
                 PetSceneWithClock(identity: appState.identity, state: appState.displayedState,
-                                  petScale: 0.86, petVerticalPosition: 0.5, showsFloor: true)
+                                  petScale: showMoodPicker ? 0.62 : 0.86, petVerticalPosition: showMoodPicker ? 0.3 : 0.5, showsFloor: true)
                     .frame(maxWidth: 440)
                     .padding(.top, 40)
                     .padding(.bottom, 120)
+                    .animation(.spring(duration: 0.5, bounce: 0.15), value: showMoodPicker)
                     .contentShape(Rectangle())
                     .onTapGesture { appState.pokePet() }
                     .accessibilityElement()
@@ -49,7 +50,8 @@ struct PetHomeView: View {
             #endif
             .sheet(isPresented: $showMoodPicker) {
                 MoodPickerSheet()
-                    .presentationDetents([.large])
+                    .presentationDetents([.fraction(0.58), .large])
+                    .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.58)))
                     .presentationDragIndicator(.visible)
             }
             .fullScreenCover(isPresented: $showSitWithPet) {
@@ -67,6 +69,10 @@ struct PetHomeView: View {
                 case "pets": showPets = true
                 case "sit": showSitWithPet = true
                 case "widgets": showWidgets = true
+                case "poke":
+                    Task { try? await Task.sleep(for: .seconds(1.5)); appState.pokePet() }
+                case "react":
+                    Task { try? await Task.sleep(for: .seconds(1.5)); appState.log(mood: .excited) }
                 default: break
                 }
             }

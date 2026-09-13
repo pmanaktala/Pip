@@ -95,6 +95,7 @@ final class AppState {
         let entry = logger.log(mood: mood, intensity: intensity, contexts: contexts, note: note)
         latestEntry = entry
         todayEntries = PipQueries.entries(on: .now, in: context)
+        react(to: entry)
         return entry
     }
 
@@ -126,22 +127,56 @@ final class AppState {
         refresh()
     }
 
-    /// A tiny reaction when the pet is tapped: a quick happy blink, then back to normal.
+    /// Tap reaction: a quick hop with a heart, then a happy settle, then back to normal.
     func pokePet() {
-        var state = displayedState
-        state.rig.eyeArc = max(state.rig.eyeArc, 0.8)
-        state.rig.mouthCurve = max(state.rig.mouthCurve, 0.6)
-        state.rig.lift -= 5
-        state.rig.squash = min(1.1, state.rig.squash + 0.06)
-        state.rig.earLift = 1
-        state.rig.armRaise = max(state.rig.armRaise, 0.6)
-        state.rig.headDrop = 0
-        state.motion.hopHeight = 0
-        poke = state
+        var hop = displayedState
+        hop.rig.eyeArc = max(hop.rig.eyeArc, 0.8)
+        hop.rig.mouthCurve = max(hop.rig.mouthCurve, 0.6)
+        hop.rig.mouthOpen = max(hop.rig.mouthOpen, 0.2)
+        hop.rig.lift -= 16
+        hop.rig.squash = min(1.1, hop.rig.squash + 0.07)
+        hop.rig.earLift = 1
+        hop.rig.armRaise = 1
+        hop.rig.headDrop = 0
+        hop.rig.lying = 0
+        hop.rig.tilt = 6
+        hop.motion.hopHeight = 0
+        hop.accessory = .heart
+        var settle = hop
+        settle.rig.lift = displayedState.rig.lift
+        settle.rig.squash = displayedState.rig.squash
+        settle.rig.armRaise = 0.3
+        settle.rig.mouthOpen = 0
         Haptics.soft()
+        withAnimation(.spring(duration: 0.35, bounce: 0.45)) { poke = hop }
         Task { @MainActor in
+            try? await Task.sleep(for: .seconds(0.32))
+            withAnimation(.spring(duration: 0.45, bounce: 0.35)) { poke = settle }
             try? await Task.sleep(for: .seconds(0.9))
             withAnimation(.smooth(duration: 0.5)) { poke = nil }
+        }
+    }
+
+    /// Reaction to a freshly logged mood, visible on the Pet tab behind the sheet: the pet jumps
+    /// into the new mood (positive) or sinks into it (negative), then settles into the resolved state.
+    func react(to entry: MoodEntry) {
+        let target = PetStateResolver.resolve(mood: entry.mood, intensity: entry.intensity, identity: identity)
+        var burst = target
+        if entry.mood.valence >= 0 {
+            burst.rig.lift -= 14
+            burst.rig.squash = min(1.1, burst.rig.squash + 0.06)
+            burst.rig.armRaise = 1
+            burst.rig.eyeArc = max(burst.rig.eyeArc, 0.6)
+            burst.accessory = entry.mood == .calm ? .heart : .sparkles
+        } else {
+            burst.rig.squash = max(0.9, burst.rig.squash - 0.05)
+            burst.rig.headDrop = min(1, burst.rig.headDrop + 0.2)
+        }
+        burst.motion.hopHeight = 0
+        withAnimation(.spring(duration: 0.4, bounce: 0.4)) { poke = burst }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1.1))
+            withAnimation(.smooth(duration: 0.6)) { poke = nil }
         }
     }
 
