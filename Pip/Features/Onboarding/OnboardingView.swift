@@ -17,9 +17,8 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            pageColor
+            Color(.systemBackground)
                 .ignoresSafeArea()
-                .animation(.smooth(duration: 0.6), value: step)
 
             VStack(spacing: PipSpacing.l) {
                 Spacer(minLength: 0)
@@ -30,7 +29,6 @@ struct OnboardingView: View {
                 controls
             }
             .padding(PipSpacing.l)
-            .foregroundStyle(.white)
         }
         .animation(.spring(duration: 0.5, bounce: 0.1), value: step)
         .onAppear { wave = true }
@@ -61,7 +59,7 @@ struct OnboardingView: View {
                     .multilineTextAlignment(.center)
                 Text("Tell Pip how you feel. Your pet feels it with you, lives on your Home Screen, and keeps everything on your device.")
                     .font(PipFont.body)
-                    .opacity(0.9)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
         case .pet:
@@ -93,11 +91,11 @@ struct OnboardingView: View {
                     .focused($nameFocused)
                     .padding(.vertical, 14)
                     .padding(.horizontal, 24)
-                    .background(.white.opacity(0.22), in: Capsule())
+                    .background(Color(.secondarySystemFill), in: Capsule())
                     .onSubmit { advance() }
                 Text("Or keep \(species.defaultName). Either is lovely.")
                     .font(PipFont.footnote)
-                    .opacity(0.85)
+                    .foregroundStyle(.secondary)
             }
         case .health:
             permissionStep(
@@ -118,12 +116,13 @@ struct OnboardingView: View {
                 .frame(width: 180, height: 180)
             Image(systemName: symbol)
                 .font(.title)
+                .foregroundStyle(Color.accentColor)
             Text(title)
                 .font(PipFont.title)
                 .multilineTextAlignment(.center)
             Text(body)
                 .font(PipFont.body)
-                .opacity(0.9)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
     }
@@ -170,10 +169,10 @@ struct OnboardingView: View {
         Button(action: action) {
             Text(title)
                 .font(PipFont.headline)
-                .foregroundStyle(pageColor)
+                .foregroundStyle(.white)
                 .frame(maxWidth: 360)
                 .padding(.vertical, 16)
-                .background(.white, in: RoundedRectangle(cornerRadius: PipRadius.card, style: .continuous))
+                .background(Color.accentColor, in: RoundedRectangle(cornerRadius: PipRadius.card, style: .continuous))
         }
         .buttonStyle(PressableButtonStyle())
     }
@@ -181,7 +180,7 @@ struct OnboardingView: View {
     private func secondary(_ title: String, action: @escaping () -> Void) -> some View {
         Button(title, action: action)
             .font(PipFont.headline)
-            .foregroundStyle(.white.opacity(0.85))
+            .foregroundStyle(.secondary)
             .padding(.vertical, 8)
     }
 

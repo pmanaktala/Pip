@@ -81,8 +81,8 @@ struct PetHomeView: View {
         ZStack {
             Color(.systemBackground)
             LinearGradient(colors: [
-                mood.map { MoodColor.bold($0).opacity(scheme == .dark ? 0.28 : 0.22) } ?? PipColor.sceneTop.opacity(scheme == .dark ? 0.6 : 1),
-                mood.map { MoodColor.bold($0).opacity(scheme == .dark ? 0.06 : 0.05) } ?? PipColor.sceneBottom.opacity(scheme == .dark ? 0.5 : 0.6),
+                mood.map { MoodColor.bold($0).opacity(scheme == .dark ? 0.18 : 0.14) } ?? PipColor.sceneTop.opacity(scheme == .dark ? 0.5 : 0.8),
+                mood.map { MoodColor.bold($0).opacity(0.02) } ?? PipColor.sceneBottom.opacity(scheme == .dark ? 0.3 : 0.4),
             ], startPoint: .top, endPoint: .bottom)
         }
         .ignoresSafeArea()

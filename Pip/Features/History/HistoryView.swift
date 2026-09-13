@@ -8,6 +8,7 @@ struct HistoryView: View {
     @Query(sort: \MoodEntry.timestamp, order: .reverse) private var entries: [MoodEntry]
     @State private var month: Date = .now
     @State private var selectedDay: Date?
+    @Environment(\.colorScheme) private var scheme
 
     private var stamps: [MoodStamp] {
         entries.map { MoodStamp(id: $0.id, mood: $0.mood, intensity: $0.intensity, time: $0.timestamp) }
@@ -57,22 +58,19 @@ struct HistoryView: View {
                     VStack(spacing: 4) {
                         if let stamp {
                             PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: stamp.mood, intensity: stamp.intensity, identity: appState.identity), showsShadow: false, framing: .badge)
-                                .frame(width: 36, height: 36)
+                                .frame(width: 30, height: 30)
+                                .padding(3)
+                                .background(MoodColor.soft(stamp.mood, scheme: scheme), in: Circle())
                         } else {
-                            Circle().fill(.white.opacity(0.35)).frame(width: 10, height: 10).frame(height: 36)
+                            Circle().fill(Color(.tertiarySystemFill)).frame(width: 8, height: 8).frame(height: 36)
                         }
                         Text(day, format: .dateTime.weekday(.narrow))
                             .font(PipFont.caption)
                     }
-                    .foregroundStyle(stamp == nil ? Color.secondary : .white)
+                    .foregroundStyle(cal.isDateInToday(day) ? Color.accentColor : Color.secondary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
-                    .background(stamp.map { MoodColor.bold($0.mood) } ?? Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: PipRadius.chip, style: .continuous))
-                    .overlay {
-                        if cal.isDateInToday(day) {
-                            RoundedRectangle(cornerRadius: PipRadius.chip, style: .continuous).strokeBorder(Color.primary.opacity(0.35), lineWidth: 2)
-                        }
-                    }
+                    .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: PipRadius.chip, style: .continuous))
                 }
                 .buttonStyle(PressableButtonStyle())
                 .disabled(stamp == nil)
@@ -174,44 +172,39 @@ struct HistoryView: View {
     }
 }
 
-/// One day in the month grid: a mood-coloured tile with the pet's face, or a quiet number.
+/// One day in the month grid: the number on a soft mood tint with a small dot, or a quiet number.
 struct DayCell: View {
     var day: Date
     var stamp: MoodStamp?
     var identity: PetIdentity
     var isSelected: Bool
     var action: () -> Void
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         Button(action: action) {
             ZStack {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(stamp.map { MoodColor.bold($0.mood) } ?? Color.clear)
-                if let stamp {
-                    PetView(identity: identity, state: PetStateResolver.resolve(mood: stamp.mood, intensity: stamp.intensity, identity: identity), showsShadow: false, framing: .badge)
-                        .padding(3)
-                    Text(day, format: .dateTime.day())
-                        .font(.system(size: 9, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.9))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                        .padding(4)
-                } else {
+                    .fill(isSelected ? Color(.tertiarySystemFill) : Color.clear)
+                VStack(spacing: 3) {
                     Text(day, format: .dateTime.day())
                         .font(PipFont.caption)
-                        .foregroundStyle(Calendar.current.isDateInToday(day) ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.tertiary))
+                        .foregroundStyle(textColor)
+                    Circle()
+                        .fill(stamp.map { MoodColor.bold($0.mood) } ?? Color.clear)
+                        .frame(width: 6, height: 6)
                 }
             }
             .frame(height: 44)
-            .overlay {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(Color.primary, lineWidth: 2)
-                }
-            }
         }
         .buttonStyle(.plain)
         .disabled(stamp == nil)
         .accessibilityLabel(accessibilityText)
+    }
+
+    private var textColor: Color {
+        if Calendar.current.isDateInToday(day) { return .accentColor }
+        return stamp == nil ? Color(.tertiaryLabel) : .primary
     }
 
     private var accessibilityText: String {

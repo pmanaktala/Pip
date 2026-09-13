@@ -57,7 +57,7 @@ public struct PetHomeWidgetView: View {
                             PetView(identity: identity, state: PetStateResolver.resolve(mood: m, identity: identity), showsShadow: false, framing: .badge)
                                 .frame(width: 34, height: 34)
                                 .padding(4)
-                                .background(MoodColor.bold(m), in: Circle())
+                                .background(MoodColor.bold(m).opacity(0.18), in: Circle())
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Log \(m.displayName)")
@@ -89,7 +89,7 @@ public struct PetHomeWidgetView: View {
                                 PetView(identity: identity, state: PetStateResolver.resolve(mood: stamp.mood, intensity: stamp.intensity, identity: identity), showsShadow: false, framing: .badge)
                                     .frame(width: 36, height: 36)
                                     .padding(3)
-                                    .background(MoodColor.bold(stamp.mood), in: Circle())
+                                    .background(MoodColor.bold(stamp.mood).opacity(0.18), in: Circle())
                                 Text(stamp.time, style: .time)
                                     .font(.system(size: 9, weight: .semibold, design: .rounded))
                                     .foregroundStyle(.secondary)

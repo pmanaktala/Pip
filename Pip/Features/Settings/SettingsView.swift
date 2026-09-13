@@ -19,19 +19,16 @@ struct SettingsView: View {
                 } label: {
                     HStack(spacing: PipSpacing.m) {
                         PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: .happy, intensity: .slight, identity: appState.identity), showsShadow: false, framing: .face)
-                            .frame(width: 84, height: 84)
-                            .background(.white.opacity(0.28), in: Circle())
+                            .frame(width: 72, height: 72)
+                            .background(Color(.tertiarySystemFill), in: Circle())
                         VStack(alignment: .leading, spacing: 2) {
                             Text(appState.identity.name).font(PipFont.title2)
-                            Text("\(appState.identity.species.displayName) · \(appState.identity.personality.displayName)").font(PipFont.callout).opacity(0.85)
-                            Text("Change pet or name").font(PipFont.caption).opacity(0.7).padding(.top, 4)
+                            Text("\(appState.identity.species.displayName) · \(appState.identity.personality.displayName)").font(PipFont.callout).foregroundStyle(.secondary)
                         }
                         Spacer(minLength: 0)
                     }
-                    .foregroundStyle(.white)
                     .padding(.vertical, 6)
                 }
-                .listRowBackground(PetPalette.palette(for: appState.identity.species).base)
             }
 
             Section {

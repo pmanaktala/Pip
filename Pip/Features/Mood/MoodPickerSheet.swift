@@ -33,6 +33,7 @@ struct MoodPickerSheet: View {
                 .padding(.bottom, PipSpacing.xl)
             }
             .scrollDismissesKeyboard(.interactively)
+            .background(Color(.systemGroupedBackground))
             .navigationTitle(logged == nil ? "" : "\(appState.identity.name) \(logged!.mood.petDescription)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -127,7 +128,7 @@ struct MoodPickerSheet: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(on ? .white : .primary)
-                    .background(on ? MoodColor.bold(entry.mood) : Color(.secondarySystemFill), in: Capsule())
+                    .background(on ? Color.accentColor : Color(.secondarySystemGroupedBackground), in: Capsule())
                     .animation(.smooth(duration: 0.2), value: on)
                     .accessibilityAddTraits(on ? .isSelected : [])
                 }
@@ -142,7 +143,7 @@ struct MoodPickerSheet: View {
                 .lineLimit(1...3)
                 .textFieldStyle(.plain)
                 .padding(12)
-                .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 14))
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: PipRadius.chip, style: .continuous))
                 .focused($noteFocused)
                 .onSubmit { commitNote(entry) }
                 .onChange(of: noteFocused) { _, focused in if !focused { commitNote(entry) } }
@@ -159,24 +160,26 @@ struct MoodChoice: View {
     var mood: Mood
     var identity: PetIdentity
     var action: () -> Void
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
                 PetView(identity: identity, state: PetStateResolver.resolve(mood: mood, identity: identity), showsShadow: false, framing: .badge)
-                    .frame(width: 52, height: 52)
-                    .background(.white.opacity(0.28), in: Circle())
+                    .frame(width: 40, height: 40)
+                    .padding(4)
+                    .background(MoodColor.soft(mood, scheme: scheme), in: Circle())
                 Text(mood.displayName)
                     .font(PipFont.headline)
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                 Spacer(minLength: 0)
             }
-            .foregroundStyle(.white)
             .padding(.horizontal, 14)
-            .padding(.vertical, 14)
+            .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(MoodColor.bold(mood), in: RoundedRectangle(cornerRadius: PipRadius.tile, style: .continuous))
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: PipRadius.tile, style: .continuous))
         }
         .buttonStyle(PressableButtonStyle())
         .accessibilityLabel(mood.displayName)
