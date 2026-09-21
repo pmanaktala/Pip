@@ -12,7 +12,13 @@ public enum MoodSideEffectRegistry {
 ///
 /// Conforming to `LiveActivityIntent` makes the system run it in the app's process,
 /// so the mood-change Live Activity and Health write happen exactly as in-app logs.
-public struct LogMoodIntent: AppIntent, LiveActivityIntent {
+#if canImport(ActivityKit)
+public typealias PipIntentBase = AppIntent & LiveActivityIntent
+#else
+public typealias PipIntentBase = AppIntent
+#endif
+
+public struct LogMoodIntent: PipIntentBase {
     public static let title: LocalizedStringResource = "Log Mood"
     public static let description = IntentDescription("Tell your pet how you feel.")
     public static let openAppWhenRun = false
@@ -58,6 +64,7 @@ public struct OpenPetIntent: AppIntent {
     }
 }
 
+#if canImport(ActivityKit)
 /// Wave at the pet from a Live Activity. Runs in the app's process and updates the moment's pose.
 public struct WaveAtPetIntent: AppIntent, LiveActivityIntent {
     public static let title: LocalizedStringResource = "Wave"
@@ -72,3 +79,4 @@ public struct WaveAtPetIntent: AppIntent, LiveActivityIntent {
         return .result()
     }
 }
+#endif

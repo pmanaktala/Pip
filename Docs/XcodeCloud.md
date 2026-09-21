@@ -26,10 +26,16 @@ a release.
 
 1. **App record.** App Store Connect › Apps › + › iOS, bundle ID `com.pmanaktala.Pip`, name
    "Pip". Accept the Paid Apps / Developer agreements if prompted.
-2. **Capabilities on the App ID** (developer.apple.com › Identifiers › `com.pmanaktala.Pip`):
-   App Groups (`group.com.pmanaktala.Pip`), iCloud with CloudKit (`iCloud.com.pmanaktala.Pip`),
-   HealthKit, Push Notifications. Automatic signing registers these on the first signed build
-   from Xcode; verify they are present before the first cloud archive.
+2. **Capabilities on the App IDs** (developer.apple.com › Identifiers):
+   - `com.pmanaktala.Pip`: App Groups (`group.com.pmanaktala.Pip`), iCloud with CloudKit
+     (`iCloud.com.pmanaktala.Pip`), HealthKit, Push Notifications.
+   - `com.pmanaktala.Pip.PipWidgets`: App Groups.
+   - `com.pmanaktala.Pip.watchkitapp` (the Watch app): App Groups, iCloud with CloudKit.
+   - `com.pmanaktala.Pip.watchkitapp.PipWatchWidgets` (complications): App Groups.
+
+   Automatic signing registers these on the first signed build from Xcode (Signing &
+   Capabilities, each target); verify all four are present before the first cloud archive —
+   a missing one is the most common "No profiles for …" failure.
 3. **Internal tester group.** App Store Connect › the app › TestFlight › Internal Testing › +.
    Name it `Internal`, add only yourself, and turn on **Enable automatic distribution**. With
    that on, every build Xcode Cloud uploads reaches the group without a post-action.

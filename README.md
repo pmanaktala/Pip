@@ -5,6 +5,7 @@ A small, Apple-native iOS app: a cute pet that visually reflects your mood, and 
 - **One tap** to log a mood; the pet reacts with pose, expression and motion.
 - **Five pets** (cat, dog, capybara, penguin, red panda), each with a personality.
 - **Widgets** everywhere: Home Screen, Lock Screen, StandBy. **Live Activities** for pet moments.
+- **Apple Watch** companion with complications; moods logged on the wrist sync through iCloud.
 - **Apple Health** State of Mind sync, optional and write-only.
 - **Private by design:** no accounts, no tracking, no analytics, no servers. Local-first with private CloudKit mirroring so history survives reinstalls.
 
@@ -17,6 +18,8 @@ Requires iOS 26. Built with the iOS 27 SDK; iOS 27-only niceties are guarded wit
 | `Pip/` | App target: `App/` (entry, `AppState`), `Features/` (Pet, Mood, History, SitWithPet, Settings, Onboarding), `Health/`, `Resources/` |
 | `PipCore/` | Shared with the widget extension: models, SwiftData store, services, design system, the pet renderer (`Pet/`), App Intents, Live Activity attributes |
 | `PipWidgets/` | Widget extension: widgets, Live Activity UI |
+| `PipWatch/` | Apple Watch app: the pet in its room, a two-tap mood log, sitting together. Same SwiftData + CloudKit store, so it syncs with the phone through iCloud |
+| `PipWatchWidgets/` | Watch complications: circular and corner (the face), rectangular (face + how they feel), inline |
 | `PipTests/` | Swift Testing unit tests (resolver, Health mapping, history, persistence, scheduler, icon render) |
 | `AppStore/` | Metadata, review notes, release checklist |
 | `scripts/` | `privacy-audit.sh` (run in CI and Xcode Cloud), `xcode-cloud-workflow.py` (creates the Xcode Cloud workflows via the App Store Connect API) |

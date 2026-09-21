@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 
 fail() { echo "::error::$1"; exit 1; }
 
-for m in Pip/Resources/PrivacyInfo.xcprivacy PipWidgets/Resources/PrivacyInfo.xcprivacy; do
+for m in Pip/Resources/PrivacyInfo.xcprivacy PipWidgets/Resources/PrivacyInfo.xcprivacy PipWatch/Resources/PrivacyInfo.xcprivacy PipWatchWidgets/Resources/PrivacyInfo.xcprivacy; do
   [ -f "$m" ] || fail "Missing privacy manifest: $m"
   grep -A1 "NSPrivacyTracking</key>" "$m" | grep -q "<false/>" || fail "$m must declare NSPrivacyTracking = false"
   grep -A1 "NSPrivacyTrackingDomains</key>" "$m" | grep -q "<array/>" || fail "$m must declare no tracking domains"
@@ -21,17 +21,17 @@ fi
 
 # No analytics / attribution SDK identifiers in source.
 # Whole words only, so prose like "amplitudes" or "branch" in a comment does not trip it.
-if grep -rInwE "Firebase|Crashlytics|Amplitude|AmplitudeSwift|Mixpanel|Segment|Adjust|AppsFlyer|BranchSDK|Sentry|Bugsnag|Instabug|Facebook|FBSDKCoreKit|GoogleAnalytics|ASIdentifierManager|AppTrackingTransparency|advertisingIdentifier" Pip PipCore PipWidgets --include=*.swift; then
+if grep -rInwE "Firebase|Crashlytics|Amplitude|AmplitudeSwift|Mixpanel|Segment|Adjust|AppsFlyer|BranchSDK|Sentry|Bugsnag|Instabug|Facebook|FBSDKCoreKit|GoogleAnalytics|ASIdentifierManager|AppTrackingTransparency|advertisingIdentifier" Pip PipCore PipWidgets PipWatch PipWatchWidgets --include=*.swift; then
   fail "Tracking / analytics SDK reference found"
 fi
 
 # No networking in app code at all (CloudKit and HealthKit go through system frameworks).
-if grep -rInE "URLSession|NWConnection|NSURLConnection|WKWebView" Pip PipCore PipWidgets --include=*.swift; then
+if grep -rInE "URLSession|NWConnection|NSURLConnection|WKWebView" Pip PipCore PipWidgets PipWatch PipWatchWidgets --include=*.swift; then
   fail "Direct networking found; Pip must not talk to servers"
 fi
 # The only URLs allowed are user-initiated links that open outside the app: the privacy policy
 # and the Support screen's crisis lines and resources.
-if grep -rInE "http://|https://" Pip PipCore PipWidgets --include=*.swift \
+if grep -rInE "http://|https://" Pip PipCore PipWidgets PipWatch PipWatchWidgets --include=*.swift \
     | grep -v "github.com/pmanaktala/Pip/blob/main/PRIVACY.md" \
     | grep -v "Pip/Features/Settings/SupportView.swift"; then
   fail "Unexpected URL in source; only the privacy policy and Support links may open outside the app"

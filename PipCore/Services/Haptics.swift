@@ -1,3 +1,18 @@
+#if os(watchOS)
+import WatchKit
+
+/// Centralised, restrained haptics. Never fired from idle animation.
+/// On the wrist the Taptic Engine has a fixed vocabulary; these map to its gentlest members.
+@MainActor
+public enum Haptics {
+    public static var isEnabled: () -> Bool = { true }
+
+    public static func selection() { if isEnabled() { WKInterfaceDevice.current().play(.click) } }
+    public static func soft(intensity: CGFloat = 0.7) { if isEnabled() { WKInterfaceDevice.current().play(.click) } }
+    public static func light() { if isEnabled() { WKInterfaceDevice.current().play(.directionUp) } }
+    public static func success() { if isEnabled() { WKInterfaceDevice.current().play(.success) } }
+}
+#else
 import UIKit
 
 /// Centralised, restrained haptics. Never fired from idle animation.
@@ -33,3 +48,4 @@ public enum Haptics {
         notificationGenerator.notificationOccurred(.success)
     }
 }
+#endif
