@@ -13,6 +13,9 @@ public enum PipColor {
 /// same hue as a tint for canvases and chips; `ink` is a dark tone of it for text on soft.
 /// Colour is always paired with the pet's pose, never the only cue.
 public enum MoodColor {
+    /// Consistent dark foreground on saturated mood surfaces, including yellow and mint.
+    public static let onBold = Color(red: 0.12, green: 0.16, blue: 0.18)
+
     public static func bold(_ mood: Mood) -> Color {
         switch mood {
         case .happy: Color(red: 0.99, green: 0.74, blue: 0.20)
@@ -48,8 +51,8 @@ public enum MoodColor {
 
 /// Type ramp. Everything is a Dynamic Type text style; rounded and heavy for warmth.
 public enum PipFont {
-    public static let display = Font.system(.largeTitle, design: .rounded, weight: .heavy)
-    public static let title = Font.system(.title, design: .rounded, weight: .heavy)
+    public static let display = Font.system(.largeTitle, design: .serif, weight: .regular)
+    public static let title = Font.system(.title, design: .serif, weight: .regular)
     public static let title2 = Font.system(.title2, design: .rounded, weight: .bold)
     public static let headline = Font.system(.headline, design: .rounded, weight: .bold)
     public static let body = Font.system(.body, design: .rounded)

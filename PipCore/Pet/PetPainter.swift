@@ -3,10 +3,10 @@ import SwiftUI
 /// Shared drawing vocabulary for all species painters. See `Docs/CharacterSpec.md`.
 ///
 /// Painters draw into a 200×200 "design canvas"; `PetView` scales it to fit. Every pet
-/// follows one construction: a single flat silhouette (head merged into a sitting body,
-/// species features part of the outline), a lighter belly, small eyes, a tiny nose or
+/// follows one construction: a softly lit silhouette (head merged into a sitting body,
+/// species features part of the outline), a lighter belly, glossy eyes, a tiny nose or
 /// beak, paws or feet, and one prop. Feeling comes from pose and glyphs, not rendering.
-/// Paired parts are drawn once and mirrored; nothing is shaded.
+/// Paired parts are drawn once and mirrored, with a consistent upper-left key light.
 public struct PetPaintContext {
     public var rig: PetRig
     public var live: LiveMotion
@@ -110,7 +110,7 @@ public struct PetAnatomy: Sendable {
     /// Eye radius as a fraction of head width.
     public var eyeRadius: CGFloat
 
-    public init(headWidth: CGFloat, headHeight: CGFloat, headOverlap: CGFloat, cheekSquareness: CGFloat, torsoHeight: CGFloat, chestWidth: CGFloat, hipWidth: CGFloat, eyeRadius: CGFloat = 0.055) {
+    public init(headWidth: CGFloat, headHeight: CGFloat, headOverlap: CGFloat, cheekSquareness: CGFloat, torsoHeight: CGFloat, chestWidth: CGFloat, hipWidth: CGFloat, eyeRadius: CGFloat = 0.072) {
         self.headWidth = headWidth
         self.headHeight = headHeight
         self.headOverlap = headOverlap
@@ -130,6 +130,38 @@ public protocol PetPainter {
 // MARK: - Shared primitives
 
 public enum PetDraw {
+
+    /// Soft toy volume: one warm key light and a quiet lower-right shadow.
+    /// Kept in vector geometry so expressions interpolate and tiny widgets stay crisp.
+    public static func plush(_ ctx: inout GraphicsContext, _ shape: Path, _ p: PetPaintContext) {
+        let bounds = shape.boundingRect
+        ctx.fill(shape, with: .linearGradient(Gradient(stops: [
+            .init(color: p.palette.light, location: 0),
+            .init(color: p.palette.base, location: 0.42),
+            .init(color: p.palette.shade, location: 1)
+        ]), startPoint: CGPoint(x: bounds.minX, y: bounds.minY), endPoint: CGPoint(x: bounds.maxX, y: bounds.maxY)))
+        guard p.detail == .full else { return }
+        var light = ctx
+        light.clip(to: shape)
+        light.fill(shape, with: .radialGradient(Gradient(colors: [.white.opacity(0.20), .white.opacity(0)]),
+            center: CGPoint(x: p.head.center.x - p.head.width * 0.2, y: p.head.top + p.head.height * 0.2),
+            startRadius: 0, endRadius: p.head.width * 0.8))
+    }
+
+    /// Small front arms make a wave legible on every mammal, not just the penguin.
+    public static func arms(_ ctx: inout GraphicsContext, _ p: PetPaintContext) {
+        let t = p.torso
+        mirrored(&ctx) { context, side in
+            let raised = CGFloat(p.rig.armRaise) * (side == 1 ? 1 : 0.35)
+            let root = CGPoint(x: t.centerX + t.hipWidth * 0.36, y: t.top + t.height * 0.38)
+            let end = CGPoint(x: root.x + 7 + raised * 13, y: root.y + 22 - raised * 42)
+            var arm = Path()
+            arm.move(to: root)
+            arm.addQuadCurve(to: end, control: CGPoint(x: root.x + 12, y: root.y + 12 - raised * 20))
+            let shape = arm.strokedPath(StrokeStyle(lineWidth: 17, lineCap: .round))
+            plush(&context, shape, p)
+        }
+    }
 
     // MARK: Symmetry
 
@@ -322,8 +354,12 @@ public enum PetDraw {
         let eyePath = Path(ellipseIn: rect)
         var eyeCtx = ctx
         eyeCtx.clip(to: eyePath)
-        eyeCtx.fill(eyePath, with: .color(p.ink))
+        eyeCtx.fill(eyePath, with: .linearGradient(Gradient(colors: [p.ink, p.palette.shade]), startPoint: CGPoint(x: c.x, y: rect.minY), endPoint: CGPoint(x: c.x, y: rect.maxY)))
 
+        if p.detail == .full {
+            let glint = r * 0.25
+            eyeCtx.fill(Path(ellipseIn: CGRect(x: c.x + r * 0.25, y: c.y + r * 0.35, width: glint, height: glint)), with: .color(.white.opacity(0.5)))
+        }
         // Upper lid: squint / heavy lids cover from the top.
         let cover = max(CGFloat(rig.eyeSquint) * 0.45, CGFloat(rig.lidHeaviness) * 0.5)
         if cover > 0.01 {
@@ -543,15 +579,15 @@ public extension PetSpecies {
     var anatomy: PetAnatomy {
         switch self {
         case .cat:
-            PetAnatomy(headWidth: 96, headHeight: 82, headOverlap: 30, cheekSquareness: 0.35, torsoHeight: 76, chestWidth: 74, hipWidth: 100)
+            PetAnatomy(headWidth: 108, headHeight: 86, headOverlap: 33, cheekSquareness: 0.48, torsoHeight: 72, chestWidth: 74, hipWidth: 100)
         case .dog:
-            PetAnatomy(headWidth: 98, headHeight: 84, headOverlap: 30, cheekSquareness: 0.3, torsoHeight: 78, chestWidth: 76, hipWidth: 102)
+            PetAnatomy(headWidth: 106, headHeight: 88, headOverlap: 32, cheekSquareness: 0.4, torsoHeight: 73, chestWidth: 76, hipWidth: 102)
         case .capybara:
-            PetAnatomy(headWidth: 108, headHeight: 72, headOverlap: 26, cheekSquareness: 0.95, torsoHeight: 70, chestWidth: 100, hipWidth: 120, eyeRadius: 0.042)
+            PetAnatomy(headWidth: 108, headHeight: 72, headOverlap: 26, cheekSquareness: 0.95, torsoHeight: 70, chestWidth: 100, hipWidth: 120, eyeRadius: 0.052)
         case .penguin:
-            PetAnatomy(headWidth: 84, headHeight: 78, headOverlap: 34, cheekSquareness: 0.2, torsoHeight: 96, chestWidth: 82, hipWidth: 100, eyeRadius: 0.06)
+            PetAnatomy(headWidth: 94, headHeight: 84, headOverlap: 38, cheekSquareness: 0.3, torsoHeight: 90, chestWidth: 86, hipWidth: 108, eyeRadius: 0.075)
         case .redPanda:
-            PetAnatomy(headWidth: 98, headHeight: 82, headOverlap: 30, cheekSquareness: 0.4, torsoHeight: 76, chestWidth: 74, hipWidth: 104)
+            PetAnatomy(headWidth: 110, headHeight: 84, headOverlap: 34, cheekSquareness: 0.5, torsoHeight: 72, chestWidth: 74, hipWidth: 104)
         }
     }
 }

@@ -16,32 +16,55 @@ struct PetHomeView: View {
             ZStack {
                 canvas
 
-                VStack(spacing: 0) {
-                    header
-                        .padding(.horizontal, PipSpacing.l)
-                        .padding(.top, PipSpacing.s)
-                    Spacer(minLength: 0)
-                }
+                ScrollView {
+                    VStack(spacing: 20) {
+                        header
+                        VStack(spacing: 4) {
+                            Text("A little company.\nA little more you.")
+                                .font(.system(.largeTitle, design: .serif, weight: .regular))
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text("A soft place for every kind of day.")
+                                .font(PipFont.callout)
+                                .foregroundStyle(.secondary)
+                                .padding(.top, 6)
+                        }
+                        .padding(.top, 4)
 
-                PetSceneWithClock(identity: appState.identity, state: appState.displayedState,
-                                  petScale: showMoodPicker ? 0.62 : 0.86, petVerticalPosition: showMoodPicker ? 0.3 : 0.5, showsFloor: true)
-                    .frame(maxWidth: 440)
-                    .padding(.top, 40)
-                    .padding(.bottom, 120)
-                    .animation(.spring(duration: 0.5, bounce: 0.15), value: showMoodPicker)
-                    .contentShape(Rectangle())
-                    .onTapGesture { appState.pokePet() }
-                    .accessibilityElement()
-                    .accessibilityLabel(petAccessibilityLabel)
-                    .accessibilityHint("Double tap to say hello.")
-                    .accessibilityAddTraits(.isImage)
+                        Button { appState.pokePet() } label: {
+                            PetSceneWithClock(identity: appState.identity, state: appState.displayedState,
+                                              petScale: 0.80, petVerticalPosition: 0.58, showsFloor: true)
+                                .frame(height: 310)
+                                .overlay(alignment: .bottom) {
+                                    Label("Tap to say hello", systemImage: "hand.wave")
+                                        .font(PipFont.caption)
+                                        .foregroundStyle(.secondary)
+                                        .padding(.bottom, 3)
+                                }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(petAccessibilityLabel)
+                        .accessibilityHint("Double tap to say hello.")
 
-                VStack {
-                    Spacer()
-                    moodButton
-                        .padding(.horizontal, PipSpacing.l)
-                        .padding(.bottom, PipSpacing.m)
+                        moodButton
+                        HStack(spacing: 12) {
+                            Button { showSitWithPet = true } label: {
+                                ritualLabel("Take a breath", subtitle: "A moment together", symbol: "wind")
+                            }
+                            Button { showPets = true } label: {
+                                ritualLabel("Your companion", subtitle: "Meet the little ones", symbol: "pawprint")
+                            }
+                        }
+                        .buttonStyle(PressableButtonStyle())
+                        todayRibbon
+                    }
+                    .frame(maxWidth: 480)
+                    .padding(.horizontal, PipSpacing.l)
+                    .padding(.top, PipSpacing.s)
+                    .padding(.bottom, PipSpacing.l)
+                    .frame(maxWidth: .infinity)
                 }
+                .scrollIndicators(.hidden)
             }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(isPresented: $showPets) { PetSelectorView() }
@@ -57,10 +80,8 @@ struct PetHomeView: View {
             .fullScreenCover(isPresented: $showSitWithPet) {
                 SitWithPetView()
             }
-            .onChange(of: appState.pendingRoute, initial: true) { _, route in
-                guard let route else { return }
-                if route == .sit { showSitWithPet = true }
-                appState.pendingRoute = nil
+            .onChange(of: appState.presentSit, initial: true) { _, present in
+                if present { showSitWithPet = true; appState.presentSit = false }
             }
             #if DEBUG
             .onAppear {
@@ -100,10 +121,11 @@ struct PetHomeView: View {
     private var header: some View {
         HStack(alignment: .top, spacing: PipSpacing.m) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(appState.identity.name)
-                    .font(PipFont.display)
-                Text(statusLine)
-                    .font(PipFont.callout)
+                Text("pip")
+                    .font(.system(.title, design: .serif, weight: .semibold))
+                Text("WITH " + appState.identity.name.uppercased())
+                    .font(.system(.caption2, design: .rounded, weight: .bold))
+                    .tracking(2)
                     .foregroundStyle(.secondary)
                     .contentTransition(.numericText())
             }
@@ -113,7 +135,7 @@ struct PetHomeView: View {
                 Haptics.light()
                 showSitWithPet = true
             } label: {
-                Image(systemName: "sofa.fill")
+                Image(systemName: "wind")
                     .font(.title3.weight(.semibold))
                     .frame(width: 44, height: 44)
             }
@@ -161,7 +183,7 @@ struct PetHomeView: View {
                         .font(.headline.weight(.bold))
                 }
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(MoodColor.onBold)
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
             .frame(maxWidth: 420)
@@ -174,7 +196,43 @@ struct PetHomeView: View {
     }
 
     private var buttonColor: Color {
-        mood.map(MoodColor.bold) ?? Color.accentColor
+        mood.map(MoodColor.bold) ?? MoodColor.bold(.calm)
+    }
+
+    private func ritualLabel(_ title: String, subtitle: String, symbol: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Image(systemName: symbol).font(.title3).foregroundStyle(PipColor.inkSecondary)
+            Text(title).font(PipFont.headline)
+            Text(subtitle).font(PipFont.caption).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24))
+        .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(.primary.opacity(0.04)))
+    }
+
+    private var todayRibbon: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("The shape of today").font(PipFont.headline)
+                Spacer()
+                Text(appState.todayEntries.count.formatted() + " moments")
+                    .font(PipFont.caption).foregroundStyle(.secondary)
+            }
+            if appState.todayEntries.isEmpty {
+                Text("Every feeling has a place here. Start with this one.")
+                    .font(PipFont.callout).foregroundStyle(.secondary)
+            } else {
+                HStack(spacing: 5) {
+                    ForEach(appState.todayEntries.suffix(12)) { entry in
+                        Capsule().fill(MoodColor.bold(entry.mood).gradient)
+                            .frame(height: 24)
+                            .accessibilityLabel("\(entry.mood.displayName), \(entry.timestamp.formatted(date: .omitted, time: .shortened))")
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 8)
     }
 
     private var petAccessibilityLabel: String {

@@ -1,8 +1,8 @@
 # Pip character spec
 
-Every pet is drawn procedurally from the same construction. A painter that breaks a rule is a bug.
-The style is flat and graphic: one solid silhouette, small features, no shading. Feeling comes
-from pose and glyphs, charm from one prop per pet.
+Every pet is drawn procedurally from the same construction. The visual direction is a small,
+sculptural companion: rounded cheeks, a soft upper-left light, glossy eyes, and tactile paws.
+Feeling comes from pose first, expression second. One signature prop identifies each pet.
 
 ## Canvas and stance
 - 200 × 200 design units. The floor is `y = 168`. Feet touch the floor; nothing sits below `y = 176`.
@@ -12,10 +12,10 @@ from pose and glyphs, charm from one prop per pet.
 
 ## Construction (in drawing order)
 1. **Silhouette** — `PetDraw.silhouette(p, extras:)`: torso ∪ tilted head ∪ outline parts (ears, snout),
-   filled flat with `palette.base`. Head and body are one shape; there is no neck seam.
+   filled through `PetDraw.plush`. Head and body are one shape; there is no neck seam.
 2. **Belly / front** — a lighter oval clipped to the silhouette (`palette.belly`).
-3. **Limbs** — paws (`PetDraw.paws`), feet or flippers as simple flat shapes in `shade`, `belly` or `nose`.
-4. **Species marks** — ear insides, muzzle, mask, patch, stripes, tail rings. Flat fills only.
+3. **Limbs** — front arms (`PetDraw.arms`), paws (`PetDraw.paws`), feet or flippers as simple shapes in `shade`, `belly` or `nose`.
+4. **Species marks** — ear insides, muzzle, mask, patch, stripes, tail rings. Keep markings simple and readable.
 5. **Face** — eyes, brows, blush (only when the mood asks), nose/beak, mouth.
 6. **Prop** — exactly one per pet (`PetProps`): Pebble scarf, Mochi bell collar, Biscuit bandana,
    Rusty leaf, Juniper yuzu. Neck props also hide the head/body join.
@@ -24,16 +24,17 @@ from pose and glyphs, charm from one prop per pet.
 ## Proportions (units)
 | | cat | dog | red panda | penguin | capybara |
 |---|---|---|---|---|---|
-| hip width | 100 | 102 | 104 | 100 | 112 |
-| head width | 96 | 98 | 98 | 84 | 100 |
-| head overlap | 30 | 30 | 30 | 34 | 24 |
-| eye radius (× head width) | 0.055 | 0.055 | 0.055 | 0.06 | 0.045 |
+| hip width | 100 | 102 | 104 | 108 | 120 |
+| head width | 108 | 106 | 110 | 94 | 108 |
+| head overlap | 33 | 32 | 34 | 38 | 26 |
+| eye radius (× head width) | 0.072 | 0.072 | 0.072 | 0.075 | 0.052 |
 
-- Eyes on the line at 48 % of head height, 0.38 × head width apart. Small ink ovals with one top-left highlight.
+- Eyes on the line at 48 % of head height, 0.38 × head width apart. Glossy ink ovals with a top-left key light and a smaller bounce light.
 - Nose / beak / mouth group centred at 70 % of head height. Beaks and noses are tiny: ≤ 15 % of head width.
 
 ## Colour
-- Flat. No gradients, no cel shade, no rim light. `PetDraw.form` is a flat fill on purpose.
+- `PetDraw.plush` shades the silhouette from light → base → shade, with a soft head highlight.
+- Keep face markings graphic; do not add bitmap textures or expensive per-frame blur.
 - Per species: `base`, `shade` (for limbs/flippers that must separate from the body), `belly`, `marking`,
   `earInner`, `nose`, `ink`, `blush`. Pebble is charcoal, not navy.
 - Pets keep their colours in dark mode; the scene adapts, the pet does not.
@@ -54,3 +55,9 @@ from pose and glyphs, charm from one prop per pet.
   for time, `.smooth` on rig changes, no overshooting springs.
 - Where nothing can animate (widgets, Live Activities): `PetPose` variations (blink, glance, wave, hop) that
   the app pushes as state updates; the system animates the change.
+
+## Sanctuary
+- Shared vector alcove, paper-cut hills, sun and botanical silhouettes in `SanctuaryArtwork`.
+- Scenes adapt to mood and appearance; pet colours stay consistent.
+- Widgets use static artwork. Reduce Motion removes the character clock.
+- Regenerate character contact sheets using `CharacterRenderTests` and `PIP_ART_OUTPUT`.

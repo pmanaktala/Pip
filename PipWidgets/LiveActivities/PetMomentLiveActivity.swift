@@ -32,11 +32,12 @@ struct PetMomentLiveActivity: Widget {
                     Button(intent: WaveAtPetIntent()) {
                         Image(systemName: "hand.wave.fill")
                             .font(.headline.weight(.bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(MoodColor.onBold)
                             .frame(width: 44, height: 44)
                             .background(color, in: Circle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Wave at \(identity.name)")
                     .frame(width: 60, height: 60)
                 }
                 DynamicIslandExpandedRegion(.center) {
@@ -77,6 +78,7 @@ struct PetMomentLiveActivity: Widget {
                 PetView(identity: identity, state: petState, showsShadow: false, framing: .badge)
                     .frame(width: 22, height: 22)
             }
+            .widgetURL(URL(string: sitting ? "pip://sit" : "pip://home"))
             .keylineTint(color)
         }
     }

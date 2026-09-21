@@ -99,8 +99,8 @@ struct HistoryView: View {
         let ordered = Array(symbols[(cal.firstWeekday - 1)...] + symbols[..<(cal.firstWeekday - 1)])
         return VStack(spacing: 6) {
             HStack {
-                ForEach(ordered, id: \.self) { s in
-                    Text(s).font(PipFont.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity)
+                ForEach(Array(ordered.enumerated()), id: \.offset) { _, symbol in
+                    Text(symbol).font(PipFont.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity)
                 }
             }
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 5), count: 7), spacing: 5) {
@@ -153,7 +153,7 @@ struct HistoryView: View {
                     Spacer(minLength: 0)
                 }
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(MoodColor.onBold)
             .padding(PipSpacing.m)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(MoodColor.bold(mood), in: RoundedRectangle(cornerRadius: PipRadius.card, style: .continuous))

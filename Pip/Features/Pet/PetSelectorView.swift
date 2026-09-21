@@ -97,8 +97,8 @@ struct PetCard: View {
 
     var body: some View {
         VStack(spacing: PipSpacing.s) {
-            AnimatedPetView(identity: PetIdentity(species: species), state: state)
-                .frame(maxWidth: 280)
+            PetSceneWithClock(identity: PetIdentity(species: species), state: state, petScale: 0.78, petVerticalPosition: 0.59)
+                .frame(width: 280, height: 280)
                 .padding(.top, PipSpacing.s)
             Text(species.defaultName)
                 .font(PipFont.title)

@@ -48,4 +48,17 @@ final class MoodLoggingUITests: XCTestCase {
         let pet = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH 'Pebble looks' OR label BEGINSWITH 'Pebble is'")).firstMatch
         XCTAssertTrue(pet.waitForExistence(timeout: 5), "The pet must expose a VoiceOver label describing its mood")
     }
+    func testBreathingCanStartAndStop() {
+        app.buttons["Sit with Pebble"].tap()
+        let breathe = app.buttons["Breathe together"]
+        XCTAssertTrue(breathe.waitForExistence(timeout: 5))
+        breathe.tap()
+        let stop = app.buttons["Stop guided breathing"]
+        XCTAssertTrue(stop.waitForExistence(timeout: 5))
+        stop.tap()
+        XCTAssertTrue(breathe.exists)
+        app.buttons["Close"].tap()
+        XCTAssertTrue(app.buttons["Log your mood"].waitForExistence(timeout: 5))
+    }
+
 }

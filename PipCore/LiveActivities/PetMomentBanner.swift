@@ -21,7 +21,8 @@ public struct PetMomentBanner: View {
         let petState = state.petState(identity: identity)
         HStack(spacing: 14) {
             ZStack {
-                Circle().fill(color.opacity(0.22))
+                Circle().fill(color.opacity(0.14))
+                Circle().strokeBorder(color.opacity(0.3), lineWidth: 1).padding(3)
                 PetView(identity: identity, state: petState, showsShadow: false)
                     .padding(4)
                     .id(state.pose)
@@ -35,6 +36,10 @@ public struct PetMomentBanner: View {
             .animation(.spring(duration: 0.5, bounce: 0.3), value: state.pose)
 
             VStack(alignment: .leading, spacing: 4) {
+                Text(sitting ? "A LITTLE COMPANY" : "A LITTLE MOMENT")
+                    .font(.system(.caption2, design: .rounded, weight: .bold))
+                    .tracking(1.5)
+                    .foregroundStyle(.secondary)
                 Text(state.message)
                     .font(.system(.headline, design: .rounded, weight: .bold))
                     .lineLimit(2)
@@ -57,7 +62,7 @@ public struct PetMomentBanner: View {
             Button(intent: WaveAtPetIntent()) {
                 Image(systemName: "hand.wave.fill")
                     .font(.headline.weight(.bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(MoodColor.onBold)
                     .frame(width: 44, height: 44)
                     .background(color, in: Circle())
             }

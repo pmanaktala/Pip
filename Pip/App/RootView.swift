@@ -17,7 +17,6 @@ struct RootView: View {
             mainOrOnboarding
             #endif
         }
-        .fontDesign(.rounded)
         .tint(.accentColor)
     }
 
@@ -49,6 +48,12 @@ struct MainTabView: View {
             SwiftUI.Tab("You", systemImage: "person.crop.circle.fill", value: Tab.you) {
                 NavigationStack { SettingsView() }
             }
+        }
+        .onChange(of: appState.pendingRoute, initial: true) { _, route in
+            guard let route else { return }
+            tab = .pet
+            if route == .sit { appState.presentSit = true }
+            appState.pendingRoute = nil
         }
         #if DEBUG
         .onAppear {

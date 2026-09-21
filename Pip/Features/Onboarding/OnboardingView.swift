@@ -52,8 +52,8 @@ struct OnboardingView: View {
         switch step {
         case .welcome:
             VStack(spacing: PipSpacing.m) {
-                AnimatedPetView(identity: PetIdentity(species: .penguin), state: PetStateResolver.resolve(mood: wave ? .happy : .calm, identity: PetIdentity(species: .penguin)))
-                    .frame(width: 240, height: 240)
+                PetSceneWithClock(identity: PetIdentity(species: .penguin), state: PetStateResolver.resolve(mood: wave ? .happy : .calm, identity: PetIdentity(species: .penguin)), petScale: 0.78, petVerticalPosition: 0.59)
+                    .frame(width: 260, height: 260)
                 Text("Meet your mood companion")
                     .font(PipFont.display)
                     .multilineTextAlignment(.center)

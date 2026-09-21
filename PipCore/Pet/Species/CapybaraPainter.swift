@@ -16,8 +16,9 @@ public enum CapybaraPainter: PetPainter {
         let snout = CGRect(x: h.center.x - sw / 2, y: h.center.y - h.height * 0.04, width: sw, height: sh)
         let snoutPath = Path(roundedRect: snout, cornerRadius: sh * 0.4)
         let silhouette = PetDraw.silhouette(p, extras: [PetDraw.symmetric(ear), snoutPath])
-        ctx.fill(silhouette, with: .color(p.palette.base))
+        PetDraw.plush(&ctx, silhouette, p)
         PetDraw.belly(&ctx, p, within: silhouette, widthFraction: 0.5, heightFraction: 0.46)
+        PetDraw.arms(&ctx, p)
         PetDraw.paws(&ctx, p, color: p.palette.shade, spread: 0.22, width: 28, height: 14)
 
         var hc = PetDraw.headContext(ctx, p)

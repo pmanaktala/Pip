@@ -46,7 +46,10 @@ struct MoodPickerSheet: View {
                 }
             }
         }
-        .onDisappear { appState.preview = nil }
+        .onDisappear {
+            if let logged { commitNote(logged) }
+            appState.preview = nil
+        }
     }
 
     // MARK: Step 1
@@ -139,7 +142,7 @@ struct MoodPickerSheet: View {
             Text("A note? (optional)")
                 .font(PipFont.caption)
                 .foregroundStyle(.secondary)
-            TextField("Deployment broke again. Great dinner tonight.", text: $note, axis: .vertical)
+            TextField("What made this moment feel this way?", text: $note, axis: .vertical)
                 .lineLimit(1...3)
                 .textFieldStyle(.plain)
                 .padding(12)

@@ -9,6 +9,9 @@ struct SitWithPetView: View {
     @Environment(\.colorScheme) private var scheme
     @State private var ambience = AmbientSound()
     @State private var startedAt = Date.now
+    @State private var guidedBreathing = false
+    @State private var breathStartedAt = Date.now
+    @Environment(\.scenePhase) private var scenePhase
 
     private var state: PetMoodState {
         var s = PetStateResolver.resolve(mood: .calm, intensity: .moderate, identity: appState.identity)
@@ -23,6 +26,18 @@ struct SitWithPetView: View {
         ZStack {
             Color(.systemBackground).ignoresSafeArea()
             ambientLight
+
+            if guidedBreathing {
+                TimelineView(.animation(minimumInterval: reduceMotion ? 1 : 1.0 / 30)) { clock in
+                    let phase = clock.date.timeIntervalSince(breathStartedAt).truncatingRemainder(dividingBy: 10)
+                    let expansion = phase < 4 ? phase / 4 : 1 - (phase - 4) / 6
+                    Circle()
+                        .stroke(MoodColor.bold(.calm).opacity(0.25), lineWidth: 2)
+                        .frame(width: 280, height: 280)
+                        .scaleEffect(reduceMotion ? 1 : 0.85 + expansion * 0.3)
+                        .accessibilityHidden(true)
+                }
+            }
 
             PetSceneWithClock(identity: appState.identity, state: state, petScale: 0.8, petVerticalPosition: 0.5, showsFloor: true)
                 .ignoresSafeArea()
@@ -45,8 +60,23 @@ struct SitWithPetView: View {
                 .padding(.horizontal, PipSpacing.m)
                 Spacer()
                 VStack(spacing: 6) {
-                    Text("Just sitting.")
-                        .font(PipFont.title2)
+                    if guidedBreathing {
+                        TimelineView(.periodic(from: breathStartedAt, by: 1)) { clock in
+                            let phase = clock.date.timeIntervalSince(breathStartedAt).truncatingRemainder(dividingBy: 10)
+                            Text(phase < 4 ? "Breathe in." : "Let it go.")
+                                .font(PipFont.title)
+                        }
+                    } else {
+                        Text("Nothing to do. Just be.").font(PipFont.title)
+                    }
+                    Button(guidedBreathing ? "Stop guided breathing" : "Breathe together") {
+                        Haptics.soft()
+                        breathStartedAt = .now
+                        guidedBreathing.toggle()
+                    }
+                    .font(PipFont.callout)
+                    .buttonStyle(.glass)
+                    .padding(.vertical, 12)
                     Text(timerInterval: startedAt...startedAt.addingTimeInterval(24 * 3600), countsDown: false, showsHours: false)
                         .monospacedDigit()
                         .font(PipFont.callout)
@@ -57,6 +87,10 @@ struct SitWithPetView: View {
         }
         .onAppear { if appState.preferences.soundEnabled { ambience.start() } }
         .onDisappear { ambience.stop() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active && appState.preferences.soundEnabled { ambience.start() }
+            else { ambience.stop() }
+        }
     }
 
     /// A slow drift between the calm hues, like light moving across a room over a few minutes.

@@ -43,6 +43,12 @@ public struct PetSceneView: View {
                     LinearGradient(colors: [PipColor.sceneTop, PipColor.sceneBottom], startPoint: .top, endPoint: .bottom)
                 }
 
+                if showsFloor {
+                    SanctuaryArtwork(mood: state.mood)
+                        .frame(width: petSide * 1.15, height: petSide * 1.24)
+                        .position(x: petCenter.x, y: floorY - petSide * 0.43)
+                }
+
                 // Ambient light behind the pet: additive in the dark, a warm wash in the light.
                 Ellipse()
                     .fill(theme.glow(for: scheme, radius: petSide * 0.7))
@@ -58,10 +64,6 @@ public struct PetSceneView: View {
                         .frame(width: petSide * 1.3, height: petSide * 0.26)
                         .position(x: petCenter.x, y: floorY + petSide * 0.015)
                 }
-
-                Color.black
-                    .opacity(state.environment.dimness * (dark ? 0.3 : 0.06))
-                    .animation(.smooth(duration: 1.2), value: state.environment.dimness)
 
                 PetView(identity: identity, state: state, time: time)
                     .frame(width: petSide, height: petSide)

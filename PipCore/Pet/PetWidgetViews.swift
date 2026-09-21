@@ -34,18 +34,26 @@ public struct PetHomeWidgetView: View {
 
     // Small: just the pet, big.
     private var small: some View {
-        PetSceneView(identity: identity, state: state, time: nil, petScale: 1.0, petVerticalPosition: 0.5, showsFloor: true, showsAccessory: showsBackground, showsBackground: false)
-            .accessibilityLabel(accessibilityLabel)
+        ZStack(alignment: .bottomLeading) {
+            PetSceneView(identity: identity, state: state, time: nil, petScale: 0.70, petVerticalPosition: 0.53, showsFloor: showsBackground, showsAccessory: showsBackground, showsBackground: false)
+            HStack {
+                Text(identity.name).font(PipFont.caption)
+                Spacer(minLength: 0)
+                Image(systemName: state.mood.symbolName).foregroundStyle(MoodColor.bold(state.mood))
+            }
+            .padding(12)
+        }
+        .accessibilityLabel(accessibilityLabel)
     }
 
     // Medium: pet, name and status, three quick-log buttons in their mood colours.
     private var medium: some View {
         HStack(spacing: 0) {
-            PetSceneView(identity: identity, state: state, time: nil, petScale: 0.96, petVerticalPosition: 0.5, showsBackground: false)
-                .frame(width: 140)
+            PetSceneView(identity: identity, state: state, time: nil, petScale: 0.80, petVerticalPosition: 0.55, showsBackground: false)
+                .frame(maxWidth: 145)
             VStack(alignment: .leading, spacing: 6) {
                 Text(identity.name)
-                    .font(PipFont.title2)
+                    .font(.system(.title2, design: .serif, weight: .regular))
                 Text(statusLine)
                     .font(PipFont.caption)
                     .foregroundStyle(.secondary)
@@ -73,7 +81,7 @@ public struct PetHomeWidgetView: View {
     // Large: the pet, then today as a row of mood-coloured chips.
     private var large: some View {
         VStack(spacing: 0) {
-            PetSceneView(identity: identity, state: state, time: nil, petScale: 0.74, petVerticalPosition: 0.5, showsBackground: false)
+            PetSceneView(identity: identity, state: state, time: nil, petScale: 0.70, petVerticalPosition: 0.53, showsBackground: false)
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text(identity.name).font(PipFont.title2)

@@ -9,12 +9,13 @@ public enum CatPainter: PetPainter {
         let earLen: CGFloat = 34
         let ear = PetDraw.pointedEarPath(p, baseInner: earInner, baseOuter: earOuter, length: earLen)
         let silhouette = PetDraw.silhouette(p, extras: [PetDraw.symmetric(ear)])
-        ctx.fill(silhouette, with: .color(p.palette.base))
+        PetDraw.plush(&ctx, silhouette, p)
 
         PetDraw.belly(&ctx, p, within: silhouette, widthFraction: 0.5, heightFraction: 0.5)
 
         // Tail in front of the haunch, wrapping around the paws when down.
         PetDraw.tail(&ctx, p, width: 13, length: 62, color: p.palette.base, tip: p.palette.marking)
+        PetDraw.arms(&ctx, p)
         PetDraw.paws(&ctx, p, color: p.palette.light)
 
         // Inner ears.

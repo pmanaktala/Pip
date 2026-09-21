@@ -43,7 +43,8 @@ public enum RedPandaPainter: PetPainter {
         let earR = h.width * 0.15
         let ear = Path(ellipseIn: CGRect(x: earC.x - earR, y: earC.y - earR, width: earR * 2, height: earR * 2))
         let silhouette = PetDraw.silhouette(p, extras: [PetDraw.symmetric(ear)])
-        ctx.fill(silhouette, with: .color(p.palette.base))
+        PetDraw.plush(&ctx, silhouette, p)
+        PetDraw.arms(&ctx, p)
         PetDraw.paws(&ctx, p, color: p.palette.belly, spread: 0.2, width: 26, height: 14)
 
         var hc = PetDraw.headContext(ctx, p)

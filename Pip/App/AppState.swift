@@ -20,6 +20,7 @@ final class AppState {
     var preview: (mood: Mood, intensity: MoodIntensity)?
     /// A transient reaction (the user poked the pet).
     private(set) var poke: PetMoodState?
+    private var reactionTask: Task<Void, Never>?
 
     var context: ModelContext { container.mainContext }
     private(set) var logger: MoodLogger
@@ -129,7 +130,8 @@ final class AppState {
 
     /// Tap reaction: a quick hop with a heart, then a happy settle, then back to normal.
     func pokePet() {
-        var hop = displayedState
+        reactionTask?.cancel()
+        var hop = snapshot.state()
         hop.rig.eyeArc = max(hop.rig.eyeArc, 0.8)
         hop.rig.mouthCurve = max(hop.rig.mouthCurve, 0.6)
         hop.rig.mouthOpen = max(hop.rig.mouthOpen, 0.2)
@@ -143,16 +145,18 @@ final class AppState {
         hop.motion.hopHeight = 0
         hop.accessory = .heart
         var settle = hop
-        settle.rig.lift = displayedState.rig.lift
-        settle.rig.squash = displayedState.rig.squash
+        settle.rig.lift = snapshot.state().rig.lift
+        settle.rig.squash = snapshot.state().rig.squash
         settle.rig.armRaise = 0.3
         settle.rig.mouthOpen = 0
         Haptics.soft()
         withAnimation(.spring(duration: 0.35, bounce: 0.45)) { poke = hop }
-        Task { @MainActor in
+        reactionTask = Task { @MainActor in
             try? await Task.sleep(for: .seconds(0.32))
+            guard !Task.isCancelled else { return }
             withAnimation(.spring(duration: 0.45, bounce: 0.35)) { poke = settle }
             try? await Task.sleep(for: .seconds(0.9))
+            guard !Task.isCancelled else { return }
             withAnimation(.smooth(duration: 0.5)) { poke = nil }
         }
     }
@@ -160,6 +164,7 @@ final class AppState {
     /// Reaction to a freshly logged mood, visible on the Pet tab behind the sheet: the pet jumps
     /// into the new mood (positive) or sinks into it (negative), then settles into the resolved state.
     func react(to entry: MoodEntry) {
+        reactionTask?.cancel()
         let target = PetStateResolver.resolve(mood: entry.mood, intensity: entry.intensity, identity: identity)
         var burst = target
         if entry.mood.valence >= 0 {
@@ -174,8 +179,9 @@ final class AppState {
         }
         burst.motion.hopHeight = 0
         withAnimation(.spring(duration: 0.4, bounce: 0.4)) { poke = burst }
-        Task { @MainActor in
+        reactionTask = Task { @MainActor in
             try? await Task.sleep(for: .seconds(1.1))
+            guard !Task.isCancelled else { return }
             withAnimation(.smooth(duration: 0.6)) { poke = nil }
         }
     }
@@ -207,6 +213,7 @@ final class AppState {
 
     /// Requested by a Live Activity or notification tap.
     var pendingRoute: Route?
+    var presentSit = false
     enum Route: Equatable { case sit, home }
 
     func handle(url: URL) {

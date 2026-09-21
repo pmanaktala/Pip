@@ -26,7 +26,7 @@ public enum PenguinPainter: PetPainter {
                      control2: CGPoint(x: t.centerX - t.chestWidth * 0.62, y: t.top))
         egg.closeSubpath()
         let silhouette = egg.union(PetDraw.headPath(h).applying(p.headTilt))
-        ctx.fill(silhouette, with: .color(p.palette.base))
+        PetDraw.plush(&ctx, silhouette, p)
 
         // Front: a belly oval that rises into a rounded face patch. One shape, no seam.
         var layout = PetDraw.FaceLayout()
@@ -43,7 +43,7 @@ public enum PenguinPainter: PetPainter {
         let bridge = Path(roundedRect: CGRect(x: h.center.x - h.width * 0.28, y: h.center.y + h.height * 0.2, width: h.width * 0.56, height: max(0, t.bottom - bellyH - (h.center.y + h.height * 0.2)) + 30), cornerRadius: h.width * 0.2)
         var front = ctx
         front.clip(to: silhouette)
-        front.fill(belly.union(bridge).union(face), with: .color(p.palette.belly))
+        front.fill(belly.union(bridge).union(face), with: .linearGradient(Gradient(colors: [.white, p.palette.belly, Color(red: 0.85, green: 0.87, blue: 0.87)]), startPoint: CGPoint(x: h.center.x - 20, y: h.top), endPoint: CGPoint(x: t.centerX + 35, y: t.bottom + 30)))
 
         // Flippers: short, tapered; hang at rest, lift with armRaise, flap with the swing.
         let raise = CGFloat(p.rig.armRaise).clamped(0, 1)
@@ -61,7 +61,8 @@ public enum PenguinPainter: PetPainter {
             fl.addQuadCurve(to: tip, control: CGPoint(x: root.x - normal.x * w * 0.7 + dir.x * len * 0.55, y: root.y - normal.y * w * 0.7 + dir.y * len * 0.55))
             fl.addQuadCurve(to: CGPoint(x: root.x + normal.x * w * 0.5, y: root.y + normal.y * w * 0.5), control: CGPoint(x: root.x + normal.x * w * 0.5 + dir.x * len * 0.55, y: root.y + normal.y * w * 0.5 + dir.y * len * 0.55))
             fl.closeSubpath()
-            ctx.fill(fl, with: .color(p.palette.shade))
+            ctx.fill(fl, with: .linearGradient(Gradient(colors: [p.palette.base, p.palette.shade]),
+                startPoint: CGPoint(x: root.x, y: root.y - 8), endPoint: tip))
         }
 
         // Feet: two orange ovals in front, toes forward.

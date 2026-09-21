@@ -22,8 +22,9 @@ public enum DogPainter: PetPainter {
         }
 
         let silhouette = PetDraw.silhouette(p)
-        ctx.fill(silhouette, with: .color(p.palette.base))
+        PetDraw.plush(&ctx, silhouette, p)
         PetDraw.belly(&ctx, p, within: silhouette, widthFraction: 0.5, heightFraction: 0.5)
+        PetDraw.arms(&ctx, p)
         PetDraw.paws(&ctx, p, color: p.palette.belly)
 
         // Floppy ears hang from the top corners; drooping ears hang straighter.
