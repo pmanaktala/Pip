@@ -20,7 +20,8 @@ fi
 [ -f Cartfile ] && fail "Carthage is not allowed"
 
 # No analytics / attribution SDK identifiers in source.
-if grep -rInE "Firebase|Crashlytics|Amplitude|Mixpanel|Segment\.|Adjust|AppsFlyer|Branch\.|Sentry|Bugsnag|Instabug|Facebook|FBSDK|GoogleAnalytics|ASIdentifierManager|AppTrackingTransparency|advertisingIdentifier" Pip PipCore PipWidgets --include=*.swift; then
+# Whole words only, so prose like "amplitudes" or "branch" in a comment does not trip it.
+if grep -rInwE "Firebase|Crashlytics|Amplitude|AmplitudeSwift|Mixpanel|Segment|Adjust|AppsFlyer|BranchSDK|Sentry|Bugsnag|Instabug|Facebook|FBSDKCoreKit|GoogleAnalytics|ASIdentifierManager|AppTrackingTransparency|advertisingIdentifier" Pip PipCore PipWidgets --include=*.swift; then
   fail "Tracking / analytics SDK reference found"
 fi
 

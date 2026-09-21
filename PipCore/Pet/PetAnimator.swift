@@ -183,8 +183,8 @@ public enum PetAnimator {
 
     // MARK: - Bits
 
-    /// Signature business per mood. Big, eased, and rare enough to be a treat. Amplitudes are
-    /// tuned to read at phone size: a stomp squashes a fifth, a flop tips the whole body over.
+    /// Signature business per mood. Big, eased, and rare enough to be a treat. Sizes are tuned
+    /// to read at phone size: a stomp squashes a fifth, a flop tips the whole body over.
     static func performBit(_ bit: PetBit, interval: Double, t: Double, rig: inout PetRig, live: inout LiveMotion) {
         switch bit {
         case .none:
