@@ -1,3 +1,4 @@
+import WidgetKit
 import SwiftUI
 import Testing
 import UIKit
@@ -158,6 +159,29 @@ struct AnimationFilmstripTests {
             rows.append(AnyView(strip("", frames: Array(frames.dropFirst(9)))))
         }
         try write(VStack(alignment: .leading, spacing: 8) { ForEach(Array(rows.enumerated()), id: \.offset) { $0.element } }, name: "life")
+    }
+
+    /// The widget families as they look at five moments with no fresh mood: the pet's day on the
+    /// Home Screen and Lock Screen, including the room's light at each hour.
+    @Test func widgetsThroughTheDay() throws {
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = .current
+        var rows: [AnyView] = []
+        let identity = PetIdentity(species: .penguin)
+        let stale = PetSnapshot(identity: identity, mood: .calm, intensity: .moderate, loggedAt: .now.addingTimeInterval(-40 * 3600))
+        for hour in [7, 11, 15, 20, 23] {
+            var c = cal.dateComponents([.year, .month, .day], from: .now); c.hour = hour; c.minute = 15
+            let date = cal.date(from: c)!
+            // Lock Screen families need a real widget host (AccessoryWidgetBackground); the small
+            // Home Screen widget and the room are enough to check the schedule and the light.
+            let state = stale.state(at: date, calendar: cal)
+            let frames: [(String, AnyView)] = [
+                ("\(hour):15 room", AnyView(ZStack { PetRoom(mood: nil, date: date, horizon: 0.77, showsFoliage: false); PetSceneView(identity: identity, state: state, time: nil, petScale: 0.70, petVerticalPosition: 0.53, showsFloor: false, showsBackground: false, date: date) }.frame(width: 96, height: 96).clipShape(RoundedRectangle(cornerRadius: 20)))),
+                ("face", AnyView(PetView(identity: identity, state: state, showsShadow: false, framing: .face).frame(width: 48, height: 48))),
+                ("badge", AnyView(PetView(identity: identity, state: state, showsShadow: false, framing: .badge).frame(width: 28, height: 28))),
+            ]
+            rows.append(AnyView(strip(PetLife.activity(at: date, calendar: cal).rawValue, frames: frames)))
+        }
+        try write(VStack(alignment: .leading, spacing: 8) { ForEach(Array(rows.enumerated()), id: \.offset) { $0.element } }, name: "widgets-day")
     }
 
     /// Species × mood × intensity at rest, the full matrix, for silhouette and expression review.
