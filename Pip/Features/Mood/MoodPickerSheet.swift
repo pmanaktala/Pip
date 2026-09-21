@@ -32,7 +32,7 @@ struct MoodPickerSheet: View {
                 .padding(.bottom, PipSpacing.xl)
             }
             .scrollDismissesKeyboard(.interactively)
-            .background(Color(.systemGroupedBackground))
+            .background(Color.clear)
             .navigationTitle(logged == nil ? "How are you feeling?" : "")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -57,10 +57,12 @@ struct MoodPickerSheet: View {
     // MARK: Step 1
 
     private var picker: some View {
-        LazyVGrid(columns: columns, spacing: 18) {
-            ForEach(Mood.allCases) { mood in
-                MoodChoice(mood: mood) {
-                    choose(mood)
+        GlassEffectContainer(spacing: 20) {
+            LazyVGrid(columns: columns, spacing: 18) {
+                ForEach(Mood.allCases) { mood in
+                    MoodChoice(mood: mood, identity: appState.identity) {
+                        choose(mood)
+                    }
                 }
             }
         }
@@ -162,27 +164,33 @@ struct MoodPickerSheet: View {
     }
 }
 
-/// One mood: a round token in the mood's colour with its glyph, and the word beneath. Three
-/// cues at once; the pet behind the sheet supplies the fourth by reacting the moment it is tapped.
+/// One mood: a glass token holding the pet's face in that mood, tinted with the mood's colour,
+/// with a small badge for the glyph. Face, colour and word together; the glass catches the room
+/// behind the sheet and answers the touch, so the choice feels like picking up something real.
 struct MoodChoice: View {
     var mood: Mood
+    var identity: PetIdentity
     var action: () -> Void
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         Button(action: action) {
             VStack(spacing: 8) {
-                ZStack {
-                    Circle()
-                        .fill(MoodColor.soft(mood, scheme: scheme))
-                    Circle()
-                        .strokeBorder(MoodColor.bold(mood).opacity(0.55), lineWidth: 1.5)
+                ZStack(alignment: .bottomTrailing) {
+                    PetView(identity: identity, state: PetStateResolver.resolve(mood: mood, identity: identity), showsShadow: false, framing: .face)
+                        .frame(width: 66, height: 66)
+                        .padding(3)
+                        .background(MoodColor.bold(mood).opacity(scheme == .dark ? 0.12 : 0.1), in: Circle())
+                        .glassEffect(.regular.interactive(), in: .circle)
+                        .overlay(Circle().strokeBorder(MoodColor.bold(mood).opacity(0.75), lineWidth: 2))
                     Image(systemName: mood.symbolName)
-                        .font(.system(size: 26, weight: .semibold))
-                        .foregroundStyle(MoodColor.text(mood, scheme: scheme))
-                        .symbolRenderingMode(.hierarchical)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(MoodColor.onBold)
+                        .frame(width: 20, height: 20)
+                        .background(MoodColor.bold(mood), in: Circle())
+                        .overlay(Circle().strokeBorder(Color(.systemBackground).opacity(0.9), lineWidth: 1.5))
+                        .offset(x: 2, y: 2)
                 }
-                .frame(width: 64, height: 64)
                 Text(mood.displayName)
                     .font(PipFont.caption)
                     .foregroundStyle(.primary)
@@ -191,7 +199,7 @@ struct MoodChoice: View {
             }
             .frame(maxWidth: .infinity)
         }
-        .buttonStyle(PressableButtonStyle())
+        .buttonStyle(.plain)
         .accessibilityLabel(mood.displayName)
         .accessibilityHint("Logs this mood.")
     }

@@ -57,8 +57,9 @@ struct PetHomeView: View {
             #endif
             .sheet(isPresented: $showMoodPicker) {
                 MoodPickerSheet()
-                    .presentationDetents([.height(400), .large])
-                    .presentationBackgroundInteraction(.enabled(upThrough: .height(400)))
+                    .presentationDetents([.height(380), .large])
+                    .presentationBackgroundInteraction(.enabled(upThrough: .height(380)))
+                    .presentationBackground(.thinMaterial)
                     .presentationDragIndicator(.visible)
             }
             .fullScreenCover(isPresented: $showSitWithPet) {
