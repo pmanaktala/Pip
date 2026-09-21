@@ -11,8 +11,13 @@ struct PetHomeView: View {
     @State private var showSitWithPet = false
     @State private var showPets = false
     @State private var showWidgets = false
+    @State private var touchBegan: Date?
+    @State private var touchMoved = false
+    @State private var holdTask: Task<Void, Never>?
 
     private var mood: Mood? { appState.hasFreshMood ? appState.latestEntry?.mood : nil }
+    private let petScale: CGFloat = 0.66
+    private let petVerticalPosition: CGFloat = 0.47
 
     var body: some View {
         NavigationStack {
@@ -82,21 +87,62 @@ struct PetHomeView: View {
 
     // MARK: Room
 
-    /// The whole tab is the pet's room. Tapping anywhere in it says hello.
+    /// The whole tab is the pet's room. A tap says hello; a held finger is petting; while a
+    /// finger is anywhere in the room the pet's eyes follow it.
     private var room: some View {
-        Button { appState.pokePet() } label: {
+        GeometryReader { geo in
             // While the mood sheet is up the camera tilts down: the pet rises into the visible
             // third of the screen so its reaction to the tap is the first thing you see.
             PetSceneWithClock(identity: appState.identity, state: appState.displayedState,
-                              petScale: showMoodPicker ? 0.5 : 0.66, petVerticalPosition: showMoodPicker ? 0.27 : 0.47, showsFloor: true, showsBackground: true)
+                              petScale: showMoodPicker ? 0.5 : petScale, petVerticalPosition: showMoodPicker ? 0.27 : petVerticalPosition, showsFloor: true, showsBackground: true)
                 .contentShape(Rectangle())
                 .animation(.spring(duration: 0.55, bounce: 0.12), value: showMoodPicker)
+                .gesture(touch(in: geo.size))
         }
-        .buttonStyle(.plain)
         .ignoresSafeArea()
+        .accessibilityElement()
         .accessibilityLabel(petAccessibilityLabel)
         .accessibilityHint("Double tap to say hello.")
+        .accessibilityAction { appState.pokePet() }
+        .accessibilityAction(named: "Pet \(appState.identity.name)") {
+            appState.startPetting()
+            Task { try? await Task.sleep(for: .seconds(2)); appState.stopPetting() }
+        }
         .accessibilitySortPriority(1)
+    }
+
+    /// One recogniser for all three: it starts on touch-down, so the eyes follow immediately;
+    /// a hold longer than a beat (or a stroke) becomes petting; a quick release is a tap.
+    private func touch(in size: CGSize) -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .local)
+            .onChanged { value in
+                let head = CGPoint(x: size.width / 2, y: size.height * petVerticalPosition - size.width * petScale * 0.2)
+                appState.look(at: CGPoint(x: (value.location.x - head.x) / (size.width * 0.38),
+                                          y: (value.location.y - head.y) / (size.height * 0.3)))
+                if touchBegan == nil {
+                    touchBegan = .now
+                    // A still finger sends no more changes, so the hold is timed rather than polled.
+                    holdTask = Task { @MainActor in
+                        try? await Task.sleep(for: .seconds(0.45))
+                        guard !Task.isCancelled, touchBegan != nil else { return }
+                        appState.startPetting()
+                    }
+                }
+                if abs(value.translation.width) + abs(value.translation.height) > 24 { touchMoved = true }
+                let held = Date.now.timeIntervalSince(touchBegan ?? .now)
+                if !appState.isPetting, touchMoved, held > 0.2 { appState.startPetting() }
+            }
+            .onEnded { _ in
+                holdTask?.cancel()
+                if appState.isPetting {
+                    appState.stopPetting()
+                } else if !touchMoved {
+                    appState.pokePet()
+                }
+                appState.look(at: nil)
+                touchBegan = nil
+                touchMoved = false
+            }
     }
 
     /// The name floats over the sky like a large title; the line under it is who they are.

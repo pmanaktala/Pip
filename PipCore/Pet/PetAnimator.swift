@@ -28,6 +28,9 @@ public struct LiveMotion: Equatable, Sendable {
     public var headBob: Double = 0
     /// 0…1 how far a held prop (the umbrella) is raised. Props follow `hop`, `lean` and `shiverX`.
     public var prop: Double = 1
+    /// Head tilt in degrees that lags the body's lean, so the head follows through instead of
+    /// moving as one rigid piece with the torso.
+    public var headLag: Double = 0
 
     public static let still = LiveMotion()
 }
@@ -46,28 +49,24 @@ public enum PetAnimator {
         live.headBob = -live.breath * 0.8
 
         // Weight shift – hold a lean, then ease to the next one. Never a metronome.
-        if motion.swayAmount > 0 {
-            let cycle = floor(t / motion.swayPeriod)
-            let phase = t - cycle * motion.swayPeriod
-            let prev = swayTarget(cycle - 1), next = swayTarget(cycle)
-            let e = smoothstep(min(phase / 1.4, 1))
-            live.lean = (prev + (next - prev) * e) * motion.swayAmount
-        }
+        live.lean = sway(t, motion)
 
-        // Hop – anticipation squash, parabolic flight, landing squash with a tiny rebound.
+        // Hop – anticipation squash, stretch on the way up, parabolic flight, landing squash
+        // with a small rebound. Squash and stretch are what make a hop read as weight.
         if motion.hopHeight > 0, let (phase, _) = gesture(t, interval: motion.hopInterval, duration: 0.62, seed: 11) {
             let anticipate = 0.22, flight = 0.5
+            let size = min(1, motion.hopHeight / 10)
             if phase < anticipate {
                 let k = smoothstep(phase / anticipate)
-                live.squash *= 1 - 0.07 * sin(k * .pi)
+                live.squash *= 1 - 0.12 * size * sin(k * .pi)
             } else if phase < anticipate + flight {
                 let u = (phase - anticipate) / flight
                 live.hop = motion.hopHeight * 4 * u * (1 - u)
-                live.squash *= 1 + 0.05 * (1 - u) * (1 - u)
+                live.squash *= 1 + 0.10 * size * (1 - u) * (1 - u) - 0.04 * size * u * u
                 live.armSwing = sin(u * .pi)
             } else {
                 let u = (phase - anticipate - flight) / (1 - anticipate - flight)
-                live.squash *= 1 - 0.09 * sin(u * .pi) * (1 - u) + 0.015 * sin(u * .pi * 2) * u
+                live.squash *= 1 - 0.16 * size * sin(u * .pi) * (1 - u) + 0.03 * size * sin(u * .pi * 2) * u
             }
         }
 
@@ -147,10 +146,33 @@ public enum PetAnimator {
 
         performBit(motion.bit, interval: motion.bitInterval, t: t, rig: &rig, live: &live)
         // A hop and a bit can coincide; keep the head inside the 200pt canvas regardless.
-        live.hop = min(live.hop, 26)
-        live.lean = live.lean.clamped(-16, 16)
+        live.hop = min(live.hop, 22)
+        live.lean = live.lean.clamped(-36, 36)
+
+        // Follow-through: the head lags the body's lean by a few frames, then catches up.
+        let earlier = sway(t - 0.09, motion) + bitLean(motion, t: t - 0.09)
+        let now = live.lean
+        live.headLag = ((earlier - now) * 0.55).clamped(-8, 8)
 
         return (rig, live)
+    }
+
+    static func sway(_ t: Double, _ motion: PetMotionProfile) -> Double {
+        guard motion.swayAmount > 0 else { return 0 }
+        let cycle = floor(t / motion.swayPeriod)
+        let phase = t - cycle * motion.swayPeriod
+        let prev = swayTarget(cycle - 1), next = swayTarget(cycle)
+        let e = smoothstep(min(phase / 1.4, 1))
+        return (prev + (next - prev) * e) * motion.swayAmount
+    }
+
+    /// The lean a bit contributes at `t`, for follow-through. Cheap: it re-runs the bit on a scratch rig.
+    static func bitLean(_ motion: PetMotionProfile, t: Double) -> Double {
+        guard motion.bit != .none else { return 0 }
+        var rig = PetRig()
+        var live = LiveMotion()
+        performBit(motion.bit, interval: motion.bitInterval, t: t, rig: &rig, live: &live)
+        return live.lean
     }
 
     /// The breathing curve: a quick, eased inhale (42% of the cycle) and a slow exhale.
@@ -161,133 +183,180 @@ public enum PetAnimator {
 
     // MARK: - Bits
 
-    /// Signature business per mood. Big, eased, and rare enough to be a treat.
+    /// Signature business per mood. Big, eased, and rare enough to be a treat. Amplitudes are
+    /// tuned to read at phone size: a stomp squashes a fifth, a flop tips the whole body over.
     static func performBit(_ bit: PetBit, interval: Double, t: Double, rig: inout PetRig, live: inout LiveMotion) {
         switch bit {
         case .none:
             break
 
         case .wiggle:
-            guard let (p, _) = gesture(t, interval: interval, duration: 1.6, seed: 71) else { return }
+            // A little dance: four hip swings with the arms out, a bounce on each beat.
+            guard let (p, _) = gesture(t, interval: interval, duration: PetBit.wiggle.duration, seed: 71) else { return }
             let env = sin(p * .pi)
-            live.lean += sin(p * .pi * 4) * 9 * env
-            live.armSwing = sin(p * .pi * 4) * env
-            live.squash *= 1 + 0.03 * sin(p * .pi * 8) * env
+            let beat = sin(p * .pi * 4)
+            live.lean += beat * 14 * env
+            live.armSwing = beat * env
+            live.squash *= 1 + 0.06 * abs(sin(p * .pi * 8)) * env
+            live.hop += 3 * max(0, sin(p * .pi * 8)) * env
+            rig.armOut = max(rig.armOut, 0.9 * env)
             rig.eyeArc = max(rig.eyeArc, env)
-            rig.mouthOpen = max(rig.mouthOpen, 0.3 * env)
-            rig.tilt += sin(p * .pi * 2) * 6 * env
+            rig.mouthOpen = max(rig.mouthOpen, 0.35 * env)
+            rig.blush = max(rig.blush, 0.8 * env)
+            rig.tilt += beat * 6 * env
 
         case .zoomies:
-            guard let (p, cycle) = gesture(t, interval: interval, duration: 1.3, seed: 73) else { return }
+            // Two big bounces with a full-body twist and a burst of arms.
+            guard let (p, cycle) = gesture(t, interval: interval, duration: PetBit.zoomies.duration, seed: 73) else { return }
             let dir: Double = hash01(cycle + 5) < 0.5 ? -1 : 1
             let bounce = abs(sin(p * .pi * 2))
-            live.hop += 16 * bounce
-            live.squash *= 1 + 0.06 * bounce - 0.08 * max(0, cos(p * .pi * 4)) * (1 - bounce)
-            live.lean += sin(p * .pi * 2) * 12 * dir
+            let landing = max(0, -cos(p * .pi * 4)) * (1 - bounce)
+            live.hop += 12 * bounce
+            live.squash *= 1 + 0.12 * bounce - 0.16 * landing
+            live.lean += sin(p * .pi * 2) * 16 * dir
             live.armSwing = 1
+            rig.armRaise = max(rig.armRaise, bounce)
             rig.headTurn = (rig.headTurn + sin(p * .pi * 2) * 0.9 * dir).clamped(-1, 1)
             rig.eyeScale *= 1 + 0.15 * sin(p * .pi)
             rig.mouthOpen = max(rig.mouthOpen, 0.8 * sin(p * .pi))
 
         case .stretch:
-            guard let (p, _) = gesture(t, interval: interval, duration: 3.2, seed: 79) else { return }
+            // A long slow stretch up on tiptoe with a yawn, then melt back down.
+            guard let (p, _) = gesture(t, interval: interval, duration: PetBit.stretch.duration, seed: 79) else { return }
             let k = p < 0.4 ? smoothstep(p / 0.4) : 1 - smoothstep((p - 0.4) / 0.6)
-            live.squash *= 1 + 0.09 * k
-            live.headBob -= 4 * k
-            rig.armRaise = max(rig.armRaise, 0.75 * k)
-            rig.eyeOpen *= 1 - 0.92 * k
-            rig.mouthOpen = max(rig.mouthOpen, 0.35 * k)
+            live.squash *= 1 + 0.14 * k
+            live.headBob -= 5 * k
+            rig.armRaise = max(rig.armRaise, k)
+            rig.armCross *= 1 - k
+            rig.eyeOpen *= 1 - 0.95 * k
+            rig.mouthOpen = max(rig.mouthOpen, 0.7 * k)
             rig.mouthCurve = max(rig.mouthCurve, 0.5 * k)
-            rig.headDrop = min(rig.headDrop, rig.headDrop * (1 - k))
+            rig.headDrop *= 1 - k
+            rig.tilt += 6 * k
 
         case .curious:
-            guard let (p, cycle) = gesture(t, interval: interval, duration: 2.0, seed: 83) else { return }
+            // Something over there: a big head tilt, ears up, a lean toward it, a tiny hop.
+            guard let (p, cycle) = gesture(t, interval: interval, duration: PetBit.curious.duration, seed: 83) else { return }
             let side: Double = hash01(cycle + 9) < 0.5 ? -1 : 1
             let k = p < 0.25 ? smoothstep(p / 0.25) : (p < 0.75 ? 1 : 1 - smoothstep((p - 0.75) / 0.25))
-            rig.tilt += 14 * side * k
-            rig.gazeX = (rig.gazeX + 0.45 * side * k).clamped(-1, 1)
-            rig.eyeScale *= 1 + 0.08 * k
+            rig.tilt += 24 * side * k
+            live.lean += 6 * side * k
+            rig.gazeX = (rig.gazeX + 0.6 * side * k).clamped(-1, 1)
+            rig.headTurn = (rig.headTurn + 0.5 * side * k).clamped(-1, 1)
+            rig.eyeScale *= 1 + 0.12 * k
             rig.earLift = max(rig.earLift, k)
-            if p < 0.3 { live.earTwitch = max(live.earTwitch, sin(p / 0.3 * .pi)) }
+            if p < 0.3 { live.earTwitch = max(live.earTwitch, sin(p / 0.3 * .pi)); live.hop += 4 * sin(p / 0.3 * .pi) }
 
         case .flop:
-            guard let (p, cycle) = gesture(t, interval: interval, duration: 4.5, seed: 89) else { return }
+            // Nod, nod… keel over sideways, snore, then jerk awake with a startled hop.
+            guard let (p, cycle) = gesture(t, interval: interval, duration: PetBit.flop.duration, seed: 89) else { return }
             let side: Double = hash01(cycle + 13) < 0.5 ? -1 : 1
-            if p < 0.45 {
-                // Nodding off: the body slowly keels over and the eyes give up.
-                let k = smoothstep(p / 0.45)
-                rig.lying = min(1, rig.lying + 0.6 * k)
-                rig.eyeOpen *= 1 - 0.95 * k
+            if p < 0.4 {
+                let k = smoothstep(p / 0.4)
+                let nods = sin(p / 0.4 * .pi * 3) * (1 - k)
+                live.headBob += 4 * max(0, nods) + 4 * k
+                live.lean += 34 * side * k * k
+                rig.eyeOpen *= 1 - 0.97 * k
                 rig.headDrop = max(rig.headDrop, k)
-                live.lean += 9 * side * k
-                live.headBob += 3 * k
+                rig.tilt += 12 * side * k
             } else if p < 0.82 {
-                rig.lying = min(1, rig.lying + 0.6)
-                rig.eyeOpen *= 0.05
+                let snore = sin((p - 0.4) / 0.42 * .pi * 4)
+                live.lean += 34 * side
+                live.headBob += 4
+                live.squash *= 1 + 0.03 * snore
+                rig.eyeOpen *= 0.03
                 rig.headDrop = 1
-                live.lean += 9 * side
-                live.headBob += 3
+                rig.tilt += 12 * side
+                rig.mouthOpen = max(rig.mouthOpen, 0.25 + 0.15 * snore)
             } else {
-                // Jerk awake: snap upright, eyes wide, a startled little hop, then blink back down.
                 let u = (p - 0.82) / 0.18
-                let snap = 1 - smoothstep(u * 2.5)
-                rig.lying = min(1, rig.lying + 0.6 * snap)
-                live.lean += 9 * side * snap
-                live.hop += 5 * sin(min(u * 2, 1) * .pi)
-                rig.eyeOpen = max(rig.eyeOpen, 1 - smoothstep((u - 0.5) * 2))
-                rig.eyeScale *= 1 + 0.25 * (1 - u)
+                let snap = 1 - smoothstep(u * 2.2)
+                let overshoot = sin(min(u * 2.2, 1) * .pi) * 6 * -side
+                live.lean += 34 * side * snap + overshoot
+                live.hop += 7 * sin(min(u * 2, 1) * .pi)
+                live.squash *= 1 + 0.08 * sin(min(u * 2, 1) * .pi)
+                rig.eyeOpen = max(rig.eyeOpen, 1 - smoothstep((u - 0.55) * 2.2))
+                rig.eyeScale *= 1 + 0.3 * (1 - u)
                 rig.lidHeaviness *= u
                 rig.headDrop *= u
+                rig.tilt += 12 * side * snap
+                rig.mouthOpen = max(rig.mouthOpen, 0.5 * (1 - u))
             }
 
         case .fidget:
-            guard let (p, _) = gesture(t, interval: interval, duration: 1.1, seed: 97) else { return }
+            // Pace in place: quick looks left and right, a nervous shuffle, sweat.
+            guard let (p, _) = gesture(t, interval: interval, duration: PetBit.fidget.duration, seed: 97) else { return }
             let env = sin(p * .pi)
             let look = sin(p * .pi * 3) * env
             rig.headTurn = (look * 0.9).clamped(-1, 1)
             rig.gazeX = look
             rig.sweat = max(rig.sweat, env)
-            rig.eyeScale *= 1 + 0.1 * env
+            rig.eyeScale *= 1 + 0.12 * env
+            rig.armCross = max(rig.armCross, env)
+            live.lean += look * 7
+            live.hop += 2 * abs(sin(p * .pi * 6)) * env
             live.earTwitch = max(live.earTwitch, env)
 
         case .stomp:
-            guard let (p, _) = gesture(t, interval: interval, duration: 1.4, seed: 101) else { return }
-            let env = sin(p * .pi)
-            // Two stomps: lift, then slam (squash), with a lean into each one.
-            let beat = sin(p * .pi * 4)
-            live.hop += 5 * max(0, beat)
-            live.squash *= 1 - 0.14 * max(0, -beat)
-            live.lean += sin(p * .pi * 2) * 5 * env
-            rig.armRaise = max(rig.armRaise, 0.9 * env)
-            rig.browInnerUp = min(rig.browInnerUp, -1)
-            rig.mouthOpen = max(rig.mouthOpen, 0.5 * max(0, -beat))
-            rig.eyeSquint = max(rig.eyeSquint, 0.7 * env)
+            // A tantrum: two stomps (leap, slam, shake), then arms crossed and face turned away. Hmph.
+            guard let (p, _) = gesture(t, interval: interval, duration: PetBit.stomp.duration, seed: 101) else { return }
+            if p < 0.55 {
+                let u = p / 0.55
+                let beat = sin(u * .pi * 4)
+                let slam = max(0, -beat)
+                live.hop += 10 * max(0, beat)
+                live.squash *= 1 + 0.08 * max(0, beat) - 0.2 * slam
+                live.shiverX += sin(t * 2 * .pi * 18) * 2.5 * slam
+                live.lean += sin(u * .pi * 2) * 6
+                rig.armRaise = max(rig.armRaise, 0.9 * max(0, beat))
+                rig.armCross *= 1 - max(0, beat)
+                rig.browInnerUp = min(rig.browInnerUp, -1)
+                rig.mouthOpen = max(rig.mouthOpen, 0.7 * slam)
+                rig.eyeSquint = max(rig.eyeSquint, 0.7)
+                rig.earLift = min(rig.earLift, 0.1)
+            } else {
+                let u = (p - 0.55) / 0.45
+                let k = u < 0.2 ? smoothstep(u / 0.2) : (u < 0.8 ? 1 : 1 - smoothstep((u - 0.8) / 0.2))
+                rig.armCross = max(rig.armCross, k)
+                rig.headTurn = (rig.headTurn + 0.9 * k).clamped(-1, 1)
+                rig.eyeOpen *= 1 - 0.9 * k
+                rig.tilt -= 8 * k
+                live.headBob -= 2 * k
+            }
 
         case .sniffle:
-            guard let (p, _) = gesture(t, interval: interval, duration: 2.6, seed: 103) else { return }
-            if p < 0.3 {
-                // Two quick sniffs.
-                let k = sin(p / 0.3 * .pi * 2)
-                live.squash *= 1 + 0.025 * abs(k)
-                live.headBob -= 1.5 * abs(k)
+            // Two sniffs, a slow shake of the head under the umbrella, and a wipe of the eye.
+            guard let (p, _) = gesture(t, interval: interval, duration: PetBit.sniffle.duration, seed: 103) else { return }
+            if p < 0.25 {
+                let k = sin(p / 0.25 * .pi * 2)
+                live.squash *= 1 + 0.04 * abs(k)
+                live.headBob -= 2.5 * abs(k)
                 rig.mouthWobble = max(rig.mouthWobble, 0.8)
-            } else {
-                // A slow shake of the head, and the umbrella dips with it.
-                let u = (p - 0.3) / 0.7
+                rig.browInnerUp = max(rig.browInnerUp, 1)
+            } else if p < 0.7 {
+                let u = (p - 0.25) / 0.45
                 let env = sin(u * .pi)
-                rig.headTurn = (sin(u * .pi * 3) * 0.6 * env).clamped(-1, 1)
-                live.prop = 1 - 0.25 * env
+                rig.headTurn = (sin(u * .pi * 3) * 0.7 * env).clamped(-1, 1)
+                live.prop = 1 - 0.3 * env
+            } else {
+                let u = (p - 0.7) / 0.3
+                let env = sin(u * .pi)
+                rig.armRaise = max(rig.armRaise, env)
+                rig.eyeOpen *= 1 - 0.8 * env
+                rig.tilt += 6 * env
             }
 
         case .meditate:
-            // Continuous: a slow float, eyes closed, a soft mouth, paws together (arms half raised).
-            live.hop += 4 + 2.5 * sin(t * 0.7)
-            live.lean *= 0.3
+            // Continuous: a slow float, eyes closed, a soft mouth, paws together.
+            live.hop += 5 + 3 * sin(t * 0.7)
+            live.lean *= 0.25
             rig.eyeOpen = 0
             rig.eyeArc = 0
             rig.mouthCurve = 0.5
             rig.mouthOpen = 0
-            rig.armRaise = 0.45
+            rig.armCross = 0.7
+            rig.armRaise = 0
+            rig.armOut = 0
             rig.headDrop = 0.05
             rig.tilt = 0
             rig.gazeX = 0

@@ -45,13 +45,17 @@ public enum PenguinPainter: PetPainter {
         front.clip(to: silhouette)
         front.fill(belly.union(bridge).union(face), with: .linearGradient(Gradient(colors: [.white, p.palette.belly, Color(red: 0.85, green: 0.87, blue: 0.87)]), startPoint: CGPoint(x: h.center.x - 20, y: h.top), endPoint: CGPoint(x: t.centerX + 35, y: t.bottom + 30)))
 
-        // Flippers: short, tapered; hang at rest, lift with armRaise, flap with the swing.
-        let raise = CGFloat(p.rig.armRaise).clamped(0, 1)
+        // Flippers: short, tapered; hang at rest, lift with armRaise, spread with armOut, fold
+        // over the belly with armCross, and flap with the swing.
+        let cross = CGFloat(p.rig.armCross).clamped(0, 1)
+        let raise = CGFloat(p.rig.armRaise).clamped(0, 1) * (1 - cross)
+        let out = CGFloat(p.rig.armOut).clamped(0, 1) * (1 - cross)
         let swing = CGFloat(p.live.armSwing)
         PetDraw.mirrored(&ctx) { ctx, _ in
             let root = CGPoint(x: t.centerX + t.hipWidth * 0.42, y: t.top + t.height * 0.3)
             let len = t.height * 0.46 * (1 - 0.2 * lying)
-            let angle = 0.2 + raise * 1.55 + swing * 0.35 * (0.3 + raise)
+            // Angle from straight down: 0.2 rest, ~1.75 raised overhead, ~1.0 spread, negative folds inward.
+            let angle = (0.2 + raise * 1.55 + out * 0.85 + swing * 0.35 * (0.3 + raise + out)) * (1 - cross) - cross * 0.55
             let dir = CGPoint(x: sin(angle), y: cos(angle))
             let normal = CGPoint(x: dir.y, y: -dir.x)
             let tip = CGPoint(x: root.x + dir.x * len, y: root.y + dir.y * len)

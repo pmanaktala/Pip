@@ -38,7 +38,7 @@ public struct PetPaintContext {
     /// Transform that tilts the head about the neck (applied to head-part paths drawn in body space).
     public var headTilt: CGAffineTransform {
         let neck = CGPoint(x: head.center.x, y: head.bottom - 8)
-        return CGAffineTransform(translationX: neck.x, y: neck.y).rotated(by: CGFloat(rig.tilt) * .pi / 180).translatedBy(x: -neck.x, y: -neck.y)
+        return CGAffineTransform(translationX: neck.x, y: neck.y).rotated(by: CGFloat(rig.tilt + live.headLag) * .pi / 180).translatedBy(x: -neck.x, y: -neck.y)
     }
 
     public struct Blob {
@@ -148,16 +148,29 @@ public enum PetDraw {
             startRadius: 0, endRadius: p.head.width * 0.8))
     }
 
-    /// Small front arms make a wave legible on every mammal, not just the penguin.
+    /// Small front arms make a pose legible on every mammal, not just the penguin.
+    /// Rest hangs beside the belly; `armRaise` lifts one arm high (a wave) and the other a little;
+    /// `armOut` spreads both wide and open; `armCross` folds both across the chest.
     public static func arms(_ ctx: inout GraphicsContext, _ p: PetPaintContext) {
         let t = p.torso
+        let cross = CGFloat(p.rig.armCross).clamped(0, 1)
+        let out = CGFloat(p.rig.armOut).clamped(0, 1) * (1 - cross)
+        let swing = CGFloat(p.live.armSwing)
         mirrored(&ctx) { context, side in
-            let raised = CGFloat(p.rig.armRaise) * (side == 1 ? 1 : 0.35)
+            let raised = CGFloat(p.rig.armRaise).clamped(0, 1) * (side == 1 ? 1 : 0.35) * (1 - cross)
             let root = CGPoint(x: t.centerX + t.hipWidth * 0.36, y: t.top + t.height * 0.38)
-            let end = CGPoint(x: root.x + 7 + raised * 13, y: root.y + 22 - raised * 42)
+            let rest = CGPoint(x: root.x + 7, y: root.y + 22)
+            let up = CGPoint(x: root.x + 20, y: root.y - 20)
+            let wide = CGPoint(x: root.x + 30 + swing * 3, y: root.y + 4 - swing * 6)
+            // Crossed: the hand ends on the far side of the chest, just under the chin.
+            let folded = CGPoint(x: t.centerX - t.hipWidth * 0.12, y: root.y + 10)
+            var end = CGPoint(x: rest.x + (up.x - rest.x) * raised, y: rest.y + (up.y - rest.y) * raised)
+            end = CGPoint(x: end.x + (wide.x - end.x) * out, y: end.y + (wide.y - end.y) * out)
+            end = CGPoint(x: end.x + (folded.x - end.x) * cross, y: end.y + (folded.y - end.y) * cross)
+            let control = CGPoint(x: root.x + 12 + out * 8 - cross * 4, y: root.y + 12 - raised * 20 + cross * 12)
             var arm = Path()
             arm.move(to: root)
-            arm.addQuadCurve(to: end, control: CGPoint(x: root.x + 12, y: root.y + 12 - raised * 20))
+            arm.addQuadCurve(to: end, control: control)
             let shape = arm.strokedPath(StrokeStyle(lineWidth: 17, lineCap: .round))
             plush(&context, shape, p)
         }

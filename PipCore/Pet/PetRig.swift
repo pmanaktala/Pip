@@ -24,6 +24,10 @@ public struct PetRig: Equatable, Sendable {
     public var headDrop: Double = 0
     /// 0 = arms/flippers/paws resting, 1 = raised.
     public var armRaise: Double = 0
+    /// 0 = arms at the sides, 1 = folded across the chest (frustrated) or hugging (stressed).
+    public var armCross: Double = 0
+    /// 0 = arms at the sides, 1 = spread wide and open (happy, "ta-da").
+    public var armOut: Double = 0
 
     // MARK: Ears & tail
     /// 0 = flat back / drooping, 1 = perked up.
@@ -113,7 +117,7 @@ extension PetRig {
         }
     }
 
-    static let fieldCount = 27
+    static let fieldCount = 29
 
     public var vector: Vector {
         get {
@@ -125,6 +129,7 @@ extension PetRig {
                 mouthCurve, mouthOpen, mouthWidth, mouthWobble, tongue,
                 blush, sweat, lidHeaviness,
                 lean, headTurn, headDrop, armRaise,
+                armCross, armOut,
             ])
         }
         set {
@@ -137,6 +142,7 @@ extension PetRig {
             mouthCurve = v[15]; mouthOpen = v[16]; mouthWidth = v[17]; mouthWobble = v[18]; tongue = v[19]
             blush = v[20]; sweat = v[21]; lidHeaviness = v[22]
             lean = v[23]; headTurn = v[24]; headDrop = v[25]; armRaise = v[26]
+            armCross = v[27]; armOut = v[28]
         }
     }
 }
@@ -146,8 +152,8 @@ extension PetRig {
 public struct PetMotionProfile: Equatable, Sendable {
     /// Breaths per second.
     public var breathRate: Double = 0.26
-    /// Breathing scale amplitude (0.02 = 2%).
-    public var breathAmount: Double = 0.02
+    /// Breathing scale amplitude (0.03 = 3%).
+    public var breathAmount: Double = 0.03
     /// Hop height in canvas units (0 = never hops).
     public var hopHeight: Double = 0
     /// Average seconds between hops.
@@ -159,7 +165,7 @@ public struct PetMotionProfile: Equatable, Sendable {
     /// Shiver amplitude in canvas units (stress). Shivers come in short bursts.
     public var shiver: Double = 0
     /// Slow weight-shift lean amplitude in degrees.
-    public var swayAmount: Double = 1.2
+    public var swayAmount: Double = 2
     /// Seconds per weight shift.
     public var swayPeriod: Double = 7
     /// Average seconds between blinks. `.infinity` disables blinking (eyes closed).
@@ -203,6 +209,22 @@ public enum PetBit: String, Codable, Sendable, Hashable {
     case sniffle
     /// Sitting together: float a little, eyes closed, breathing slow and deep.
     case meditate
+
+    /// How long one performance lasts, in seconds (`meditate` is continuous).
+    public var duration: Double {
+        switch self {
+        case .none: 0
+        case .wiggle: 1.8
+        case .zoomies: 1.3
+        case .stretch: 3.4
+        case .curious: 2.2
+        case .flop: 5.0
+        case .fidget: 1.4
+        case .stomp: 2.2
+        case .sniffle: 3.0
+        case .meditate: .infinity
+        }
+    }
 }
 
 /// Small, optional visual additions around the pet. Rendered by the scene, not the painter.

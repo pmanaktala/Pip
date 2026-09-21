@@ -19,8 +19,15 @@ final class AppState {
     /// Set while the user is choosing a mood so the pet previews it.
     var preview: (mood: Mood, intensity: MoodIntensity)?
     /// A transient reaction (the user poked the pet).
-    private(set) var poke: PetMoodState?
-    private var reactionTask: Task<Void, Never>?
+    var poke: PetMoodState?
+    var reactionTask: Task<Void, Never>?
+    /// A finger resting on the pet (see PetInteraction).
+    var isPetting = false
+    var purrTask: Task<Void, Never>?
+    /// Where a finger is, in -1…1 around the head, while one is on the room.
+    var lookTarget: CGPoint?
+    var tapStreak = 0
+    var lastTapAt: Date = .distantPast
 
     var context: ModelContext { container.mainContext }
     private(set) var logger: MoodLogger
@@ -39,17 +46,26 @@ final class AppState {
 
     // MARK: Derived state
 
-    /// What the pet should look like right now.
+    /// What the pet should look like right now: the mood, with any reaction, petting or
+    /// finger-following layered on top.
     var displayedState: PetMoodState {
-        if let poke { return poke }
-        if let preview { return PetStateResolver.resolve(mood: preview.mood, intensity: preview.intensity, identity: identity) }
-        #if DEBUG
-        // Screenshot automation: `PIP_MOOD=excited` forces the displayed mood.
-        if let forced = ProcessInfo.processInfo.environment["PIP_MOOD"], let mood = Mood(rawValue: forced) {
-            return PetStateResolver.resolve(mood: mood, intensity: .moderate, identity: identity)
+        var state: PetMoodState
+        if let poke {
+            state = poke
+        } else if let preview {
+            state = PetStateResolver.resolve(mood: preview.mood, intensity: preview.intensity, identity: identity)
+        } else {
+            state = snapshot.state()
+            #if DEBUG
+            // Screenshot automation: `PIP_MOOD=excited` forces the displayed mood.
+            if let forced = ProcessInfo.processInfo.environment["PIP_MOOD"], let mood = Mood(rawValue: forced) {
+                state = PetStateResolver.resolve(mood: mood, intensity: .moderate, identity: identity)
+            }
+            #endif
         }
-        #endif
-        return snapshot.state()
+        if isPetting { state = pettingOverlay(state) }
+        else if let lookTarget { state = lookOverlay(state, target: lookTarget) }
+        return state
     }
 
     var snapshot: PetSnapshot {
@@ -128,39 +144,6 @@ final class AppState {
         refresh()
     }
 
-    /// Tap reaction: a quick hop with a heart, then a happy settle, then back to normal.
-    func pokePet() {
-        reactionTask?.cancel()
-        var hop = snapshot.state()
-        hop.rig.eyeArc = max(hop.rig.eyeArc, 0.8)
-        hop.rig.mouthCurve = max(hop.rig.mouthCurve, 0.6)
-        hop.rig.mouthOpen = max(hop.rig.mouthOpen, 0.2)
-        hop.rig.lift -= 16
-        hop.rig.squash = min(1.1, hop.rig.squash + 0.07)
-        hop.rig.earLift = 1
-        hop.rig.armRaise = 1
-        hop.rig.headDrop = 0
-        hop.rig.lying = 0
-        hop.rig.tilt = 6
-        hop.motion.hopHeight = 0
-        hop.accessory = .heart
-        var settle = hop
-        settle.rig.lift = snapshot.state().rig.lift
-        settle.rig.squash = snapshot.state().rig.squash
-        settle.rig.armRaise = 0.3
-        settle.rig.mouthOpen = 0
-        Haptics.soft()
-        withAnimation(.spring(duration: 0.35, bounce: 0.45)) { poke = hop }
-        reactionTask = Task { @MainActor in
-            try? await Task.sleep(for: .seconds(0.32))
-            guard !Task.isCancelled else { return }
-            withAnimation(.spring(duration: 0.45, bounce: 0.35)) { poke = settle }
-            try? await Task.sleep(for: .seconds(0.9))
-            guard !Task.isCancelled else { return }
-            withAnimation(.smooth(duration: 0.5)) { poke = nil }
-        }
-    }
-
     /// Reaction to a freshly logged mood, visible on the Pet tab behind the sheet: the pet jumps
     /// into the new mood (positive) or sinks into it (negative), then settles into the resolved state.
     func react(to entry: MoodEntry) {
@@ -178,9 +161,16 @@ final class AppState {
             burst.rig.headDrop = min(1, burst.rig.headDrop + 0.2)
         }
         burst.motion.hopHeight = 0
+        // Then the new mood's signature bit, straight away and back to back, so the change is a
+        // performance rather than a pose swap; after that the normal, rarer schedule resumes.
+        var encore = target
+        encore.motion.bitInterval = max(target.motion.bit.duration, 0.1)
         withAnimation(.spring(duration: 0.4, bounce: 0.4)) { poke = burst }
         reactionTask = Task { @MainActor in
-            try? await Task.sleep(for: .seconds(1.1))
+            try? await Task.sleep(for: .seconds(0.9))
+            guard !Task.isCancelled else { return }
+            withAnimation(.smooth(duration: 0.4)) { poke = encore }
+            try? await Task.sleep(for: .seconds(min(target.motion.bit.duration * 1.5, 5)))
             guard !Task.isCancelled else { return }
             withAnimation(.smooth(duration: 0.6)) { poke = nil }
         }

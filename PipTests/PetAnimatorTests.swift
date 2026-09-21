@@ -20,9 +20,10 @@ struct PetAnimatorTests {
                     let b = PetAnimator.animate(rig: state.rig, motion: state.motion, time: t)
                     #expect(a.rig == b.rig && a.live == b.live)
                     // Idle motion plus the mood's signature bit: bigger than idle, still on the canvas.
-                    #expect(a.live.hop >= 0 && a.live.hop <= 26)
-                    #expect(a.live.squash > 0.8 && a.live.squash < 1.2)
-                    #expect(abs(a.live.lean) <= 16)
+                    #expect(a.live.hop >= 0 && a.live.hop <= 22)
+                    #expect(a.live.squash > 0.72 && a.live.squash < 1.3)
+                    #expect(abs(a.live.lean) <= 36)
+                    #expect(abs(a.live.headLag) <= 8)
                     #expect((0...1).contains(a.rig.eyeOpen))
                 }
             }
@@ -61,9 +62,9 @@ struct PetAnimatorTests {
                 #expect(rig.eyeOpen >= -0.001 && rig.eyeOpen <= 1.001, "\(bit) eyeOpen out of range: \(rig.eyeOpen)")
                 #expect(rig.lying >= 0 && rig.lying <= 1, "\(bit) lying out of range: \(rig.lying)")
                 #expect(abs(rig.headTurn) <= 1, "\(bit) headTurn out of range: \(rig.headTurn)")
-                #expect(live.hop >= -0.001 && live.hop < 40, "\(bit) hop out of range: \(live.hop)")
+                #expect(live.hop >= -0.001 && live.hop <= 22, "\(bit) hop out of range: \(live.hop)")
                 #expect(live.squash > 0.7 && live.squash < 1.3, "\(bit) squash out of range: \(live.squash)")
-                #expect(abs(live.lean) < 30, "\(bit) lean out of range: \(live.lean)")
+                #expect(abs(live.lean) <= 36, "\(bit) lean out of range: \(live.lean)")
                 if rig != base || live.hop != 0 || live.lean != 0 { moved = true }
             }
             #expect(moved, "\(bit) never changed anything")
@@ -84,5 +85,37 @@ struct PetAnimatorTests {
         }
         #expect(PetAnimator.breath(phase: 0.42) > 0.99)
         #expect(PetAnimator.breath(phase: 0) < 0.01)
+    }
+}
+
+@Suite struct PetReactionTests {
+    /// Every mood answers a tap differently from its rest pose, and escalation changes the answer.
+    @Test func everyMoodHasItsOwnHello() {
+        let identity = PetIdentity(species: .dog)
+        for mood in Mood.allCases {
+            let base = PetStateResolver.resolve(mood: mood, identity: identity)
+            let hello = PetReaction.tap(on: base, streak: 1)
+            let giggle = PetReaction.tap(on: base, streak: 2)
+            let dizzy = PetReaction.tap(on: base, streak: 6)
+            #expect(hello.first.rig != base.rig, "\(mood): hello looks like rest")
+            #expect(giggle.first.rig != hello.first.rig, "\(mood): giggle looks like hello")
+            #expect(dizzy.first.rig != giggle.first.rig, "\(mood): dizzy looks like giggle")
+            #expect(hello.hold > 0 && hello.settle > 0)
+            for v in hello.first.rig.vector.values + giggle.first.rig.vector.values + dizzy.first.rig.vector.values { #expect(v.isFinite) }
+        }
+    }
+
+    @Test func signaturePosesAreDistinct() {
+        // The silhouettes that used to collapse into one must now differ in the body, not just the face.
+        let identity = PetIdentity(species: .penguin)
+        func body(_ m: Mood) -> [Double] {
+            let r = PetStateResolver.resolve(mood: m, identity: identity).rig
+            return [r.armRaise, r.armCross, r.armOut, r.squash, r.headDrop, r.lying, r.lean, r.tilt]
+        }
+        let pairs: [(Mood, Mood)] = [(.neutral, .sad), (.calm, .frustrated), (.happy, .neutral), (.stressed, .calm), (.tired, .sad)]
+        for (a, b) in pairs {
+            let d = zip(body(a), body(b)).map { abs($0 - $1) }.reduce(0, +)
+            #expect(d > 0.6, "\(a) and \(b) share a body pose (distance \(d))")
+        }
     }
 }
