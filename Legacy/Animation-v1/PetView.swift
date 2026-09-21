@@ -86,9 +86,15 @@ public struct PetView: View, Animatable {
 
         if showsShadow { PetDraw.floorShadow(&ctx, p) }
 
-        // One body transform for the pet and anything it holds (see `PetDraw.bodyTransform`).
+        // Body transform about the feet: hop / lift / shiver, then lean, then squash & stretch.
         // Head tilt is applied by each painter about the neck.
-        ctx.concatenate(PetDraw.bodyTransform(rig: rig, live: live))
+        let pivot = CGPoint(x: p.axis, y: p.floor)
+        let squash = CGFloat(live.squash)
+        ctx.translateBy(x: CGFloat(live.shiverX), y: CGFloat(-live.hop + rig.lift))
+        ctx.translateBy(x: pivot.x, y: pivot.y)
+        ctx.rotate(by: .degrees(rig.lean + live.lean))
+        ctx.scaleBy(x: 1 - (squash - 1) * 0.55, y: squash)
+        ctx.translateBy(x: -pivot.x, y: -pivot.y)
 
         switch identity.species {
         case .cat: CatPainter.paint(&ctx, p)

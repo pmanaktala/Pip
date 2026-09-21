@@ -59,14 +59,32 @@ Feeling comes from pose first, expression second. One signature prop identifies 
   landing squash, shiver bursts, sigh, nod, blink, glance) — never a raw sine. Amplitudes are tuned for phone
   size: sway ±2°, breath 3%, a big hop squashes 16% on landing. One driver: `TimelineView` for time,
   `.smooth` on rig changes, no overshooting springs.
-- Follow-through: the head lags the body's lean (`LiveMotion.headLag`, up to 8°) so nothing moves as one
-  rigid piece.
+- **The body never tips over as a rigid piece.** `PetDraw.bodyTransform` is the one body transform (the pet
+  and everything it holds go through it): shiver / hop / lift, then a lean that is 70% *shear over planted
+  feet* and 30% rotation, then squash. Leans stay under `PetAnimator.maxLean` (24°); a slump is `lying` +
+  `headDrop` + `tilt`, not a rotation. The head lags the lean (`LiveMotion.headLag`, up to 8°).
+- **Arms say what the pet is doing.** `armRaise` alone is one paw (a wave); with `armSymmetric` it is both
+  (a cheer, fists, a stretch). `armOut` spreads them, `armForward` reaches down to the lap (typing), `armHold`
+  brings both paws to the chest (a book), `armToFace` brings the left paw to the eye (a wipe, a yawn, "hmm").
+  `armCross` folds them and wins over everything. `PetDraw.armEnd` is the one blend; penguin flippers follow
+  the same blend in `PenguinPainter.flipper`, so a pose means the same thing on every species. A half raise
+  never passes horizontal — no airplane flippers at rest.
+- **Held props are in the hand.** `PetDraw.handPoint(p, species:, side:)` is where the paw is; the umbrella's
+  handle sits in the right paw with the shaft rising past the cheek to a canopy over the crown; the book's
+  lower corners sit in both paws (sized from the resting hold, so it never stretches when a paw moves); the
+  laptop is on the floor with its lid open *toward the pet* (we see the back of the screen; its light spills
+  onto the face; the paws type behind the lid). `PetDraw.pawOver` draws the paw in front of the prop. Props are
+  drawn by `AccessoryOverlay`, which shares the body transform and the animated rig with the painter.
 - **Bits** (`PetBit`, `PetAnimator.performBit`): each mood performs a signature piece of business every
-  `bitInterval` seconds — wiggle (happy), zoomies (excited), stretch-and-yawn (calm), curious tilt (neutral),
-  nod-off / keel over 34° / jerk awake (tired), pace-and-fidget (stressed), leap-slam-shake-hmph (frustrated),
-  sniffle-shake-wipe (sad), and a continuous float with paws together for meditation. Durations live on
-  `PetBit.duration`. A freshly logged mood plays its bit back to back for a few seconds (`AppState.react`).
-- Held props ride the body: the umbrella follows hop, lean and shiver through `AccessoryOverlay(live:)`.
+  `bitInterval` seconds — wiggle (happy: a hip wiggle, the head countering), zoomies (excited: two bounces, both
+  paws up), stretch-and-yawn (calm / waking: both paws up, then a shake-off), curious tilt (neutral), nod-off /
+  slump into a heap / jerk awake (tired), pace-and-hug (stressed), fists-leap-slam-hmph (frustrated),
+  sniff-headshake-wipe-the-eye (sad), typing then a paw to the chin (working), a page flick (reading), a snore
+  (asleep), and a continuous float for meditation. Durations live on `PetBit.duration`.
+  **Scheduling is one slot per cycle** (`PetAnimator.bitWindow`): the cycle's chosen bit (signature or an
+  alternate) plays in that slot, and a cycle is never shorter than its longest bit, so an encore back to back
+  still finishes each performance. A freshly logged mood plays its bit back to back for a few seconds
+  (`AppState.react`).
 - **Touch** (`PetInteraction.swift`): a tap gets a hello in character (`PetReaction.tap`); taps within 2.5 s
   escalate — giggle from the second, dizzy on the sixth, then reset. A finger held 0.45 s (or a stroke) is
   petting: eyes shut, leaning in, purring breath, hearts, a soft haptic every 0.7 s. While a finger is on the
@@ -75,8 +93,10 @@ Feeling comes from pose first, expression second. One signature prop identifies 
 - Where nothing can animate (widgets, Live Activities): `PetPose` variations (blink, glance, wave, hop) that
   the app pushes as state updates; the system animates the change.
 - Review motion with `AnimationFilmstripTests` (`PIP_FILM_OUTPUT=<dir>`): one strip per bit for every species,
-  the transitions between moods, the tap repertoire and the rest matrix. Bounds are enforced by
-  `PetAnimatorTests` and `PetBitTests` (hop ≤ 22, lean ≤ 36°, squash 0.72–1.3, no NaNs).
+  the transitions between moods, the tap repertoire, the pet's day and the rest matrix. Bounds are enforced by
+  `PetAnimatorTests` and `PetBitTests` (hop ≤ `maxHop`, lean ≤ `maxLean`, squash 0.72–1.3, no NaNs, every
+  cycle plays its chosen bit, hands stay on the body). The pre-v2 motion code is kept in `Legacy/Animation-v1/`
+  (not compiled) with a note on what changed and why.
 
 ## Room
 - The pet lives in `PetRoom`: sky, horizon and floor blended between dawn/day/evening/night keyframes and

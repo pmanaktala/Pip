@@ -148,114 +148,31 @@ public enum PetDraw {
             startRadius: 0, endRadius: p.head.width * 0.8))
     }
 
-    // MARK: Body transform
-
-    /// The whole-body transform every painter and held prop shares: shiver / hop / lift, then a
-    /// lean about the feet, then squash and stretch. The lean is mostly a *shear* — the feet stay
-    /// planted and the body bends over them — with a small rotational share, so a big lean reads as
-    /// a soft body shifting its weight rather than a rigid picture tipping over.
-    public static func bodyTransform(rig: PetRig, live: LiveMotion) -> CGAffineTransform {
-        let pivot = CGPoint(x: 100, y: 168)
-        let lean = CGFloat(rig.lean + live.lean) * .pi / 180
-        let rotation = lean * 0.3
-        let shear = lean * 0.7
-        let squash = CGFloat(live.squash)
-        var t = CGAffineTransform(translationX: CGFloat(live.shiverX), y: CGFloat(-live.hop + rig.lift))
-        t = t.translatedBy(x: pivot.x, y: pivot.y)
-        t = t.rotated(by: rotation)
-        t = CGAffineTransform(a: 1, b: 0, c: -tan(shear), d: 1, tx: 0, ty: 0).concatenating(t)
-        t = t.scaledBy(x: 1 - (squash - 1) * 0.55, y: squash)
-        t = t.translatedBy(x: -pivot.x, y: -pivot.y)
-        return t
-    }
-
-    // MARK: Arms
-
-    /// Where an arm's shoulder sits, in body space (right side; mirror for the left).
-    public static func armRoot(_ p: PetPaintContext) -> CGPoint {
-        let t = p.torso
-        return CGPoint(x: t.centerX + t.hipWidth * 0.36, y: t.top + t.height * 0.38)
-    }
-
-    /// Where the paw ends up for the rig, in body space, for `side` (+1 = the pet's right, drawn
-    /// as written; -1 = the pet's left, mirrored). Rest hangs beside the belly; `armRaise` lifts the
-    /// right paw (both when `armSymmetric`); `armOut` spreads wide; `armForward` reaches down to
-    /// the lap; `armHold` brings both paws up to the chest; `armToFace` brings the *left* paw to the
-    /// eye; `armCross` folds across the chest and wins over everything.
-    public static func armEnd(_ p: PetPaintContext, side: CGFloat) -> (end: CGPoint, control: CGPoint) {
-        let t = p.torso, h = p.head, rig = p.rig
-        let cross = CGFloat(rig.armCross).clamped(0, 1)
-        let sym = CGFloat(rig.armSymmetric).clamped(0, 1)
-        let raised = CGFloat(rig.armRaise).clamped(0, 1) * (side == 1 ? 1 : 0.3 + 0.7 * sym)
-        let out = CGFloat(rig.armOut).clamped(0, 1)
-        let forward = CGFloat(rig.armForward).clamped(0, 1)
-        let hold = CGFloat(rig.armHold).clamped(0, 1)
-        let face = side == -1 ? CGFloat(rig.armToFace).clamped(0, 1) : 0
-        let swing = CGFloat(p.live.armSwing)
-        // Typing alternates the paws; a flap moves them together.
-        let lift = swing * side * forward + swing * (1 - forward)
-
-        let root = armRoot(p)
-        let rest = CGPoint(x: root.x + 7, y: root.y + 22)
-        let up = CGPoint(x: root.x + 18, y: root.y - 24)
-        let wide = CGPoint(x: root.x + 30 + lift * 3, y: root.y + 4 - lift * 6)
-        let lap = CGPoint(x: root.x - 10, y: t.bottom - 12 - max(0, lift) * 4)
-        let chest = CGPoint(x: t.centerX + t.hipWidth * 0.2, y: t.top + t.height * 0.42)
-        let eye = CGPoint(x: t.centerX + t.hipWidth * 0.14, y: h.center.y + h.height * 0.12)
-        let folded = CGPoint(x: t.centerX - t.hipWidth * 0.12, y: root.y + 10)
-
-        var end = lerp(rest, up, raised)
-        end = lerp(end, wide, out)
-        end = lerp(end, lap, forward)
-        end = lerp(end, chest, hold)
-        end = lerp(end, eye, face)
-        end = lerp(end, folded, cross)
-
-        // The elbow bulges outward, more so when reaching up, inward when folding or holding.
-        var bulge = CGPoint(x: 6 + raised * 8 + out * 4, y: 6 - raised * 6)
-        bulge = lerp(bulge, CGPoint(x: 10, y: 2), forward)
-        bulge = lerp(bulge, CGPoint(x: 12, y: 10), hold)
-        bulge = lerp(bulge, CGPoint(x: 14, y: 2), face)
-        bulge = lerp(bulge, CGPoint(x: -2, y: 14), cross)
-        let control = CGPoint(x: (root.x + end.x) / 2 + bulge.x, y: (root.y + end.y) / 2 + bulge.y)
-        return (end, control)
-    }
-
     /// Small front arms make a pose legible on every mammal, not just the penguin.
+    /// Rest hangs beside the belly; `armRaise` lifts one arm high (a wave) and the other a little;
+    /// `armOut` spreads both wide and open; `armCross` folds both across the chest.
     public static func arms(_ ctx: inout GraphicsContext, _ p: PetPaintContext) {
+        let t = p.torso
+        let cross = CGFloat(p.rig.armCross).clamped(0, 1)
+        let out = CGFloat(p.rig.armOut).clamped(0, 1) * (1 - cross)
+        let swing = CGFloat(p.live.armSwing)
         mirrored(&ctx) { context, side in
-            let root = armRoot(p)
-            let (end, control) = armEnd(p, side: side)
+            let raised = CGFloat(p.rig.armRaise).clamped(0, 1) * (side == 1 ? 1 : 0.35) * (1 - cross)
+            let root = CGPoint(x: t.centerX + t.hipWidth * 0.36, y: t.top + t.height * 0.38)
+            let rest = CGPoint(x: root.x + 7, y: root.y + 22)
+            let up = CGPoint(x: root.x + 20, y: root.y - 20)
+            let wide = CGPoint(x: root.x + 30 + swing * 3, y: root.y + 4 - swing * 6)
+            // Crossed: the hand ends on the far side of the chest, just under the chin.
+            let folded = CGPoint(x: t.centerX - t.hipWidth * 0.12, y: root.y + 10)
+            var end = CGPoint(x: rest.x + (up.x - rest.x) * raised, y: rest.y + (up.y - rest.y) * raised)
+            end = CGPoint(x: end.x + (wide.x - end.x) * out, y: end.y + (wide.y - end.y) * out)
+            end = CGPoint(x: end.x + (folded.x - end.x) * cross, y: end.y + (folded.y - end.y) * cross)
+            let control = CGPoint(x: root.x + 12 + out * 8 - cross * 4, y: root.y + 12 - raised * 20 + cross * 12)
             var arm = Path()
             arm.move(to: root)
             arm.addQuadCurve(to: end, control: control)
             let shape = arm.strokedPath(StrokeStyle(lineWidth: 17, lineCap: .round))
             plush(&context, shape, p)
-        }
-    }
-
-    /// The paw's position in unmirrored body space for either side, for props that are held.
-    public static func handPoint(_ p: PetPaintContext, species: PetSpecies, side: CGFloat) -> CGPoint {
-        let point: CGPoint
-        switch species {
-        case .penguin: point = PenguinPainter.flipperTip(p)
-        default: point = armEnd(p, side: side).end
-        }
-        return side == 1 ? point : CGPoint(x: 200 - point.x, y: point.y)
-    }
-
-    /// A paw drawn *over* a held prop, so the hand is in front of the handle or the page.
-    public static func pawOver(_ ctx: inout GraphicsContext, _ p: PetPaintContext, species: PetSpecies, at c: CGPoint) {
-        switch species {
-        case .penguin:
-            let r = CGRect(x: c.x - 7, y: c.y - 5, width: 14, height: 10)
-            ctx.fill(Path(ellipseIn: r), with: .color(p.palette.shade))
-        default:
-            let r = CGRect(x: c.x - 8.5, y: c.y - 8.5, width: 17, height: 17)
-            ctx.fill(Path(ellipseIn: r), with: .color(p.palette.base))
-            if p.detail == .full {
-                ctx.fill(Path(ellipseIn: CGRect(x: c.x - 4, y: c.y - 1, width: 8, height: 6)), with: .color(p.palette.light.opacity(0.8)))
-            }
         }
     }
 

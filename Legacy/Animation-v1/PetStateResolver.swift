@@ -67,10 +67,7 @@ public enum PetStateResolver {
             rig.blush = 0.65
             rig.earLift = 1
             rig.tailLift = 1
-            // Both paws up — a cheer, not a wave that never ends.
-            rig.armRaise = 0.5
-            rig.armSymmetric = 1
-            rig.armOut = 0.35
+            rig.armRaise = 1
             rig.squash = 1.08
             rig.lean = 0
             rig.tilt = -5
@@ -202,7 +199,7 @@ public enum PetStateResolver {
             rig.squash = 0.92
             rig.lying = 0.15
             rig.headDrop = 0.8
-            rig.armRaise = 0.95 // the right paw holds the umbrella up beside the head
+            rig.armRaise = 0.55 // holding the umbrella up
             rig.tilt = 4
             rig.lean = -3
             rig.blush = 0.1
@@ -275,11 +272,7 @@ public enum PetStateResolver {
         if intensity == .slight {
             // Slight moods keep their accessory only when it is very characteristic.
             switch state.accessory {
-            case .umbrella:
-                // No umbrella, so nothing to hold up: the paw comes down.
-                state.accessory = nil
-                state.rig.armRaise = 0
-            case .sparkles, .rainCloud, .steam: state.accessory = nil
+            case .sparkles, .rainCloud, .umbrella, .steam: state.accessory = nil
             default: break
             }
             state.environment.tintStrength *= 0.7
@@ -357,9 +350,9 @@ public enum PetStateResolver {
                 state.rig.mouthOpen = max(state.rig.mouthOpen, 0.3)
             }
         case .penguin:
-            // Penguins don't blush as much; a lively tail (which they lack) lifts the flippers a touch.
+            // Flippers carry a lot of the pose; penguins don't blush as much.
             state.rig.blush *= 0.7
-            state.rig.armRaise = max(state.rig.armRaise, state.rig.tailLift * 0.15)
+            state.rig.armRaise = max(state.rig.armRaise, state.rig.tailLift * 0.5)
         case .capybara:
             state.motion.breathAmount *= 1.2
             state.motion.hopHeight *= 0.5
@@ -388,10 +381,6 @@ public enum PetStateResolver {
         rig.armRaise = rig.armRaise.clamped(0, 1)
         rig.armCross = rig.armCross.clamped(0, 1)
         rig.armOut = rig.armOut.clamped(0, 1)
-        rig.armSymmetric = rig.armSymmetric.clamped(0, 1)
-        rig.armForward = rig.armForward.clamped(0, 1)
-        rig.armHold = rig.armHold.clamped(0, 1)
-        rig.armToFace = rig.armToFace.clamped(0, 1)
         rig.headTurn = rig.headTurn.clamped(-1, 1)
     }
 }

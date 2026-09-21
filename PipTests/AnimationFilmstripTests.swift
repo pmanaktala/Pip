@@ -13,34 +13,15 @@ struct AnimationFilmstripTests {
         ProcessInfo.processInfo.environment["PIP_FILM_OUTPUT"].map { URL(fileURLWithPath: $0, isDirectory: true) }
     }
 
-    /// When the bit for `motion` first fires after `from`, and its duration.
+    /// The first slot after `from` in which `motion`'s *signature* bit plays, and its duration.
+    /// Alternates are skipped so every strip shows the bit its label names.
     private func bitWindow(_ motion: PetMotionProfile, from: Double = 0) -> (start: Double, duration: Double)? {
-        let seed: Double
-        let duration = motion.bit.duration
-        switch motion.bit {
-        case .none: return nil
-        case .wiggle: seed = 71
-        case .zoomies: seed = 73
-        case .stretch: seed = 79
-        case .curious: seed = 83
-        case .flop: seed = 89
-        case .fidget: seed = 97
-        case .stomp: seed = 101
-        case .sniffle: seed = 103
-        case .meditate: return (from, 6)
-        case .tada: seed = 107
-        case .typing: seed = 109
-        case .pageTurn: seed = 113
-        case .snore: seed = 127
-        }
+        if motion.bit == .meditate { return (from, 6) }
         var t = from
-        while t < from + motion.bitInterval * 3 {
-            if let (phase, cycle) = PetAnimator.gesture(t, interval: motion.bitInterval, duration: duration, seed: seed), phase < 0.02 {
-                let cycleStart = cycle * motion.bitInterval
-                let at = (motion.bitInterval - duration) * PetAnimator.hash01(cycle + seed)
-                return (cycleStart + at, duration)
-            }
-            t += 0.01
+        for _ in 0..<12 {
+            guard let next = PetAnimator.nextBit(motion, from: t) else { return nil }
+            if next.bit == motion.bit { return (next.start, next.bit.duration) }
+            t = next.start + next.bit.duration + 0.01
         }
         return nil
     }

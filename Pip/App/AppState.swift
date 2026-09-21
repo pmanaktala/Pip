@@ -161,6 +161,7 @@ final class AppState {
             burst.rig.lift -= 14
             burst.rig.squash = min(1.1, burst.rig.squash + 0.06)
             burst.rig.armRaise = 1
+            burst.rig.armSymmetric = 1
             burst.rig.eyeArc = max(burst.rig.eyeArc, 0.6)
             burst.accessory = entry.mood == .calm ? .heart : .sparkles
         } else {

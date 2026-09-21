@@ -81,8 +81,7 @@ public enum PetLife: String, Sendable, CaseIterable {
 
         case .working:
             var s = PetStateResolver.resolve(mood: .neutral, intensity: .moderate, identity: identity)
-            s.rig.armForward = 1 // paws down on the keys, behind the lid
-            s.rig.armRaise = 0
+            s.rig.armRaise = 0.35
             s.rig.armOut = 0
             s.rig.gazeY = 0.45
             s.rig.gazeX = 0
@@ -94,14 +93,13 @@ public enum PetLife: String, Sendable, CaseIterable {
             s.motion.blinkInterval = 3
             s.motion.bit = .typing
             s.motion.bitInterval = 4
-            s.motion.alternateBits = [.typing, .stretch]
+            s.motion.alternateBits = [.typing, .typing, .stretch]
             s.accessory = .laptop
             return s
 
         case .reading:
             var s = PetStateResolver.resolve(mood: .calm, intensity: .slight, identity: identity)
-            s.rig.armHold = 1 // the book sits between the paws
-            s.rig.armCross = 0
+            s.rig.armCross = 0.7
             s.rig.armRaise = 0
             s.rig.gazeY = 0.5
             s.rig.gazeX = 0.1
@@ -113,7 +111,7 @@ public enum PetLife: String, Sendable, CaseIterable {
             s.motion.swayAmount = 0.5
             s.motion.bit = .pageTurn
             s.motion.bitInterval = 6
-            s.motion.alternateBits = [.pageTurn, .stretch]
+            s.motion.alternateBits = [.pageTurn, .pageTurn, .stretch]
             s.accessory = .book
             return s
 

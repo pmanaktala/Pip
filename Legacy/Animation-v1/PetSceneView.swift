@@ -69,7 +69,7 @@ public struct PetSceneView: View {
 
                 if showsAccessory, let accessory = state.accessory {
                     let animated = PetAnimator.animate(rig: state.rig, motion: state.motion, time: time)
-                    AccessoryOverlay(kind: accessory, time: time, palette: PetPalette.palette(for: identity.species), live: animated.live, rig: animated.rig, species: identity.species)
+                    AccessoryOverlay(kind: accessory, time: time, palette: PetPalette.palette(for: identity.species), live: animated.live, lift: animated.rig.lift, lean: animated.rig.lean, rig: animated.rig, anatomy: identity.species.anatomy)
                         .frame(width: petSide, height: petSide)
                         .position(petCenter)
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
@@ -89,39 +89,43 @@ private struct AdditiveInDark: ViewModifier {
     }
 }
 
-/// Small props around the pet: sparkles, zzz, stress squiggles, a rain cloud, steam — and the
-/// things the pet holds or wears. Drawn in the same 200×200 design space as the pet so they line
-/// up at any size; held props are anchored to the paw (`PetDraw.handPoint`) and ride the same
-/// body transform as the pet, so they are *in hand* in every frame.
+/// Small props around the pet: sparkles, zzz, stress squiggles, a rain cloud, steam.
+/// Drawn in the same 200×200 design space as the pet so they line up at any size.
 public struct AccessoryOverlay: View {
     public var kind: PetAccessory
     public var time: TimeInterval?
     public var palette: PetPalette
     /// Body motion, so held props move with the pet.
     public var live: LiveMotion
-    /// The animated rig, so worn and held props follow the pose.
+    public var lift: Double
+    public var lean: Double
+    /// The animated rig and species anatomy, so worn props (the nightcap) sit on the head.
     public var rig: PetRig
-    public var species: PetSpecies
+    public var anatomy: PetAnatomy?
 
     @Environment(\.colorScheme) private var scheme
 
-    public init(kind: PetAccessory, time: TimeInterval?, palette: PetPalette, live: LiveMotion = .still, rig: PetRig = PetRig(), species: PetSpecies = .penguin) {
+    public init(kind: PetAccessory, time: TimeInterval?, palette: PetPalette, live: LiveMotion = .still, lift: Double = 0, lean: Double = 0, rig: PetRig = PetRig(), anatomy: PetAnatomy? = nil) {
         self.kind = kind
         self.time = time
         self.palette = palette
         self.live = live
+        self.lift = lift
+        self.lean = lean
         self.rig = rig
-        self.species = species
+        self.anatomy = anatomy
     }
 
-    private var paint: PetPaintContext {
-        PetPaintContext(rig: rig, live: live, palette: palette, colorScheme: scheme, anatomy: species.anatomy)
-    }
-
-    /// The same transform `PetView.draw` applies to the body.
+    /// The same body transform `PetView.draw` applies: shiver/hop/lift, lean about the feet, squash.
     private func bodyContext(_ ctx: GraphicsContext) -> GraphicsContext {
         var body = ctx
-        body.concatenate(PetDraw.bodyTransform(rig: rig, live: live))
+        let pivot = CGPoint(x: 100, y: 168)
+        let squash = CGFloat(live.squash)
+        body.translateBy(x: CGFloat(live.shiverX), y: CGFloat(-live.hop + lift))
+        body.translateBy(x: pivot.x, y: pivot.y)
+        body.rotate(by: .degrees(lean + live.lean))
+        body.scaleBy(x: 1 - (squash - 1) * 0.55, y: squash)
+        body.translateBy(x: -pivot.x, y: -pivot.y)
         return body
     }
 
@@ -168,9 +172,7 @@ public struct AccessoryOverlay: View {
                     }
                 }
             case .umbrella:
-                // The cloud stays put in the world. The umbrella is *held*: its handle sits in the
-                // pet's right paw and the shaft rises from there to a canopy centred over the head,
-                // so it tilts with the arm and rides the body through every hop and lean.
+                // The cloud stays put in the world; the umbrella is held, so it rides the body.
                 let c = CGPoint(x: 100, y: 8 + sin(t * 1.2) * 1.5)
                 let cloudColor = scheme == .dark ? Color(white: 0.55) : Color(red: 0.62, green: 0.68, blue: 0.78)
                 var cloud = Path()
@@ -179,67 +181,51 @@ public struct AccessoryOverlay: View {
                 cloud.addEllipse(in: CGRect(x: c.x + 2, y: c.y - 6, width: 22, height: 16))
                 ctx.fill(cloud, with: .color(cloudColor.opacity(0.85)))
 
-                let p = paint
-                let transform = PetDraw.bodyTransform(rig: rig, live: live)
-                var held = bodyContext(ctx)
-                let hand = PetDraw.handPoint(p, species: species, side: 1)
-                // Where the canopy wants to be: over the crown, drawn toward the holding paw so the
-                // shaft passes the cheek rather than the face.
+                var held = ctx
+                held.translateBy(x: CGFloat(live.shiverX), y: CGFloat(-live.hop + lift))
+                held.translateBy(x: 100, y: 168)
+                held.rotate(by: .degrees(lean + live.lean))
+                held.translateBy(x: -100, y: -168)
                 let raise = CGFloat(live.prop)
-                let goal = CGPoint(x: p.head.center.x + (hand.x - p.head.center.x) * 0.5, y: p.head.top - 24 + (1 - raise) * 10)
-                let dx = goal.x - hand.x, dy = goal.y - hand.y
-                let shaftLen = max(30, sqrt(dx * dx + dy * dy))
-                let dir = CGPoint(x: dx / shaftLen, y: dy / shaftLen)
-                let top = goal
-                let tiltAngle = atan2(dir.y, dir.x) + .pi / 2
-                let stick = scheme == .dark ? Color(white: 0.85) : Color(red: 0.36, green: 0.30, blue: 0.28)
-                // Shaft from just under the canopy to a little below the paw, ending in a crook.
-                var shaft = Path()
-                shaft.move(to: CGPoint(x: top.x - dir.x * 2, y: top.y - dir.y * 2))
-                shaft.addLine(to: CGPoint(x: hand.x - dir.x * 10, y: hand.y - dir.y * 10))
-                let crookEnd = CGPoint(x: hand.x - dir.x * 10 - dir.y * 8, y: hand.y - dir.y * 10 + dir.x * 8)
-                shaft.addQuadCurve(to: crookEnd, control: CGPoint(x: hand.x - dir.x * 17 - dir.y * 2, y: hand.y - dir.y * 17 + dir.x * 2))
-                held.stroke(shaft, with: .color(stick), style: StrokeStyle(lineWidth: 2.4, lineCap: .round))
-
-                // Canopy, drawn in a frame aligned with the shaft.
-                var canopyCtx = held
-                canopyCtx.translateBy(x: top.x, y: top.y)
-                canopyCtx.rotate(by: .radians(tiltAngle))
-                let canopyW: CGFloat = 108, canopyH: CGFloat = 28
+                let top = CGPoint(x: 100, y: 46 - raise * 8 + CGFloat(live.headBob) * 0.3)
+                let canopyW: CGFloat = 92, canopyH: CGFloat = 26
                 var canopy = Path()
-                canopy.move(to: CGPoint(x: -canopyW / 2, y: canopyH))
-                canopy.addQuadCurve(to: CGPoint(x: 0, y: 0), control: CGPoint(x: -canopyW * 0.42, y: -canopyH * 0.35))
-                canopy.addQuadCurve(to: CGPoint(x: canopyW / 2, y: canopyH), control: CGPoint(x: canopyW * 0.42, y: -canopyH * 0.35))
+                canopy.move(to: CGPoint(x: top.x - canopyW / 2, y: top.y + canopyH))
+                canopy.addQuadCurve(to: CGPoint(x: top.x, y: top.y), control: CGPoint(x: top.x - canopyW * 0.42, y: top.y - canopyH * 0.35))
+                canopy.addQuadCurve(to: CGPoint(x: top.x + canopyW / 2, y: top.y + canopyH), control: CGPoint(x: top.x + canopyW * 0.42, y: top.y - canopyH * 0.35))
+                // Three scallops along the bottom edge.
                 for i in stride(from: 2, through: 0, by: -1) {
-                    let x0 = -canopyW / 2 + canopyW * CGFloat(i + 1) / 3
-                    let x1 = -canopyW / 2 + canopyW * CGFloat(i) / 3
-                    canopy.addQuadCurve(to: CGPoint(x: x1, y: canopyH), control: CGPoint(x: (x0 + x1) / 2, y: canopyH - 7))
+                    let x0 = top.x - canopyW / 2 + canopyW * CGFloat(i + 1) / 3
+                    let x1 = top.x - canopyW / 2 + canopyW * CGFloat(i) / 3
+                    canopy.addQuadCurve(to: CGPoint(x: x1, y: top.y + canopyH), control: CGPoint(x: (x0 + x1) / 2, y: top.y + canopyH - 7))
                 }
                 canopy.closeSubpath()
                 let coral = Color(red: 0.96, green: 0.55, blue: 0.45)
-                canopyCtx.fill(canopy, with: .linearGradient(Gradient(colors: [coral.opacity(0.98), Color(red: 0.86, green: 0.40, blue: 0.34)]), startPoint: CGPoint(x: -canopyW / 2, y: 0), endPoint: CGPoint(x: canopyW / 2, y: canopyH)))
+                held.fill(canopy, with: .linearGradient(Gradient(colors: [coral.opacity(0.98), Color(red: 0.86, green: 0.40, blue: 0.34)]), startPoint: CGPoint(x: top.x - canopyW / 2, y: top.y), endPoint: CGPoint(x: top.x + canopyW / 2, y: top.y + canopyH)))
                 var ribs = Path()
                 for i in 1..<3 {
-                    let x = -canopyW / 2 + canopyW * CGFloat(i) / 3
-                    ribs.move(to: .zero)
-                    ribs.addQuadCurve(to: CGPoint(x: x, y: canopyH), control: CGPoint(x: x / 2, y: canopyH * 0.35))
+                    let x = top.x - canopyW / 2 + canopyW * CGFloat(i) / 3
+                    ribs.move(to: top)
+                    ribs.addQuadCurve(to: CGPoint(x: x, y: top.y + canopyH), control: CGPoint(x: (top.x + x) / 2, y: top.y + canopyH * 0.35))
                 }
-                canopyCtx.stroke(ribs, with: .color(.white.opacity(0.35)), style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
+                held.stroke(ribs, with: .color(.white.opacity(0.35)), style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
                 var tip = Path()
-                tip.move(to: .zero)
-                tip.addLine(to: CGPoint(x: 0, y: -6))
-                canopyCtx.stroke(tip, with: .color(stick), style: StrokeStyle(lineWidth: 2.2, lineCap: .round))
+                tip.move(to: top)
+                tip.addLine(to: CGPoint(x: top.x, y: top.y - 6))
+                var handle = Path()
+                handle.move(to: CGPoint(x: top.x, y: top.y + canopyH - 2))
+                handle.addLine(to: CGPoint(x: top.x, y: top.y + canopyH + 56))
+                handle.addQuadCurve(to: CGPoint(x: top.x - 8, y: top.y + canopyH + 56), control: CGPoint(x: top.x - 4, y: top.y + canopyH + 64))
+                let stick = scheme == .dark ? Color(white: 0.85) : Color(red: 0.36, green: 0.30, blue: 0.28)
+                held.stroke(tip, with: .color(stick), style: StrokeStyle(lineWidth: 2.2, lineCap: .round))
+                held.stroke(handle, with: .color(stick), style: StrokeStyle(lineWidth: 2.2, lineCap: .round))
 
-                // The paw in front of the handle.
-                PetDraw.pawOver(&held, p, species: species, at: hand)
-
-                // Rain: falls in the world, lands on the canopy where the canopy actually is.
-                let worldTop = top.applying(transform)
+                // Rain that hits the canopy and skips off it, plus a couple of stray drops past the edge.
                 for i in 0..<5 {
                     let phase = (t * 0.8 + Double(i) * 0.2).truncatingRemainder(dividingBy: 1)
                     let x = c.x - 34 + CGFloat(i) * 17
-                    let onCanopy = abs(x - worldTop.x) < canopyW / 2 - 6
-                    let landing = onCanopy ? worldTop.y + abs(x - worldTop.x) * 0.24 - 2 : 150
+                    let onCanopy = abs(x - top.x) < canopyW / 2 - 4
+                    let landing = onCanopy ? top.y + abs(x - top.x) * 0.22 - 3 : 150
                     let y = c.y + 12 + phase * (landing - c.y - 12)
                     var drop = Path()
                     drop.move(to: CGPoint(x: x, y: y))
@@ -253,14 +239,14 @@ public struct AccessoryOverlay: View {
                 }
             case .nightcap:
                 // A soft cap that sits on the head and moves with it, and a slow zzz.
-                let p = paint
+                let p = PetPaintContext(rig: rig, live: live, palette: palette, colorScheme: scheme, anatomy: anatomy ?? PetSpecies.penguin.anatomy)
                 var head = bodyContext(ctx)
                 head.concatenate(p.headTilt)
                 let h = p.head
                 let capColor = Color(red: 0.52, green: 0.55, blue: 0.86)
                 let capShade = Color(red: 0.40, green: 0.42, blue: 0.72)
-                let bandW = h.width * 0.86, bandH = h.height * 0.14
-                let bandY = h.top + h.height * 0.17
+                let bandW = h.width * 0.78, bandH = h.height * 0.14
+                let bandY = h.top + h.height * 0.10
                 // Cone: from the band up and over to the pet's right, drooping at the tip.
                 var cone = Path()
                 cone.move(to: CGPoint(x: h.center.x - bandW / 2, y: bandY))
@@ -282,62 +268,51 @@ public struct AccessoryOverlay: View {
                 }
 
             case .laptop:
-                // A small laptop on the floor in front of the pet, its lid open *toward the pet*:
-                // we see the back of the screen, and its light spills over the lid onto the face.
-                // The paws reach down behind the lid to the keyboard.
-                let shell = scheme == .dark ? Color(white: 0.34) : Color(red: 0.76, green: 0.78, blue: 0.82)
-                let shellShade = scheme == .dark ? Color(white: 0.24) : Color(red: 0.60, green: 0.62, blue: 0.68)
-                let flicker = 0.88 + 0.12 * sin(t * 9) * sin(t * 2.3)
-                let glowColor = Color(red: 0.78, green: 0.90, blue: 1)
-                // Light on the face and chest, from below.
-                ctx.fill(Path(ellipseIn: CGRect(x: 54, y: 66, width: 92, height: 76)), with: .radialGradient(Gradient(colors: [glowColor.opacity(0.30 * flicker), .clear]), center: CGPoint(x: 100, y: 118), startRadius: 0, endRadius: 50))
-                // Base: we see its front edge.
-                let base = CGRect(x: 63, y: 155, width: 74, height: 9)
-                ctx.fill(Path(roundedRect: base, cornerRadius: 2.5), with: .linearGradient(Gradient(colors: [shell, shellShade]), startPoint: CGPoint(x: base.midX, y: base.minY), endPoint: CGPoint(x: base.midX, y: base.maxY)))
-                // Lid: leans back toward the pet, so it is a hair narrower at the top.
-                var lid = Path()
-                lid.move(to: CGPoint(x: 70, y: 121))
-                lid.addLine(to: CGPoint(x: 130, y: 121))
-                lid.addLine(to: CGPoint(x: 133, y: 156))
-                lid.addLine(to: CGPoint(x: 67, y: 156))
-                lid.closeSubpath()
-                let lidRounded = lid.strokedPath(StrokeStyle(lineWidth: 3, lineJoin: .round)).union(lid)
-                ctx.fill(lidRounded, with: .linearGradient(Gradient(colors: [shellShade, shell]), startPoint: CGPoint(x: 100, y: 121), endPoint: CGPoint(x: 100, y: 156)))
-                // Screen light leaking around the lid's top edge.
-                ctx.fill(Path(roundedRect: CGRect(x: 71, y: 118.5, width: 58, height: 2.5), cornerRadius: 1.2), with: .color(glowColor.opacity(0.85 * flicker)))
-                // A small light on the back of the lid.
-                ctx.fill(Path(ellipseIn: CGRect(x: 97, y: 135, width: 6, height: 6)), with: .color(.white.opacity(scheme == .dark ? 0.55 : 0.9)))
+                // A small open laptop on the floor in front of the pet; the screen lights the face.
+                let base = CGRect(x: 66, y: 150, width: 68, height: 11)
+                let lid = CGRect(x: 71, y: 116, width: 58, height: 36)
+                var lidPath = Path()
+                lidPath.move(to: CGPoint(x: lid.minX + 3, y: lid.minY))
+                lidPath.addLine(to: CGPoint(x: lid.maxX - 3, y: lid.minY))
+                lidPath.addLine(to: CGPoint(x: lid.maxX, y: lid.maxY))
+                lidPath.addLine(to: CGPoint(x: lid.minX, y: lid.maxY))
+                lidPath.closeSubpath()
+                let shell = scheme == .dark ? Color(white: 0.30) : Color(red: 0.72, green: 0.74, blue: 0.78)
+                let shellShade = scheme == .dark ? Color(white: 0.22) : Color(red: 0.58, green: 0.60, blue: 0.66)
+                // Screen glow on the face, drawn first so the laptop sits on top of it.
+                let flicker = 0.9 + 0.1 * sin(t * 9)
+                ctx.fill(Path(ellipseIn: CGRect(x: 60, y: 60, width: 80, height: 70)), with: .radialGradient(Gradient(colors: [Color(red: 0.75, green: 0.88, blue: 1).opacity(0.28 * flicker), .clear]), center: CGPoint(x: 100, y: 100), startRadius: 0, endRadius: 46))
+                ctx.fill(lidPath, with: .linearGradient(Gradient(colors: [shell, shellShade]), startPoint: CGPoint(x: lid.midX, y: lid.minY), endPoint: CGPoint(x: lid.midX, y: lid.maxY)))
+                let screen = CGRect(x: lid.minX + 6, y: lid.minY + 4, width: lid.width - 12, height: lid.height - 9)
+                ctx.fill(Path(roundedRect: screen, cornerRadius: 2), with: .linearGradient(Gradient(colors: [Color(red: 0.86, green: 0.94, blue: 1), Color(red: 0.70, green: 0.84, blue: 0.98)]), startPoint: CGPoint(x: screen.minX, y: screen.minY), endPoint: CGPoint(x: screen.maxX, y: screen.maxY)))
+                // A few lines of "text" that scroll while typing.
+                let scroll = (t * 0.6).truncatingRemainder(dividingBy: 1)
+                for i in 0..<4 {
+                    let y = screen.minY + 5 + CGFloat(i) * 5.5 - CGFloat(scroll) * 5.5
+                    guard y > screen.minY + 2, y < screen.maxY - 2 else { continue }
+                    let w = screen.width * (0.4 + 0.5 * PetAnimator.hash01(Double(i) + floor(t * 0.6)))
+                    ctx.fill(Path(roundedRect: CGRect(x: screen.minX + 4, y: y, width: w, height: 2), cornerRadius: 1), with: .color(Color(red: 0.30, green: 0.42, blue: 0.62).opacity(0.7)))
+                }
+                ctx.fill(Path(roundedRect: base, cornerRadius: 3), with: .linearGradient(Gradient(colors: [shell, shellShade]), startPoint: CGPoint(x: base.midX, y: base.minY), endPoint: CGPoint(x: base.midX, y: base.maxY)))
+                ctx.fill(Path(roundedRect: CGRect(x: base.minX + 8, y: base.minY + 3, width: base.width - 16, height: 4), cornerRadius: 1.5), with: .color(shellShade.opacity(0.6)))
 
             case .book:
-                // An open book held between the paws: its lower corners sit in the hands, so it
-                // follows the arms and the body. `live.prop` runs 1 → 0 → 1 while a page turns.
-                let p = paint
-                var body = bodyContext(ctx)
-                // The book keeps the size and place of the resting hold; only the paws move.
-                var holdRig = rig
-                holdRig.armHold = 1; holdRig.armRaise = 0; holdRig.armOut = 0; holdRig.armForward = 0; holdRig.armToFace = 0; holdRig.armCross = 0
-                let holdPaint = PetPaintContext(rig: holdRig, live: .still, palette: palette, colorScheme: scheme, anatomy: species.anatomy)
-                let restL = PetDraw.handPoint(holdPaint, species: species, side: -1)
-                let restR = PetDraw.handPoint(holdPaint, species: species, side: 1)
-                let hl = PetDraw.handPoint(p, species: species, side: -1)
-                let hr = PetDraw.handPoint(p, species: species, side: 1)
-                let cx = (restL.x + restR.x) / 2
-                let w = max(36, restR.x - restL.x + 12)
-                let bottom = (restL.y + restR.y) / 2 + 3
-                let h: CGFloat = 26
-                let top = bottom - h
+                // An open book held at the chest, following the body.
+                let body = bodyContext(ctx)
+                let cx: CGFloat = 100, top: CGFloat = 116, w: CGFloat = 48, h: CGFloat = 26
                 let cover = Color(red: 0.86, green: 0.48, blue: 0.40)
                 let page = Color(red: 0.99, green: 0.97, blue: 0.92)
-                func pagePath(_ side: CGFloat) -> Path {
-                    var pg = Path()
-                    pg.move(to: CGPoint(x: cx, y: top + 4))
-                    pg.addQuadCurve(to: CGPoint(x: cx + side * w / 2, y: top), control: CGPoint(x: cx + side * w * 0.25, y: top - 3))
-                    pg.addLine(to: CGPoint(x: cx + side * w / 2, y: top + h))
-                    pg.addQuadCurve(to: CGPoint(x: cx, y: top + h + 4), control: CGPoint(x: cx + side * w * 0.25, y: top + h + 1))
-                    pg.closeSubpath()
-                    return pg
-                }
-                let left = pagePath(-1), right = pagePath(1)
+                var left = Path(), right = Path()
+                left.move(to: CGPoint(x: cx, y: top + 4))
+                left.addQuadCurve(to: CGPoint(x: cx - w / 2, y: top), control: CGPoint(x: cx - w * 0.25, y: top - 3))
+                left.addLine(to: CGPoint(x: cx - w / 2, y: top + h))
+                left.addQuadCurve(to: CGPoint(x: cx, y: top + h + 4), control: CGPoint(x: cx - w * 0.25, y: top + h + 1))
+                left.closeSubpath()
+                right.move(to: CGPoint(x: cx, y: top + 4))
+                right.addQuadCurve(to: CGPoint(x: cx + w / 2, y: top), control: CGPoint(x: cx + w * 0.25, y: top - 3))
+                right.addLine(to: CGPoint(x: cx + w / 2, y: top + h))
+                right.addQuadCurve(to: CGPoint(x: cx, y: top + h + 4), control: CGPoint(x: cx + w * 0.25, y: top + h + 1))
+                right.closeSubpath()
                 body.fill(left.applying(CGAffineTransform(translationX: -1.5, y: 2)), with: .color(cover))
                 body.fill(right.applying(CGAffineTransform(translationX: 1.5, y: 2)), with: .color(cover))
                 body.fill(left, with: .color(page))
@@ -351,16 +326,6 @@ public struct AccessoryOverlay: View {
                     }
                 }
                 body.stroke(lines, with: .color(Color(red: 0.55, green: 0.50, blue: 0.48).opacity(0.5)), style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
-                // A page mid-turn: the right page swings up about the spine and lands on the left.
-                let flip = CGFloat(1 - live.prop)
-                if flip > 0.02 {
-                    let k = cos(flip * .pi)
-                    let turning = right.applying(CGAffineTransform(translationX: cx, y: top + h / 2).scaledBy(x: max(abs(k), 0.04) * (k < 0 ? -1 : 1), y: 1 - 0.15 * sin(flip * .pi)).translatedBy(x: -cx, y: -(top + h / 2)))
-                    body.fill(turning, with: .color(page))
-                    body.stroke(turning, with: .color(cover.opacity(0.5)), style: StrokeStyle(lineWidth: 0.8))
-                }
-                PetDraw.pawOver(&body, p, species: species, at: CGPoint(x: hl.x, y: hl.y))
-                PetDraw.pawOver(&body, p, species: species, at: CGPoint(x: hr.x, y: hr.y))
 
             case .rainCloud:
                 let bob = sin(t * 1.2) * 1.5

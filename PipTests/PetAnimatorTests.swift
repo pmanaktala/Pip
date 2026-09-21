@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import Testing
 @testable import Pip
 
@@ -21,9 +22,9 @@ struct PetAnimatorTests {
                     let b = PetAnimator.animate(rig: state.rig, motion: state.motion, time: t)
                     #expect(a.rig == b.rig && a.live == b.live)
                     // Idle motion plus the mood's signature bit: bigger than idle, still on the canvas.
-                    #expect(a.live.hop >= 0 && a.live.hop <= 22)
+                    #expect(a.live.hop >= 0 && a.live.hop <= PetAnimator.maxHop)
                     #expect(a.live.squash > 0.72 && a.live.squash < 1.3)
-                    #expect(abs(a.live.lean) <= 36)
+                    #expect(abs(a.live.lean) <= PetAnimator.maxLean)
                     #expect(abs(a.live.headLag) <= 8)
                     #expect((0...1).contains(a.rig.eyeOpen))
                 }
@@ -63,12 +64,54 @@ struct PetAnimatorTests {
                 #expect(rig.eyeOpen >= -0.001 && rig.eyeOpen <= 1.001, "\(bit) eyeOpen out of range: \(rig.eyeOpen)")
                 #expect(rig.lying >= 0 && rig.lying <= 1, "\(bit) lying out of range: \(rig.lying)")
                 #expect(abs(rig.headTurn) <= 1, "\(bit) headTurn out of range: \(rig.headTurn)")
-                #expect(live.hop >= -0.001 && live.hop <= 22, "\(bit) hop out of range: \(live.hop)")
+                #expect(live.hop >= -0.001 && live.hop <= PetAnimator.maxHop, "\(bit) hop out of range: \(live.hop)")
                 #expect(live.squash > 0.7 && live.squash < 1.3, "\(bit) squash out of range: \(live.squash)")
-                #expect(abs(live.lean) <= 36, "\(bit) lean out of range: \(live.lean)")
+                #expect(abs(live.lean) <= PetAnimator.maxLean, "\(bit) lean out of range: \(live.lean)")
                 if rig != base || live.hop != 0 || live.lean != 0 { moved = true }
             }
             #expect(moved, "\(bit) never changed anything")
+        }
+    }
+
+    /// The bit that is chosen for a cycle is the bit that plays in it, and every cycle plays one.
+    @Test func everyCyclePlaysItsChosenBit() {
+        var motion = PetMotionProfile()
+        motion.bit = .wiggle
+        motion.alternateBits = [.tada]
+        motion.bitInterval = 6
+        var played: [PetBit: Int] = [:]
+        for cycle in 0..<12 {
+            let start = PetAnimator.bitStart(motion, cycle: Double(cycle))
+            let window = PetAnimator.bitWindow(motion, t: start + 0.05)
+            #expect(window != nil, "cycle \(cycle) plays nothing")
+            if let window { played[window.bit, default: 0] += 1 }
+            let before = PetAnimator.bitWindow(motion, t: start - 0.05)
+            #expect(before == nil || before!.cycle != Double(cycle), "cycle \(cycle) started early")
+        }
+        #expect(played[.wiggle, default: 0] > 0 && played[.tada, default: 0] > 0, "both bits should get a turn: \(played)")
+    }
+
+    /// A cycle is never shorter than its longest bit, so an encore back-to-back still finishes each performance.
+    @Test func cycleFitsTheLongestBit() {
+        var motion = PetMotionProfile()
+        motion.bit = .flop
+        motion.bitInterval = 0.1
+        let start = PetAnimator.bitStart(motion, cycle: 3)
+        #expect(PetAnimator.bitWindow(motion, t: start + PetBit.flop.duration - 0.01)?.cycle == 3)
+    }
+
+    /// Held props follow the paw: the umbrella hand is where the arm ends, on every species.
+    @Test func handPointsAreOnTheBody() {
+        for species in PetSpecies.allCases {
+            let id = PetIdentity(species: species)
+            let state = PetStateResolver.resolve(mood: .sad, identity: id)
+            let p = PetPaintContext(rig: state.rig, live: .still, palette: PetPalette.palette(for: species), colorScheme: .light, anatomy: species.anatomy)
+            let right = PetDraw.handPoint(p, species: species, side: 1)
+            let left = PetDraw.handPoint(p, species: species, side: -1)
+            #expect(right.x > 100 && left.x < 100, "\(species): hands are on the wrong sides")
+            #expect(abs((right.x - 100) - (100 - left.x)) < 12, "\(species): a one-paw raise should not throw the other paw far off")
+            #expect(right.y < p.torso.top + 30, "\(species): the umbrella paw should be raised to shoulder height, got \(right.y) vs shoulders \(p.torso.top)")
+            #expect((0...200).contains(right.x) && (0...200).contains(right.y))
         }
     }
 

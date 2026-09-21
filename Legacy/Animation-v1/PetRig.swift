@@ -28,14 +28,6 @@ public struct PetRig: Equatable, Sendable {
     public var armCross: Double = 0
     /// 0 = arms at the sides, 1 = spread wide and open (happy, "ta-da").
     public var armOut: Double = 0
-    /// How `armRaise` is shared: 0 = one paw up (a wave), 1 = both paws up equally (a cheer, a stretch, fists).
-    public var armSymmetric: Double = 0
-    /// 0 = at the sides, 1 = both arms reaching forward and down to the lap or floor (typing, pawing at something).
-    public var armForward: Double = 0
-    /// 0 = at the sides, 1 = both paws up at the chest, holding something (a book, a mug).
-    public var armHold: Double = 0
-    /// 0 = at the sides, 1 = the free paw (the pet's left) comes up to the face (wiping an eye, a yawn, "hmm").
-    public var armToFace: Double = 0
 
     // MARK: Ears & tail
     /// 0 = flat back / drooping, 1 = perked up.
@@ -125,7 +117,7 @@ extension PetRig {
         }
     }
 
-    static let fieldCount = 33
+    static let fieldCount = 29
 
     public var vector: Vector {
         get {
@@ -138,7 +130,6 @@ extension PetRig {
                 blush, sweat, lidHeaviness,
                 lean, headTurn, headDrop, armRaise,
                 armCross, armOut,
-                armSymmetric, armForward, armHold, armToFace,
             ])
         }
         set {
@@ -152,7 +143,6 @@ extension PetRig {
             blush = v[20]; sweat = v[21]; lidHeaviness = v[22]
             lean = v[23]; headTurn = v[24]; headDrop = v[25]; armRaise = v[26]
             armCross = v[27]; armOut = v[28]
-            armSymmetric = v[29]; armForward = v[30]; armHold = v[31]; armToFace = v[32]
         }
     }
 }
@@ -247,6 +237,26 @@ public enum PetBit: String, Codable, Sendable, Hashable {
         case .typing: 2.6
         case .pageTurn: 1.2
         case .snore: 2.4
+        }
+    }
+
+    /// The deterministic seed each bit schedules itself with.
+    var seed: Double {
+        switch self {
+        case .none: 0
+        case .wiggle: 71
+        case .zoomies: 73
+        case .stretch: 79
+        case .curious: 83
+        case .flop: 89
+        case .fidget: 97
+        case .stomp: 101
+        case .sniffle: 103
+        case .meditate: 0
+        case .tada: 107
+        case .typing: 109
+        case .pageTurn: 113
+        case .snore: 127
         }
     }
 }
