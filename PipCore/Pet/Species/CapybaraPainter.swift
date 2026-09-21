@@ -37,7 +37,7 @@ public enum CapybaraPainter: PetPainter {
         layout.eyeY = -0.18
         layout.eyeRadius = p.anatomy.eyeRadius
         layout.mouthY = 0.42
-        layout.mouthWidth = 0.11
+        layout.mouthWidth = 0.16
         layout.blushX = 0.44
         layout.blushY = -0.04
 
@@ -55,7 +55,7 @@ public enum CapybaraPainter: PetPainter {
         PetDraw.blush(&hc, p, layout: layout)
         PetDraw.eyes(&hc, p, layout: layout)
         PetDraw.brows(&hc, p, layout: layout)
-        PetDraw.mouth(&hc, p, style: .simple, layout: layout)
+        PetDraw.mouth(&hc, p, style: .snout, layout: layout)
         PetProps.yuzu(&hc, p, at: h.point(0.14, -0.5), radius: h.width * 0.1)
         PetDraw.sweat(&hc, p)
     }

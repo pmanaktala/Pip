@@ -419,6 +419,7 @@ public enum PetDraw {
 
     public enum MouthStyle { case cat, simple, snout }
 
+
     /// The mouth anchor (below the nose).
     public static func mouthAnchor(_ p: PetPaintContext, layout: FaceLayout) -> CGPoint {
         CGPoint(x: p.head.center.x + p.faceShift, y: p.head.center.y + p.head.height * layout.mouthY)
@@ -459,7 +460,17 @@ public enum PetDraw {
             path.move(to: CGPoint(x: mx - half, y: endY))
             path.addQuadCurve(to: CGPoint(x: mx, y: my), control: CGPoint(x: mx - half * 0.5, y: ctrlY))
             path.addQuadCurve(to: CGPoint(x: mx + half, y: endY), control: CGPoint(x: mx + half * 0.5, y: ctrlY))
-        case .simple, .snout:
+        case .snout:
+            // Snouts: a short vertical philtrum from the nose meeting a wide, gentle curve — reads
+            // as a muzzle rather than a dash, and keeps its expression at every size.
+            let stem = half * 0.55
+            path.move(to: CGPoint(x: mx, y: my - stem))
+            path.addLine(to: CGPoint(x: mx, y: my))
+            let wob = rig.mouthWobble > 0.05 ? half * 0.18 * CGFloat(rig.mouthWobble) : 0
+            path.move(to: CGPoint(x: mx - half, y: my - curve * half * 0.5 + wob))
+            path.addQuadCurve(to: CGPoint(x: mx, y: my), control: CGPoint(x: mx - half * 0.5, y: my + curve * half * 0.9))
+            path.addQuadCurve(to: CGPoint(x: mx + half, y: my - curve * half * 0.5 - wob), control: CGPoint(x: mx + half * 0.5, y: my + curve * half * 0.9))
+        case .simple:
             if rig.mouthWobble > 0.05 {
                 let n = 6
                 path.move(to: CGPoint(x: mx - half, y: my))

@@ -51,15 +51,21 @@ public enum PetProps {
         }
     }
 
-    /// A thin collar with a little bell.
+    /// A thin collar with a little bell: a band that curves *around* the neck, so it sits on the
+    /// body rather than floating under the chin, with the bell hanging from its lowest point.
     public static func collar(_ ctx: inout GraphicsContext, _ p: PetPaintContext, color: Color = coral, shade: Color = coralShade) {
         let h = p.head
-        let y = h.bottom - h.height * 0.06
-        let w = h.width * 0.62, bandH = h.height * 0.075
-        let band = CGRect(x: h.center.x - w / 2, y: y - bandH / 2, width: w, height: bandH)
-        PetDraw.form(&ctx, Path(roundedRect: band, cornerRadius: bandH / 2), in: band, base: color, shade: shade, light: .white, strength: 0.6)
-        let r = bandH * 0.95
-        let bell = CGRect(x: h.center.x - r, y: band.midY + bandH * 0.2, width: r * 2, height: r * 2)
+        let y = h.bottom - h.height * 0.1
+        let w = h.width * 0.64, bandH = h.height * 0.07
+        let dip = h.height * 0.09
+        var band = Path()
+        band.move(to: CGPoint(x: h.center.x - w / 2, y: y))
+        band.addQuadCurve(to: CGPoint(x: h.center.x + w / 2, y: y), control: CGPoint(x: h.center.x, y: y + dip * 2))
+        let bandStroke = band.strokedPath(StrokeStyle(lineWidth: bandH, lineCap: .round))
+        let bandBox = CGRect(x: h.center.x - w / 2, y: y - bandH / 2, width: w, height: dip + bandH)
+        PetDraw.form(&ctx, bandStroke, in: bandBox, base: color, shade: shade, light: .white, strength: 0.6)
+        let r = bandH * 1.05
+        let bell = CGRect(x: h.center.x - r, y: y + dip + bandH * 0.15, width: r * 2, height: r * 2)
         PetDraw.form(&ctx, Path(ellipseIn: bell), in: bell, base: gold, shade: goldShade, light: .white, strength: 0.8)
         if p.detail == .full {
             var slit = Path()

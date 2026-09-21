@@ -61,7 +61,8 @@ public enum RedPandaPainter: PetPainter {
         let cheeks = Path(ellipseIn: CGRect(x: fx - h.width * 0.42, y: h.center.y + h.height * 0.02, width: h.width * 0.84, height: h.height * 0.4))
         let muzzle = Path(ellipseIn: CGRect(x: fx - h.width * 0.2, y: h.center.y + h.height * 0.04, width: h.width * 0.4, height: h.height * 0.38))
         mask.fill(cheeks.union(muzzle), with: .color(p.palette.marking))
-        PetDraw.mirrored(&mask) { ctx, _ in
+        // Brow spots and tear-marks are the small print; at badge size the mask alone carries the species.
+        if p.detail == .full { PetDraw.mirrored(&mask) { ctx, _ in
             let brow = CGRect(x: h.center.x + h.width * 0.12, y: h.center.y - h.height * 0.26, width: h.width * 0.15, height: h.height * 0.1)
             ctx.fill(Path(ellipseIn: brow), with: .color(p.palette.marking))
             var tear = Path()
@@ -69,7 +70,7 @@ public enum RedPandaPainter: PetPainter {
             tear.move(to: CGPoint(x: sx, y: h.center.y + h.height * 0.07))
             tear.addQuadCurve(to: CGPoint(x: sx + h.width * 0.08, y: h.center.y + h.height * 0.3), control: CGPoint(x: sx + h.width * 0.01, y: h.center.y + h.height * 0.2))
             ctx.stroke(tear, with: .color(p.palette.shade), style: StrokeStyle(lineWidth: h.width * 0.045, lineCap: .round))
-        }
+        } }
 
         var layout = PetDraw.FaceLayout()
         layout.eyeSpacing = 0.2
