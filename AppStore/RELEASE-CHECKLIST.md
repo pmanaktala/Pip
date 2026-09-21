@@ -7,7 +7,7 @@ Run before every TestFlight / App Store build. Tick with the build number and da
 - [ ] `xcodebuild test` green locally and in CI (`.github/workflows/ci.yml`)
 - [ ] `scripts/privacy-audit.sh` passes
 - [ ] Deployment target iOS 26.0; built with the iOS 27 SDK
-- [ ] Bump `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`
+- [ ] Bump `MARKETING_VERSION` for a release (`CURRENT_PROJECT_VERSION` is stamped by Xcode Cloud from `CI_BUILD_NUMBER`; see `Docs/XcodeCloud.md`)
 - [ ] Capabilities registered in the developer portal (Xcode › Signing & Capabilities does this on first signed build): App Group `group.com.pmanaktala.Pip`, iCloud container `iCloud.com.pmanaktala.Pip` (CloudKit), HealthKit, Push Notifications (CloudKit silent pushes)
 - [ ] CloudKit schema deployed to **Production** in CloudKit Console (Development schema is created automatically by the first run; deploy it before App Store submission)
 - [ ] Release entitlements: `aps-environment` becomes `production` in the archive (Xcode handles this automatically)

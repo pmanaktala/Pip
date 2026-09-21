@@ -24,9 +24,16 @@ if grep -rInE "Firebase|Crashlytics|Amplitude|Mixpanel|Segment\.|Adjust|AppsFlye
   fail "Tracking / analytics SDK reference found"
 fi
 
-# No networking to non-Apple hosts in app code (CloudKit and HealthKit go through system frameworks).
-if grep -rInE "URLSession|http://|https://" Pip PipCore PipWidgets --include=*.swift | grep -v "github.com/pmanaktala/Pip/blob/main/PRIVACY.md"; then
+# No networking in app code at all (CloudKit and HealthKit go through system frameworks).
+if grep -rInE "URLSession|NWConnection|NSURLConnection|WKWebView" Pip PipCore PipWidgets --include=*.swift; then
   fail "Direct networking found; Pip must not talk to servers"
+fi
+# The only URLs allowed are user-initiated links that open outside the app: the privacy policy
+# and the Support screen's crisis lines and resources.
+if grep -rInE "http://|https://" Pip PipCore PipWidgets --include=*.swift \
+    | grep -v "github.com/pmanaktala/Pip/blob/main/PRIVACY.md" \
+    | grep -v "Pip/Features/Settings/SupportView.swift"; then
+  fail "Unexpected URL in source; only the privacy policy and Support links may open outside the app"
 fi
 
 echo "Privacy audit passed."

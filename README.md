@@ -19,7 +19,9 @@ Requires iOS 26. Built with the iOS 27 SDK; iOS 27-only niceties are guarded wit
 | `PipWidgets/` | Widget extension: widgets, Live Activity UI |
 | `PipTests/` | Swift Testing unit tests (resolver, Health mapping, history, persistence, scheduler, icon render) |
 | `AppStore/` | Metadata, review notes, release checklist |
-| `scripts/` | `privacy-audit.sh` (run in CI) |
+| `scripts/` | `privacy-audit.sh` (run in CI and Xcode Cloud), `xcode-cloud-workflow.py` (creates the Xcode Cloud workflows via the App Store Connect API) |
+| `ci_scripts/` | Xcode Cloud hooks: toolchain check, privacy audit + build-number stamping, TestFlight notes |
+| `Docs/` | `CharacterSpec.md`, `Design/Principles.md` (design and care rules), `XcodeCloud.md` (pipeline setup) |
 
 ### How the pet works
 
@@ -48,6 +50,13 @@ TEST_RUNNER_PIP_ICON_OUTPUT=/tmp/icon.png xcodebuild test -project Pip.xcodeproj
 ```
 
 Then copy `/tmp/icon.png` to `Pip/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png` and `/tmp/icon-layer.png` to `Pip/Resources/AppIcon.icon/Assets/Pebble.png`.
+
+## Delivery
+
+Pull requests are built and tested by GitHub Actions. Every push to `main` is archived by
+Xcode Cloud and delivered to the internal TestFlight group; the build number is the Xcode Cloud
+build number and the tester notes come from the commit log. Setup and troubleshooting live in
+[Docs/XcodeCloud.md](Docs/XcodeCloud.md).
 
 ## Planning
 
