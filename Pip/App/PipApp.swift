@@ -23,11 +23,15 @@ struct PipApp: App {
         let effects: [any MoodLogSideEffect] = [
             LiveActivityMoodSideEffect(preferences: preferences),
             HealthMoodSideEffect(service: health, context: container.mainContext, preferences: preferences),
+            DeviceSyncSideEffect(),
         ]
         MoodSideEffectRegistry.effects = effects
         let state = AppState(container: container, preferences: preferences, sideEffects: effects)
         let notifications = NotificationService()
         notifications.onOpen = { [state] url in state.handle(url: url) }
+        // Fast path to the Watch; iCloud remains the store of record.
+        DeviceSync.shared.start(container: container)
+        DeviceSync.shared.onRemoteChange = { [state] in state.refresh() }
         _appState = State(initialValue: state)
         _health = State(initialValue: health)
         _notifications = State(initialValue: notifications)

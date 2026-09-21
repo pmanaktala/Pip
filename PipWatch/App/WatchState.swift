@@ -27,9 +27,12 @@ final class WatchState {
         self.container = container
         let preferences = preferences ?? Preferences.shared
         self.preferences = preferences
-        self.logger = MoodLogger(context: container.mainContext)
+        self.logger = MoodLogger(context: container.mainContext, sideEffects: [DeviceSyncSideEffect()])
         Haptics.isEnabled = { [preferences] in preferences.hapticsEnabled }
         refresh()
+        // Straight to the phone over WatchConnectivity; iCloud catches up on its own.
+        DeviceSync.shared.start(container: container)
+        DeviceSync.shared.onRemoteChange = { [weak self] in self?.refresh() }
         remoteChangeObserver = NotificationCenter.default.addObserver(forName: .NSPersistentStoreRemoteChange, object: nil, queue: .main) { _ in
             Task { @MainActor in WatchState.remoteChangeHandler?() }
         }

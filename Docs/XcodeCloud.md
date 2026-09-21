@@ -30,7 +30,7 @@ a release.
    - `com.pmanaktala.Pip`: App Groups (`group.com.pmanaktala.Pip`), iCloud with CloudKit
      (`iCloud.com.pmanaktala.Pip`), HealthKit, Push Notifications.
    - `com.pmanaktala.Pip.PipWidgets`: App Groups.
-   - `com.pmanaktala.Pip.watchkitapp` (the Watch app): App Groups, iCloud with CloudKit.
+   - `com.pmanaktala.Pip.watchkitapp` (the Watch app): App Groups, iCloud with CloudKit. (Phone ↔ watch sync itself uses WatchConnectivity and needs no capability.)
    - `com.pmanaktala.Pip.watchkitapp.PipWatchWidgets` (complications): App Groups.
 
    Automatic signing registers these on the first signed build from Xcode (Signing &

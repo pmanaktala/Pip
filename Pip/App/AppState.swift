@@ -121,11 +121,14 @@ final class AppState {
     func update(_ entry: MoodEntry, intensity: MoodIntensity? = nil, contexts: [MoodContext]? = nil, note: String?? = nil) {
         logger.update(entry, intensity: intensity, contexts: contexts, note: note)
         todayEntries = PipQueries.entries(on: .now, in: context)
+        DeviceSync.shared.send(entry)
     }
 
     func delete(_ entry: MoodEntry) {
+        let id = entry.id
         logger.delete(entry)
         refresh()
+        DeviceSync.shared.sendDeletion(of: id)
     }
 
     // MARK: Pet
@@ -137,6 +140,7 @@ final class AppState {
         try? context.save()
         refresh()
         Haptics.success()
+        DeviceSync.shared.send(identity: identity)
     }
 
     func rename(_ name: String) {
@@ -144,6 +148,7 @@ final class AppState {
         profile.identity = PetIdentity(species: profile.species, name: name, personality: profile.personality)
         try? context.save()
         refresh()
+        DeviceSync.shared.send(identity: identity)
     }
 
     /// Reaction to a freshly logged mood, visible on the Pet tab behind the sheet: the pet jumps
