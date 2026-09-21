@@ -54,6 +54,7 @@ public enum PetStateResolver {
             motion.breathRate = 0.3
             motion.bit = .wiggle
             motion.bitInterval = 9
+            motion.alternateBits = [.wiggle, .tada]
             env.tintStrength = 0.5
 
         case .excited:
@@ -79,6 +80,7 @@ public enum PetStateResolver {
             motion.swayAmount = 0.6
             motion.bit = .zoomies
             motion.bitInterval = 7
+            motion.alternateBits = [.zoomies, .tada]
             accessory = .sparkles
             env.tintStrength = 0.6
 

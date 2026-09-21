@@ -182,6 +182,8 @@ public struct PetMotionProfile: Equatable, Sendable {
     public var bit: PetBit = .none
     /// Average seconds between bits.
     public var bitInterval: Double = 10
+    /// Other bits the pet may pick instead, one per cycle, so a mood has more than one trick.
+    public var alternateBits: [PetBit] = []
 
     public init() {}
 }
@@ -209,6 +211,14 @@ public enum PetBit: String, Codable, Sendable, Hashable {
     case sniffle
     /// Sitting together: float a little, eyes closed, breathing slow and deep.
     case meditate
+    /// Happy, the other one: arms flung wide, a hop, a big grin. Ta-da.
+    case tada
+    /// Working: a burst of typing, then a lean back and a look at the ceiling.
+    case typing
+    /// Reading: a page turned with a flick, a glance up, back to the book.
+    case pageTurn
+    /// Asleep: a snore that swells the chest, a twitch, a smack of the lips.
+    case snore
 
     /// How long one performance lasts, in seconds (`meditate` is continuous).
     public var duration: Double {
@@ -223,6 +233,30 @@ public enum PetBit: String, Codable, Sendable, Hashable {
         case .stomp: 2.2
         case .sniffle: 3.0
         case .meditate: .infinity
+        case .tada: 1.6
+        case .typing: 2.6
+        case .pageTurn: 1.2
+        case .snore: 2.4
+        }
+    }
+
+    /// The deterministic seed each bit schedules itself with.
+    var seed: Double {
+        switch self {
+        case .none: 0
+        case .wiggle: 71
+        case .zoomies: 73
+        case .stretch: 79
+        case .curious: 83
+        case .flop: 89
+        case .fidget: 97
+        case .stomp: 101
+        case .sniffle: 103
+        case .meditate: 0
+        case .tada: 107
+        case .typing: 109
+        case .pageTurn: 113
+        case .snore: 127
         }
     }
 }
@@ -232,6 +266,12 @@ public enum PetAccessory: String, Codable, Sendable, Hashable {
     case sparkles, zzz, stressLines, heart, rainCloud, steam
     /// A rain cloud *and* the umbrella the pet holds up under it.
     case umbrella
+    /// Asleep: a nightcap on the head, and zzz.
+    case nightcap
+    /// At work: a small open laptop on the floor, its screen lighting the face.
+    case laptop
+    /// Reading: an open book held at the chest.
+    case book
 }
 
 /// Ambient scene changes driven by mood.

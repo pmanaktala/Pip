@@ -22,6 +22,7 @@ public final class Preferences {
         notificationsCompany = defaults.bool(forKey: Keys.notifCompany)
         notificationsSleepy = defaults.bool(forKey: Keys.notifSleepy)
         notificationsMoments = defaults.bool(forKey: Keys.notifMoments)
+        petWordsEnabled = defaults.object(forKey: Keys.petWords) as? Bool ?? true
     }
 
     private enum Keys {
@@ -35,6 +36,7 @@ public final class Preferences {
         static let notifCompany = "pref.notif.company"
         static let notifSleepy = "pref.notif.sleepy"
         static let notifMoments = "pref.notif.moments"
+        static let petWords = "pref.petWords"
     }
 
     public var hasCompletedOnboarding: Bool { didSet { defaults.set(hasCompletedOnboarding, forKey: Keys.onboarding) } }
@@ -62,6 +64,10 @@ public final class Preferences {
 
     public var anyNotificationsEnabled: Bool { notificationsCompany || notificationsSleepy || notificationsMoments }
 
+    /// On-device Apple Intelligence writes the History sentences in the pet's voice. Default on;
+    /// silently inert where Apple Intelligence is unavailable.
+    public var petWordsEnabled: Bool { didSet { defaults.set(petWordsEnabled, forKey: Keys.petWords) } }
+
     /// Resets everything to first-launch defaults (used by Delete All App Data).
     public func reset() {
         hasCompletedOnboarding = false
@@ -74,5 +80,6 @@ public final class Preferences {
         notificationsCompany = false
         notificationsSleepy = false
         notificationsMoments = false
+        petWordsEnabled = true
     }
 }

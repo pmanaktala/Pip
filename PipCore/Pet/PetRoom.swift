@@ -32,9 +32,18 @@ public struct PetRoom: View {
                 // Sky: the top of the room is the coolest, the horizon carries the haze.
                 LinearGradient(colors: [light.skyTop, light.skyHorizon], startPoint: .top, endPoint: UnitPoint(x: 0.5, y: horizon))
 
-                // Key light: a window somewhere off to the upper right.
+                // Key light: the sun (or moon) somewhere in the sky, low at dawn and dusk, high at noon.
                 RadialGradient(colors: [light.keyLight.opacity(light.keyStrength), light.keyLight.opacity(0)],
-                               center: UnitPoint(x: 0.78, y: horizon * 0.35), startRadius: 0, endRadius: max(w, h) * 0.62)
+                               center: UnitPoint(x: light.keyX, y: horizon * light.keyY), startRadius: 0, endRadius: max(w, h) * 0.62)
+                if light.night > 0.01 {
+                    // A small moon, and stars that come out as the sky darkens.
+                    Circle()
+                        .fill(RadialGradient(colors: [.white.opacity(0.95), Color(red: 0.92, green: 0.93, blue: 1).opacity(0.7)], center: .topLeading, startRadius: 0, endRadius: w * 0.05))
+                        .frame(width: w * 0.07, height: w * 0.07)
+                        .position(x: w * light.keyX, y: floorY * light.keyY)
+                        .opacity(light.night)
+                        .blur(radius: 0.4)
+                }
 
                 // Floor: a plane that recedes into the haze at the horizon.
                 VStack(spacing: 0) {
@@ -47,12 +56,14 @@ public struct PetRoom: View {
                     .offset(y: floorY - max(12, h * 0.045))
 
                 Canvas { context, size in
-                    // Dust in the light: a handful of still motes, only where the sky is.
-                    for i in 0..<10 {
-                        let x = (0.45 + PetAnimator.hash01(Double(i) * 7.1) * 0.5) * size.width
-                        let y = PetAnimator.hash01(Double(i) * 3.7 + 9) * floorY * 0.8
+                    // Dust in the light by day; stars at night, more of them the darker it gets.
+                    let starCount = 10 + Int(light.night * 26)
+                    for i in 0..<starCount {
+                        let x = (i < 10 ? 0.45 + PetAnimator.hash01(Double(i) * 7.1) * 0.5 : PetAnimator.hash01(Double(i) * 5.3)) * size.width
+                        let y = PetAnimator.hash01(Double(i) * 3.7 + 9) * floorY * (i < 10 ? 0.8 : 0.7)
                         let r = 0.8 + PetAnimator.hash01(Double(i) * 1.3) * 1.2
-                        context.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r * 2, height: r * 2)), with: .color(.white.opacity(scheme == .dark ? 0.35 : 0.7)))
+                        let alpha = i < 10 ? (scheme == .dark ? 0.35 : 0.7) : 0.85 * light.night * (0.5 + 0.5 * PetAnimator.hash01(Double(i) * 2.9))
+                        context.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r * 2, height: r * 2)), with: .color(.white.opacity(alpha)))
                     }
                     guard showsFoliage, size.width > 200 else { return }
                     // Quiet botanical silhouettes ground the room at either edge of the floor.
@@ -95,14 +106,32 @@ public struct RoomLight: Sendable, Equatable {
     public var keyLight: Color
     public var keyStrength: Double
     public var foliage: Color
+    /// Where the sun or moon sits: x across the width, y as a fraction of the sky height.
+    public var keyX: Double
+    public var keyY: Double
+    /// 0 by day, 1 in the middle of the night. Drives stars and the moon.
+    public var night: Double
+    public var hour: Double
 
     public init(date: Date, mood: Mood?, dark: Bool, calendar: Calendar = .current) {
         let comps = calendar.dateComponents([.hour, .minute], from: date)
-        let hour = Double(comps.hour ?? 12) + Double(comps.minute ?? 0) / 60
+        var hour = Double(comps.hour ?? 12) + Double(comps.minute ?? 0) / 60
+        #if DEBUG
+        if let forced = ProcessInfo.processInfo.environment["PIP_HOUR"], let h = Double(forced) { hour = h }
+        #endif
+        self.hour = hour
         let frames = dark ? Self.darkFrames : Self.lightFrames
         let f = Self.blend(frames, at: hour)
         let tint = mood.map(MoodColor.bold)
-        let amount = dark ? 0.16 : 0.13
+        let amount = dark ? 0.07 : 0.14
+
+        // The sun rises on the left around 6:30, is overhead at 13:00 and sets on the right around 19:30;
+        // the moon does the same trip through the night.
+        let day = hour >= 6.5 && hour < 19.5
+        let progress = day ? (hour - 6.5) / 13 : ((hour + 24 - 19.5).truncatingRemainder(dividingBy: 24)) / 11
+        keyX = 0.18 + 0.64 * progress
+        keyY = 0.72 - 0.6 * sin(progress * .pi)
+        night = hour < 5 || hour >= 21 ? 1 : (hour < 6.5 ? (6.5 - hour) / 1.5 : (hour >= 19.5 ? (hour - 19.5) / 1.5 : 0))
 
         skyTop = tint.map { Self.mix(f.skyTop, $0, amount) } ?? f.skyTop
         skyHorizon = tint.map { Self.mix(f.skyHorizon, $0, amount * 0.6) } ?? f.skyHorizon
@@ -126,24 +155,32 @@ public struct RoomLight: Sendable, Equatable {
         var foliage: (Double, Double, Double)
     }
 
-    /// Light appearance: pale, warm, never saturated. Night stays airy so text remains dark-on-light.
+    /// Light appearance: a real sky, never saturated. Night is a soft indigo so the pet and dark
+    /// text still read; dawn is peach, midday a pale blue, evening apricot into lavender.
     static let lightFrames: [Frame] = [
-        Frame(hour: 0, skyTop: (0.72, 0.74, 0.86), skyHorizon: (0.86, 0.85, 0.92), floorFar: (0.80, 0.78, 0.86), floorNear: (0.74, 0.72, 0.82), keyLight: (0.92, 0.93, 1.0), keyStrength: 0.35, foliage: (0.50, 0.50, 0.66)),
-        Frame(hour: 6.5, skyTop: (0.96, 0.86, 0.80), skyHorizon: (0.99, 0.94, 0.87), floorFar: (0.94, 0.86, 0.78), floorNear: (0.90, 0.80, 0.71), keyLight: (1.0, 0.90, 0.72), keyStrength: 0.55, foliage: (0.70, 0.58, 0.48)),
-        Frame(hour: 12, skyTop: (0.88, 0.93, 0.96), skyHorizon: (0.98, 0.97, 0.94), floorFar: (0.93, 0.89, 0.83), floorNear: (0.88, 0.83, 0.76), keyLight: (1.0, 0.97, 0.86), keyStrength: 0.5, foliage: (0.62, 0.66, 0.58)),
-        Frame(hour: 18.5, skyTop: (0.93, 0.82, 0.80), skyHorizon: (0.99, 0.92, 0.85), floorFar: (0.92, 0.83, 0.77), floorNear: (0.87, 0.77, 0.71), keyLight: (1.0, 0.84, 0.66), keyStrength: 0.55, foliage: (0.68, 0.54, 0.50)),
-        Frame(hour: 22, skyTop: (0.72, 0.74, 0.86), skyHorizon: (0.86, 0.85, 0.92), floorFar: (0.80, 0.78, 0.86), floorNear: (0.74, 0.72, 0.82), keyLight: (0.92, 0.93, 1.0), keyStrength: 0.35, foliage: (0.50, 0.50, 0.66)),
-        Frame(hour: 24, skyTop: (0.72, 0.74, 0.86), skyHorizon: (0.86, 0.85, 0.92), floorFar: (0.80, 0.78, 0.86), floorNear: (0.74, 0.72, 0.82), keyLight: (0.92, 0.93, 1.0), keyStrength: 0.35, foliage: (0.50, 0.50, 0.66)),
+        Frame(hour: 0, skyTop: (0.36, 0.40, 0.60), skyHorizon: (0.62, 0.62, 0.78), floorFar: (0.58, 0.56, 0.70), floorNear: (0.50, 0.48, 0.63), keyLight: (0.90, 0.92, 1.0), keyStrength: 0.30, foliage: (0.36, 0.36, 0.54)),
+        Frame(hour: 5, skyTop: (0.44, 0.46, 0.66), skyHorizon: (0.80, 0.72, 0.78), floorFar: (0.66, 0.62, 0.72), floorNear: (0.56, 0.52, 0.64), keyLight: (1.0, 0.86, 0.72), keyStrength: 0.35, foliage: (0.44, 0.40, 0.54)),
+        Frame(hour: 7, skyTop: (0.86, 0.82, 0.90), skyHorizon: (1.0, 0.88, 0.76), floorFar: (0.94, 0.84, 0.74), floorNear: (0.88, 0.76, 0.66), keyLight: (1.0, 0.86, 0.60), keyStrength: 0.6, foliage: (0.68, 0.56, 0.46)),
+        Frame(hour: 10, skyTop: (0.70, 0.84, 0.96), skyHorizon: (0.94, 0.96, 0.96), floorFar: (0.92, 0.88, 0.80), floorNear: (0.86, 0.80, 0.72), keyLight: (1.0, 0.98, 0.88), keyStrength: 0.5, foliage: (0.58, 0.66, 0.54)),
+        Frame(hour: 14, skyTop: (0.66, 0.82, 0.96), skyHorizon: (0.93, 0.96, 0.97), floorFar: (0.92, 0.88, 0.80), floorNear: (0.86, 0.80, 0.72), keyLight: (1.0, 0.98, 0.90), keyStrength: 0.45, foliage: (0.56, 0.66, 0.54)),
+        Frame(hour: 17.5, skyTop: (0.78, 0.76, 0.90), skyHorizon: (1.0, 0.86, 0.70), floorFar: (0.94, 0.82, 0.70), floorNear: (0.88, 0.74, 0.62), keyLight: (1.0, 0.78, 0.50), keyStrength: 0.6, foliage: (0.68, 0.52, 0.46)),
+        Frame(hour: 19.5, skyTop: (0.52, 0.48, 0.72), skyHorizon: (0.92, 0.70, 0.66), floorFar: (0.78, 0.66, 0.68), floorNear: (0.66, 0.56, 0.62), keyLight: (1.0, 0.70, 0.52), keyStrength: 0.45, foliage: (0.52, 0.42, 0.52)),
+        Frame(hour: 21.5, skyTop: (0.36, 0.40, 0.60), skyHorizon: (0.62, 0.62, 0.78), floorFar: (0.58, 0.56, 0.70), floorNear: (0.50, 0.48, 0.63), keyLight: (0.90, 0.92, 1.0), keyStrength: 0.30, foliage: (0.36, 0.36, 0.54)),
+        Frame(hour: 24, skyTop: (0.36, 0.40, 0.60), skyHorizon: (0.62, 0.62, 0.78), floorFar: (0.58, 0.56, 0.70), floorNear: (0.50, 0.48, 0.63), keyLight: (0.90, 0.92, 1.0), keyStrength: 0.30, foliage: (0.36, 0.36, 0.54)),
     ]
 
-    /// Dark appearance: a dim room, the key light doing most of the work.
+    /// Dark appearance: the same sky after dark — blue-grey, never brown — with the light of
+    /// day showing as a cooler or warmer cast rather than brightness.
     static let darkFrames: [Frame] = [
-        Frame(hour: 0, skyTop: (0.06, 0.07, 0.13), skyHorizon: (0.15, 0.15, 0.24), floorFar: (0.13, 0.12, 0.19), floorNear: (0.09, 0.08, 0.13), keyLight: (0.70, 0.74, 1.0), keyStrength: 0.22, foliage: (0.36, 0.38, 0.56)),
-        Frame(hour: 6.5, skyTop: (0.16, 0.12, 0.16), skyHorizon: (0.34, 0.24, 0.24), floorFar: (0.26, 0.20, 0.20), floorNear: (0.17, 0.13, 0.13), keyLight: (1.0, 0.78, 0.58), keyStrength: 0.30, foliage: (0.50, 0.38, 0.34)),
-        Frame(hour: 12, skyTop: (0.11, 0.14, 0.19), skyHorizon: (0.22, 0.23, 0.27), floorFar: (0.20, 0.18, 0.18), floorNear: (0.14, 0.12, 0.12), keyLight: (1.0, 0.95, 0.82), keyStrength: 0.26, foliage: (0.40, 0.46, 0.40)),
-        Frame(hour: 18.5, skyTop: (0.16, 0.11, 0.15), skyHorizon: (0.33, 0.22, 0.22), floorFar: (0.25, 0.19, 0.19), floorNear: (0.16, 0.12, 0.12), keyLight: (1.0, 0.72, 0.52), keyStrength: 0.30, foliage: (0.50, 0.36, 0.34)),
-        Frame(hour: 22, skyTop: (0.06, 0.07, 0.13), skyHorizon: (0.15, 0.15, 0.24), floorFar: (0.13, 0.12, 0.19), floorNear: (0.09, 0.08, 0.13), keyLight: (0.70, 0.74, 1.0), keyStrength: 0.22, foliage: (0.36, 0.38, 0.56)),
-        Frame(hour: 24, skyTop: (0.06, 0.07, 0.13), skyHorizon: (0.15, 0.15, 0.24), floorFar: (0.13, 0.12, 0.19), floorNear: (0.09, 0.08, 0.13), keyLight: (0.70, 0.74, 1.0), keyStrength: 0.22, foliage: (0.36, 0.38, 0.56)),
+        Frame(hour: 0, skyTop: (0.05, 0.06, 0.13), skyHorizon: (0.14, 0.15, 0.26), floorFar: (0.12, 0.12, 0.20), floorNear: (0.08, 0.08, 0.14), keyLight: (0.72, 0.76, 1.0), keyStrength: 0.22, foliage: (0.34, 0.36, 0.56)),
+        Frame(hour: 5, skyTop: (0.08, 0.08, 0.16), skyHorizon: (0.24, 0.18, 0.28), floorFar: (0.18, 0.15, 0.22), floorNear: (0.12, 0.10, 0.16), keyLight: (1.0, 0.80, 0.62), keyStrength: 0.26, foliage: (0.40, 0.34, 0.48)),
+        Frame(hour: 7, skyTop: (0.14, 0.13, 0.22), skyHorizon: (0.36, 0.26, 0.28), floorFar: (0.26, 0.21, 0.24), floorNear: (0.17, 0.14, 0.17), keyLight: (1.0, 0.82, 0.60), keyStrength: 0.32, foliage: (0.50, 0.40, 0.40)),
+        Frame(hour: 10, skyTop: (0.11, 0.16, 0.24), skyHorizon: (0.22, 0.26, 0.32), floorFar: (0.20, 0.19, 0.20), floorNear: (0.13, 0.12, 0.13), keyLight: (1.0, 0.96, 0.84), keyStrength: 0.28, foliage: (0.38, 0.46, 0.42)),
+        Frame(hour: 14, skyTop: (0.11, 0.16, 0.24), skyHorizon: (0.22, 0.26, 0.32), floorFar: (0.20, 0.19, 0.20), floorNear: (0.13, 0.12, 0.13), keyLight: (1.0, 0.96, 0.84), keyStrength: 0.26, foliage: (0.38, 0.46, 0.42)),
+        Frame(hour: 17.5, skyTop: (0.14, 0.12, 0.22), skyHorizon: (0.36, 0.24, 0.26), floorFar: (0.26, 0.20, 0.22), floorNear: (0.17, 0.13, 0.15), keyLight: (1.0, 0.74, 0.50), keyStrength: 0.32, foliage: (0.50, 0.38, 0.38)),
+        Frame(hour: 19.5, skyTop: (0.09, 0.08, 0.18), skyHorizon: (0.26, 0.18, 0.28), floorFar: (0.19, 0.15, 0.22), floorNear: (0.12, 0.10, 0.16), keyLight: (1.0, 0.72, 0.56), keyStrength: 0.26, foliage: (0.40, 0.32, 0.46)),
+        Frame(hour: 21.5, skyTop: (0.05, 0.06, 0.13), skyHorizon: (0.14, 0.15, 0.26), floorFar: (0.12, 0.12, 0.20), floorNear: (0.08, 0.08, 0.14), keyLight: (0.72, 0.76, 1.0), keyStrength: 0.22, foliage: (0.34, 0.36, 0.56)),
+        Frame(hour: 24, skyTop: (0.05, 0.06, 0.13), skyHorizon: (0.14, 0.15, 0.26), floorFar: (0.12, 0.12, 0.20), floorNear: (0.08, 0.08, 0.14), keyLight: (0.72, 0.76, 1.0), keyStrength: 0.22, foliage: (0.34, 0.36, 0.56)),
     ]
 
     struct Blended {

@@ -82,6 +82,19 @@ struct SettingsView: View {
             }
 
             Section {
+                Toggle("\(appState.identity.name)’s words", isOn: $prefs.petWordsEnabled)
+                    .disabled(!PetWords.isAvailable)
+                    .onChange(of: prefs.petWordsEnabled) { _, on in if !on { PetWords.clearCache() } }
+                if let reason = PetWords.unavailableReason {
+                    Text(reason).font(PipFont.footnote).foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Apple Intelligence")
+            } footer: {
+                Text("\(appState.identity.name) writes the History sentences from your entries, in its own voice, using the on-device model. Nothing leaves your iPhone. Off, or where Apple Intelligence isn’t available, Pip uses its fixed phrases.")
+            }
+
+            Section {
                 Toggle("Haptics", isOn: $prefs.hapticsEnabled)
                 Toggle("Ambient sound while sitting together", isOn: $prefs.soundEnabled)
             } header: {

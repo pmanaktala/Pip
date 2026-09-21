@@ -28,6 +28,7 @@ struct PetInteractionTests {
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let state = AppState(container: PipModelContainer.make(inMemory: true), preferences: Preferences(defaults: defaults))
+        state.log(mood: .happy)
         state.look(at: CGPoint(x: -1, y: 0))
         #expect(state.displayedState.rig.gazeX == -1)
         #expect(state.displayedState.rig.headTurn < 0)

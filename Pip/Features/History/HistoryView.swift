@@ -9,6 +9,8 @@ struct HistoryView: View {
     @State private var month: Date = .now
     @State private var selectedDay: Date = Calendar.current.startOfDay(for: .now)
     @State private var entryToDelete: MoodEntry?
+    @State private var weekWords: String?
+    @State private var dayWords: [String: String] = [:]
     @Environment(\.colorScheme) private var scheme
 
     private var stamps: [MoodStamp] {
@@ -35,6 +37,8 @@ struct HistoryView: View {
         .pipSwipeActionsContainer()
         .background(Color(.systemGroupedBackground))
         .navigationTitle("History")
+        .task(id: wordsKey(.week, day: nil)) { await writeWords(.week, day: nil) }
+        .task(id: wordsKey(.day, day: selectedDay)) { await writeWords(.day, day: selectedDay) }
         .confirmationDialog("Delete this entry?", isPresented: Binding(get: { entryToDelete != nil }, set: { if !$0 { entryToDelete = nil } }), titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 if let entry = entryToDelete {
@@ -61,16 +65,60 @@ struct HistoryView: View {
 
     // MARK: Week
 
+    // MARK: The pet's words
+
+    /// A stable key for a set of entries: the pet writes once per distinct set, never per render.
+    private func wordsKey(_ kind: PetWords.Kind, day: Date?) -> String {
+        let cal = Calendar.current
+        let scoped: [MoodEntry]
+        switch kind {
+        case .week:
+            let days = MoodHistory.recentDays(count: 7)
+            scoped = entries.filter { $0.timestamp >= (days.first ?? .distantPast) }
+        case .day:
+            scoped = entries.filter { cal.isDate($0.timestamp, inSameDayAs: day ?? .now) }
+        }
+        var hasher = Hasher()
+        for e in scoped { hasher.combine(e.id); hasher.combine(e.moodRaw); hasher.combine(e.intensityRaw); hasher.combine(e.contextsRaw); hasher.combine(e.note ?? "") }
+        hasher.combine(appState.identity.name)
+        let stamp = kind == .week ? (MoodHistory.recentDays(count: 7).first ?? .now).formatted(.iso8601.year().month().day()) : (day ?? .now).formatted(.iso8601.year().month().day())
+        return "\(kind.rawValue).\(stamp).\(hasher.finalize())"
+    }
+
+    private func writeWords(_ kind: PetWords.Kind, day: Date?) async {
+        guard appState.preferences.petWordsEnabled else { return }
+        let key = wordsKey(kind, day: day)
+        let cal = Calendar.current
+        let scoped = entries.filter {
+            kind == .week ? $0.timestamp >= (MoodHistory.recentDays(count: 7).first ?? .distantPast) : cal.isDate($0.timestamp, inSameDayAs: day ?? .now)
+        }.sorted { $0.timestamp < $1.timestamp }
+        guard scoped.count >= (kind == .week ? 2 : 1) else { return }
+        let input = scoped.map {
+            PetWords.Entry(dayName: cal.isDateInToday($0.timestamp) ? "Today" : $0.timestamp.formatted(.dateTime.weekday(.wide)),
+                           partOfDay: MoodHistory.DayPart.part(of: $0.timestamp).displayName.lowercased(),
+                           mood: $0.mood.displayName.lowercased(),
+                           intensity: $0.intensity.adverb ?? "",
+                           contexts: $0.contexts.map { $0.displayName.lowercased() },
+                           note: $0.note)
+        }
+        let text = await PetWords.line(kind: kind, key: key, petName: appState.identity.name, species: appState.identity.species.displayName.lowercased(), entries: input)
+        guard let text, !Task.isCancelled else { return }
+        withAnimation(.smooth) {
+            if kind == .week { weekWords = text } else { dayWords[key] = text }
+        }
+    }
+
     /// A single descriptive sentence; absent until there is enough to describe.
     @ViewBuilder
     private var weekSummary: some View {
-        if let summary = MoodHistory.weekSummary(stamps: stamps, petName: appState.identity.name) {
+        if let summary = weekWords ?? MoodHistory.weekSummary(stamps: stamps, petName: appState.identity.name) {
             HStack(alignment: .top, spacing: 12) {
                 PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: .calm, intensity: .slight, identity: appState.identity), showsShadow: false, framing: .face)
                     .frame(width: 44, height: 44)
                 Text(summary)
                     .font(PipFont.body)
                     .fixedSize(horizontal: false, vertical: true)
+                    .contentTransition(.opacity)
                 Spacer(minLength: 0)
             }
             .padding(PipSpacing.m)
@@ -187,9 +235,10 @@ struct HistoryView: View {
 
             if let recap = MoodHistory.recap(for: selectedDay, stamps: stamps, petName: appState.identity.name) {
                 let mood = MoodHistory.dominant(days[selectedDay] ?? [])?.mood ?? .neutral
-                Text(recap.title)
+                Text(dayWords[wordsKey(.day, day: selectedDay)] ?? recap.title)
                     .font(PipFont.headline)
                     .foregroundStyle(MoodColor.text(mood, scheme: scheme))
+                    .contentTransition(.opacity)
                     .padding(.horizontal, PipSpacing.m)
                     .padding(.vertical, 12)
                     .frame(maxWidth: .infinity, alignment: .leading)

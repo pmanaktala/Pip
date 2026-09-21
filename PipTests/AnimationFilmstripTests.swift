@@ -27,6 +27,10 @@ struct AnimationFilmstripTests {
         case .stomp: seed = 101
         case .sniffle: seed = 103
         case .meditate: return (from, 6)
+        case .tada: seed = 107
+        case .typing: seed = 109
+        case .pageTurn: seed = 113
+        case .snore: seed = 127
         }
         var t = from
         while t < from + motion.bitInterval * 3 {
@@ -134,6 +138,26 @@ struct AnimationFilmstripTests {
             }
         }
         try write(VStack(alignment: .leading, spacing: 8) { ForEach(Array(rows.enumerated()), id: \.offset) { $0.element } }, name: "tap-reactions")
+    }
+
+    /// The pet's own day: every life activity for every species, mid-bit, with its prop.
+    @Test func lifeActivities() throws {
+        var rows: [AnyView] = []
+        for species in PetSpecies.allCases {
+            let identity = PetIdentity(species: species)
+            var frames: [(String, AnyView)] = []
+            for activity in PetLife.allCases {
+                let state = activity.state(identity: identity)
+                let window = bitWindow(state.motion) ?? (0, 1)
+                for k in [0.0, 0.3, 0.7] {
+                    let t = window.start + window.duration * k
+                    frames.append(("\(activity.rawValue) \(String(format: "%.0f", k * 100))%", AnyView(PetSceneView(identity: identity, state: state, time: t, petScale: 0.9, petVerticalPosition: 0.5, showsFloor: false, showsBackground: false))))
+                }
+            }
+            rows.append(AnyView(strip(species.defaultName, frames: Array(frames.prefix(9)))))
+            rows.append(AnyView(strip("", frames: Array(frames.dropFirst(9)))))
+        }
+        try write(VStack(alignment: .leading, spacing: 8) { ForEach(Array(rows.enumerated()), id: \.offset) { $0.element } }, name: "life")
     }
 
     /// Species × mood × intensity at rest, the full matrix, for silhouette and expression review.

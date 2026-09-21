@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import Pip
 
@@ -48,7 +49,7 @@ struct PetAnimatorTests {
     /// Every bit, sampled through several of its cycles, must keep the rig drawable:
     /// finite, inside the clamps the painters assume, and never off the 200pt canvas.
     @Test func bitsStayInRangeAcrossTime() {
-        let bits: [PetBit] = [.wiggle, .zoomies, .stretch, .curious, .flop, .fidget, .stomp, .sniffle, .meditate]
+        let bits: [PetBit] = [.wiggle, .zoomies, .stretch, .curious, .flop, .fidget, .stomp, .sniffle, .meditate, .tada, .typing, .pageTurn, .snore]
         for bit in bits {
             var motion = PetMotionProfile()
             motion.bit = bit
@@ -117,5 +118,44 @@ struct PetAnimatorTests {
             let d = zip(body(a), body(b)).map { abs($0 - $1) }.reduce(0, +)
             #expect(d > 0.6, "\(a) and \(b) share a body pose (distance \(d))")
         }
+    }
+}
+
+@Suite struct PetLifeTests {
+    @Test func scheduleFollowsTheClock() {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        func at(_ hour: Int, weekday: Int = 3) -> Date { // 3 = Tuesday
+            var c = DateComponents(); c.year = 2026; c.month = 9; c.day = 14 + weekday; c.hour = hour; c.minute = 0 // 15 Sep 2026 is a Tuesday
+            return cal.date(from: c)!
+        }
+        #expect(PetLife.activity(at: at(23), calendar: cal) == .sleeping)
+        #expect(PetLife.activity(at: at(3), calendar: cal) == .sleeping)
+        #expect(PetLife.activity(at: at(7), calendar: cal) == .waking)
+        #expect(PetLife.activity(at: at(11), calendar: cal) == .working)
+        #expect(PetLife.activity(at: at(11, weekday: 6), calendar: cal) == .lounging, "Saturday daytime is for lounging")
+        #expect(PetLife.activity(at: at(20), calendar: cal) == .reading)
+    }
+
+    @Test func everyActivityHasAPoseAPropOrABit() {
+        let identity = PetIdentity(species: .cat)
+        for activity in PetLife.allCases {
+            let s = activity.state(identity: identity)
+            #expect(s.motion.bit != .none, "\(activity) has nothing to do")
+            for v in s.rig.vector.values { #expect(v.isFinite) }
+        }
+        #expect(PetLife.sleeping.state(identity: identity).accessory == .nightcap)
+        #expect(PetLife.working.state(identity: identity).accessory == .laptop)
+        #expect(PetLife.reading.state(identity: identity).accessory == .book)
+    }
+
+    @Test func freshMoodBeatsTheSchedule() {
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = TimeZone(identifier: "UTC")!
+        var c = DateComponents(); c.year = 2026; c.month = 9; c.day = 15; c.hour = 23
+        let night = cal.date(from: c)!
+        let fresh = PetSnapshot(identity: PetIdentity(species: .dog), mood: .excited, intensity: .strong, loggedAt: night.addingTimeInterval(-600))
+        #expect(fresh.state(at: night, calendar: cal).mood == .excited, "an excited pet at 11pm is excited, not asleep")
+        let faded = PetSnapshot(identity: PetIdentity(species: .dog), mood: .excited, intensity: .strong, loggedAt: night.addingTimeInterval(-12 * 3600))
+        #expect(faded.state(at: night, calendar: cal).accessory == .nightcap, "a faded mood at night is sleep")
     }
 }
