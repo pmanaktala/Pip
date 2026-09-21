@@ -23,8 +23,9 @@ final class WatchState {
 
     var context: ModelContext { container.mainContext }
 
-    init(container: ModelContainer = PipModelContainer.shared, preferences: Preferences = .shared) {
+    init(container: ModelContainer = PipModelContainer.shared, preferences: Preferences? = nil) {
         self.container = container
+        let preferences = preferences ?? Preferences.shared
         self.preferences = preferences
         self.logger = MoodLogger(context: container.mainContext)
         Haptics.isEnabled = { [preferences] in preferences.hapticsEnabled }

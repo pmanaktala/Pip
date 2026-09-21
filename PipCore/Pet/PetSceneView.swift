@@ -298,7 +298,7 @@ public struct AccessoryOverlay: View {
 
             case .book:
                 // An open book held at the chest, following the body.
-                var body = bodyContext(ctx)
+                let body = bodyContext(ctx)
                 let cx: CGFloat = 100, top: CGFloat = 116, w: CGFloat = 48, h: CGFloat = 26
                 let cover = Color(red: 0.86, green: 0.48, blue: 0.40)
                 let page = Color(red: 0.99, green: 0.97, blue: 0.92)
