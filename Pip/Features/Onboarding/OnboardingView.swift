@@ -27,23 +27,16 @@ struct OnboardingView: View {
                     .id(step)
                 Spacer(minLength: 0)
                 controls
+                    .padding(.bottom, PipSpacing.s)
             }
-            .padding(PipSpacing.l)
+            .frame(maxWidth: 480)
+            .padding(.horizontal, PipSpacing.l)
+            .padding(.top, PipSpacing.l)
         }
         .animation(.spring(duration: 0.5, bounce: 0.1), value: step)
         .onAppear { wave = true }
     }
 
-    /// Each step has its own colour; text is white on it.
-    private var pageColor: Color {
-        switch step {
-        case .welcome: MoodColor.bold(.calm)
-        case .pet: MoodColor.bold(.happy)
-        case .name: MoodColor.bold(.excited)
-        case .health: MoodColor.bold(.sad)
-        case .notifications: MoodColor.bold(.neutral)
-        }
-    }
 
     // MARK: Steps
 
@@ -52,12 +45,12 @@ struct OnboardingView: View {
         switch step {
         case .welcome:
             VStack(spacing: PipSpacing.m) {
-                PetSceneWithClock(identity: PetIdentity(species: .penguin), state: PetStateResolver.resolve(mood: wave ? .happy : .calm, identity: PetIdentity(species: .penguin)), petScale: 0.78, petVerticalPosition: 0.59)
-                    .frame(width: 260, height: 260)
+                RoomWindow(identity: PetIdentity(species: .penguin), state: PetStateResolver.resolve(mood: wave ? .happy : .calm, identity: PetIdentity(species: .penguin)))
+                    .frame(height: 300)
                 Text("Meet your mood companion")
                     .font(PipFont.display)
                     .multilineTextAlignment(.center)
-                Text("Tell Pip how you feel. Your pet feels it with you, lives on your Home Screen, and keeps everything on your device.")
+                Text("A small pet who feels what you feel, and helps you notice it.")
                     .font(PipFont.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -133,7 +126,10 @@ struct OnboardingView: View {
     private var controls: some View {
         switch step {
         case .welcome:
-            primary("Let’s go") { advance() }
+            VStack(spacing: PipSpacing.m) {
+                primary("Let’s go") { advance() }
+                footnote("Private by design. Your moods stay on your device.", symbol: "lock.fill")
+            }
         case .pet:
             primary("This one") { advance() }
         case .name:
@@ -161,20 +157,30 @@ struct OnboardingView: View {
                     }
                 }
                 secondary("Skip") { finish() }
+                footnote("Pip is company for noticing how you feel — not therapy, and never a substitute for care.", symbol: "heart")
             }
         }
+    }
+
+    /// The small print, in the place Apple puts it: under the action, never in the headline.
+    private func footnote(_ text: String, symbol: String) -> some View {
+        Label(text, systemImage: symbol)
+            .font(PipFont.footnote)
+            .foregroundStyle(.tertiary)
+            .multilineTextAlignment(.center)
+            .labelStyle(.titleAndIcon)
+            .frame(maxWidth: 360)
     }
 
     private func primary(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
                 .font(PipFont.headline)
-                .foregroundStyle(.white)
                 .frame(maxWidth: 360)
-                .padding(.vertical, 16)
-                .background(Color.accentColor, in: RoundedRectangle(cornerRadius: PipRadius.card, style: .continuous))
         }
-        .buttonStyle(PressableButtonStyle())
+        .buttonStyle(.glassProminent)
+        .buttonBorderShape(.capsule)
+        .controlSize(.extraLarge)
     }
 
     private func secondary(_ title: String, action: @escaping () -> Void) -> some View {

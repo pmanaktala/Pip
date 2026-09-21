@@ -89,6 +89,16 @@ struct SettingsView: View {
             }
 
             Section {
+                NavigationLink {
+                    SupportView()
+                } label: {
+                    Label("Support and crisis resources", systemImage: "lifepreserver")
+                }
+            } footer: {
+                Text("Pip is a companion for noticing how you feel, not therapy or medical advice. If things feel heavy, there are people who can help.")
+            }
+
+            Section {
                 LabeledContent("iCloud", value: PipModelContainer.isCloudKitEnabled ? "On" : "Unavailable")
                 if !PipModelContainer.isCloudKitEnabled {
                     Text("Without iCloud, your history is stored only on this device and won’t survive deleting the app.")
@@ -103,9 +113,14 @@ struct SettingsView: View {
             }
 
             Section {
+                ShareLink(item: MoodExport(context: appState.context), preview: SharePreview("Pip moods", image: Image(systemName: "doc.text"))) {
+                    Label("Export My Data", systemImage: "square.and.arrow.up")
+                }
                 Button("Delete All App Data", role: .destructive) { showDeleteConfirmation = true }
+            } header: {
+                Text("Your data")
             } footer: {
-                Text("Removes your mood history, pet and preferences from this device and your private iCloud. Entries already saved to Apple Health are not affected.")
+                Text("Export writes every mood, note and your pet to a JSON file you can keep or open elsewhere. Delete removes your mood history, pet and preferences from this device and your private iCloud; entries already saved to Apple Health are not affected.")
             }
 
             Section {

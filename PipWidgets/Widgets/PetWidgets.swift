@@ -20,24 +20,20 @@ struct PetHomeWidget: Widget {
     }
 }
 
-/// The widget's ground: system background washed with the current mood's colour.
+/// The widget's ground: the pet's room, lit for the entry's time of day and tinted by a fresh mood.
 struct WidgetCanvas: View {
     var snapshot: PetSnapshot
     var date: Date
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.widgetFamily) private var family
 
     var body: some View {
         let mood: Mood? = {
             guard let m = snapshot.mood, let at = snapshot.loggedAt, date.timeIntervalSince(at) < PetSnapshot.freshness else { return nil }
             return m
         }()
-        ZStack {
-            Color(.systemBackground)
-            LinearGradient(colors: [
-                (mood.map(MoodColor.bold) ?? PipColor.sceneTop).opacity(mood == nil ? (scheme == .dark ? 0.5 : 1) : (scheme == .dark ? 0.3 : 0.22)),
-                (mood.map(MoodColor.bold) ?? PipColor.sceneBottom).opacity(mood == nil ? (scheme == .dark ? 0.4 : 0.7) : 0.06),
-            ], startPoint: .top, endPoint: .bottom)
-        }
+        // Horizon where each family's pet scene puts the feet (see PetHomeWidgetView).
+        let horizon: CGFloat = family == .systemMedium ? 0.82 : 0.77
+        PetRoom(mood: mood, date: date, horizon: horizon, showsFoliage: family == .systemLarge)
     }
 }
 

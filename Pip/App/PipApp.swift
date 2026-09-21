@@ -5,7 +5,7 @@ import SwiftUI
 struct PipApp: App {
     @State private var appState: AppState
     @State private var health: HealthSyncService
-    @State private var notifications = NotificationService()
+    @State private var notifications: NotificationService
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -26,8 +26,11 @@ struct PipApp: App {
         ]
         MoodSideEffectRegistry.effects = effects
         let state = AppState(container: container, preferences: preferences, sideEffects: effects)
+        let notifications = NotificationService()
+        notifications.onOpen = { [state] url in state.handle(url: url) }
         _appState = State(initialValue: state)
         _health = State(initialValue: health)
+        _notifications = State(initialValue: notifications)
         #if DEBUG
         if ProcessInfo.processInfo.environment["PIP_SEED"] == "1" { state.seedDemoData() }
         #endif

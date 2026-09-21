@@ -1,6 +1,9 @@
 import SwiftUI
 
-/// The Pet tab: your pet, large, on a canvas tinted by how you feel, with one primary action.
+/// The Pet tab: your pet, large, under a native large title, with one primary action.
+///
+/// Structure follows the platform (large title, glass toolbar buttons, a scroll view) and the
+/// skin stays calm: the only strong colour on the screen is the mood mark on the primary action.
 struct PetHomeView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var scheme
@@ -13,68 +16,44 @@ struct PetHomeView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                canvas
-
-                ScrollView {
-                    VStack(spacing: 20) {
-                        header
-                        VStack(spacing: 4) {
-                            Text("A little company.\nA little more you.")
-                                .font(.system(.largeTitle, design: .serif, weight: .regular))
-                                .multilineTextAlignment(.center)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Text("A soft place for every kind of day.")
-                                .font(PipFont.callout)
-                                .foregroundStyle(.secondary)
-                                .padding(.top, 6)
-                        }
-                        .padding(.top, 4)
-
-                        Button { appState.pokePet() } label: {
-                            PetSceneWithClock(identity: appState.identity, state: appState.displayedState,
-                                              petScale: 0.80, petVerticalPosition: 0.58, showsFloor: true)
-                                .frame(height: 310)
-                                .overlay(alignment: .bottom) {
-                                    Label("Tap to say hello", systemImage: "hand.wave")
-                                        .font(PipFont.caption)
-                                        .foregroundStyle(.secondary)
-                                        .padding(.bottom, 3)
-                                }
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(petAccessibilityLabel)
-                        .accessibilityHint("Double tap to say hello.")
-
-                        moodButton
-                        HStack(spacing: 12) {
-                            Button { showSitWithPet = true } label: {
-                                ritualLabel("Take a breath", subtitle: "A moment together", symbol: "wind")
-                            }
-                            Button { showPets = true } label: {
-                                ritualLabel("Your companion", subtitle: "Meet the little ones", symbol: "pawprint")
-                            }
-                        }
-                        .buttonStyle(PressableButtonStyle())
-                        todayRibbon
-                    }
-                    .frame(maxWidth: 480)
-                    .padding(.horizontal, PipSpacing.l)
-                    .padding(.top, PipSpacing.s)
-                    .padding(.bottom, PipSpacing.l)
-                    .frame(maxWidth: .infinity)
+            ZStack(alignment: .bottom) {
+                room
+                VStack(alignment: .leading, spacing: 0) {
+                    titleBlock
+                    Spacer(minLength: 0)
                 }
-                .scrollIndicators(.hidden)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                controls
             }
-            .toolbar(.hidden, for: .navigationBar)
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        Haptics.light()
+                        showSitWithPet = true
+                    } label: {
+                        Label("Sit with \(appState.identity.name)", systemImage: "figure.mind.and.body")
+                    }
+                }
+                ToolbarSpacer(.fixed, placement: .topBarTrailing)
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showPets = true
+                    } label: {
+                        Label("Pets", systemImage: "pawprint")
+                    }
+                }
+            }
             .navigationDestination(isPresented: $showPets) { PetSelectorView() }
             #if DEBUG
             .navigationDestination(isPresented: $showWidgets) { WidgetGalleryView() }
             #endif
             .sheet(isPresented: $showMoodPicker) {
                 MoodPickerSheet()
-                    .presentationDetents([.fraction(0.58), .large])
-                    .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.58)))
+                    .presentationDetents([.height(400), .large])
+                    .presentationBackgroundInteraction(.enabled(upThrough: .height(400)))
                     .presentationDragIndicator(.visible)
             }
             .fullScreenCover(isPresented: $showSitWithPet) {
@@ -101,58 +80,75 @@ struct PetHomeView: View {
         }
     }
 
-    // MARK: Canvas
+    // MARK: Room
 
-    /// The whole tab takes on the current mood, gently: a wash from the top that fades into the floor.
-    private var canvas: some View {
-        ZStack {
-            Color(.systemBackground)
-            LinearGradient(colors: [
-                mood.map { MoodColor.bold($0).opacity(scheme == .dark ? 0.18 : 0.14) } ?? PipColor.sceneTop.opacity(scheme == .dark ? 0.5 : 0.8),
-                mood.map { MoodColor.bold($0).opacity(0.02) } ?? PipColor.sceneBottom.opacity(scheme == .dark ? 0.3 : 0.4),
-            ], startPoint: .top, endPoint: .bottom)
+    /// The whole tab is the pet's room. Tapping anywhere in it says hello.
+    private var room: some View {
+        Button { appState.pokePet() } label: {
+            // While the mood sheet is up the camera tilts down: the pet rises into the visible
+            // third of the screen so its reaction to the tap is the first thing you see.
+            PetSceneWithClock(identity: appState.identity, state: appState.displayedState,
+                              petScale: showMoodPicker ? 0.5 : 0.66, petVerticalPosition: showMoodPicker ? 0.27 : 0.47, showsFloor: true, showsBackground: true)
+                .contentShape(Rectangle())
+                .animation(.spring(duration: 0.55, bounce: 0.12), value: showMoodPicker)
         }
+        .buttonStyle(.plain)
         .ignoresSafeArea()
-        .animation(.smooth(duration: 1.0), value: mood)
+        .accessibilityLabel(petAccessibilityLabel)
+        .accessibilityHint("Double tap to say hello.")
+        .accessibilitySortPriority(1)
     }
 
-    // MARK: Header
-
-    private var header: some View {
-        HStack(alignment: .top, spacing: PipSpacing.m) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("pip")
-                    .font(.system(.title, design: .serif, weight: .semibold))
-                Text("WITH " + appState.identity.name.uppercased())
-                    .font(.system(.caption2, design: .rounded, weight: .bold))
-                    .tracking(2)
-                    .foregroundStyle(.secondary)
-                    .contentTransition(.numericText())
-            }
-            .accessibilityElement(children: .combine)
-            Spacer()
-            Button {
-                Haptics.light()
-                showSitWithPet = true
-            } label: {
-                Image(systemName: "wind")
-                    .font(.title3.weight(.semibold))
-                    .frame(width: 44, height: 44)
-            }
-            .buttonStyle(.glass)
-            .accessibilityLabel("Sit with \(appState.identity.name)")
+    /// The name floats over the sky like a large title; the line under it is who they are.
+    private var titleBlock: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(appState.identity.name)
+                .font(PipFont.display)
+            Text("\(appState.identity.species.displayName) · \(appState.identity.personality.displayName)")
+                .font(PipFont.callout)
+                .foregroundStyle(.secondary)
         }
+        .padding(.horizontal, PipSpacing.l)
+        .padding(.top, PipSpacing.xs)
+        .accessibilityElement(children: .combine)
+        .accessibilitySortPriority(2)
     }
 
-    private var statusLine: String {
-        if let entry = appState.latestEntry, appState.hasFreshMood {
-            return "\(entry.mood.petDescription.capitalizedFirst) · \(entry.timestamp.formatted(.relative(presentation: .named)))"
+    // MARK: Controls
+
+    /// Everything that floats over the floor: how they feel, the one action, today's moments.
+    private var controls: some View {
+        VStack(spacing: PipSpacing.m) {
+            statusLine
+            moodButton
+            todayStrip
         }
-        return "Ready when you are."
+        .frame(maxWidth: 520)
+        .padding(.horizontal, PipSpacing.l)
+        .padding(.bottom, PipSpacing.s)
+        .frame(maxWidth: .infinity)
     }
 
-    // MARK: Primary action
+    /// One quiet line under the pet: how they feel and since when, or an invitation.
+    private var statusLine: some View {
+        Group {
+            if let entry = appState.latestEntry, appState.hasFreshMood {
+                HStack(spacing: 6) {
+                    Circle().fill(MoodColor.bold(entry.mood)).frame(width: 7, height: 7)
+                    Text("\(appState.identity.name) \(entry.mood.petDescription) · \(entry.timestamp.formatted(.relative(presentation: .named)))")
+                }
+            } else {
+                Text("Ready when you are.")
+            }
+        }
+        .font(PipFont.callout)
+        .foregroundStyle(.secondary)
+        .contentTransition(.numericText())
+        .animation(.smooth(duration: 0.4), value: mood)
+        .accessibilityElement(children: .combine)
+    }
 
+    /// No fresh mood: a prominent glass capsule. Fresh mood: the same capsule carries the mood colour.
     private var moodButton: some View {
         Button {
             Haptics.light()
@@ -160,10 +156,12 @@ struct PetHomeView: View {
         } label: {
             HStack(spacing: 12) {
                 if let entry = appState.latestEntry, appState.hasFreshMood {
-                    PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: entry.mood, intensity: entry.intensity, identity: appState.identity), showsShadow: false, framing: .badge)
-                        .frame(width: 40, height: 40)
-                        .background(.white.opacity(0.25), in: Circle())
-                    VStack(alignment: .leading, spacing: 0) {
+                    PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: entry.mood, intensity: entry.intensity, identity: appState.identity), showsShadow: false, framing: .face)
+                        .frame(width: 32, height: 32)
+                        .padding(3)
+                        .background(.white.opacity(0.28), in: Circle())
+                        .padding(.leading, -6)
+                    VStack(alignment: .leading, spacing: 1) {
                         Text(entry.intensity.phrase(for: entry.mood).capitalizedFirst)
                             .font(PipFont.headline)
                         Text("Tap to update")
@@ -171,68 +169,64 @@ struct PetHomeView: View {
                             .opacity(0.8)
                     }
                     Spacer(minLength: 0)
-                    Image(systemName: "arrow.up.right")
-                        .font(.headline.weight(.bold))
+                    Image(systemName: "chevron.up")
+                        .font(.subheadline.weight(.bold))
+                        .opacity(0.8)
                 } else {
-                    Image(systemName: "face.smiling.inverse")
-                        .font(.title2)
+                    Image(systemName: "face.smiling")
+                        .font(.title3.weight(.semibold))
                     Text("How are you feeling?")
                         .font(PipFont.headline)
                     Spacer(minLength: 0)
-                    Image(systemName: "arrow.up.right")
-                        .font(.headline.weight(.bold))
+                    Image(systemName: "chevron.up")
+                        .font(.subheadline.weight(.bold))
+                        .opacity(0.8)
                 }
             }
-            .foregroundStyle(MoodColor.onBold)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
-            .frame(maxWidth: 420)
-            .background(buttonColor, in: RoundedRectangle(cornerRadius: PipRadius.card, style: .continuous))
-            .shadow(color: buttonColor.opacity(0.35), radius: 16, y: 8)
+            .padding(.horizontal, 4)
+            .frame(maxWidth: .infinity)
         }
-        .buttonStyle(PressableButtonStyle())
+        .buttonStyle(.glassProminent)
+        .buttonBorderShape(.capsule)
+        .controlSize(.extraLarge)
+        .tint(mood.map(MoodColor.bold) ?? Color.accentColor)
+        .foregroundStyle(mood == nil ? Color.white : MoodColor.onBold)
         .accessibilityLabel(appState.hasFreshMood ? "Update your mood" : "Log your mood")
         .animation(.smooth(duration: 0.6), value: mood)
     }
 
-    private var buttonColor: Color {
-        mood.map(MoodColor.bold) ?? MoodColor.bold(.calm)
-    }
-
-    private func ritualLabel(_ title: String, subtitle: String, symbol: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: symbol).font(.title3).foregroundStyle(PipColor.inkSecondary)
-            Text(title).font(PipFont.headline)
-            Text(subtitle).font(PipFont.caption).foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24))
-        .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(.primary.opacity(0.04)))
-    }
-
-    private var todayRibbon: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("The shape of today").font(PipFont.headline)
-                Spacer()
-                Text(appState.todayEntries.count.formatted() + " moments")
-                    .font(PipFont.caption).foregroundStyle(.secondary)
-            }
-            if appState.todayEntries.isEmpty {
-                Text("Every feeling has a place here. Start with this one.")
-                    .font(PipFont.callout).foregroundStyle(.secondary)
-            } else {
-                HStack(spacing: 5) {
-                    ForEach(appState.todayEntries.suffix(12)) { entry in
-                        Capsule().fill(MoodColor.bold(entry.mood).gradient)
-                            .frame(height: 24)
-                            .accessibilityLabel("\(entry.mood.displayName), \(entry.timestamp.formatted(date: .omitted, time: .shortened))")
+    /// Today's moments as a row of small faces on their mood tint, in glass on the floor.
+    @ViewBuilder
+    private var todayStrip: some View {
+        if !appState.todayEntries.isEmpty {
+            HStack(spacing: PipSpacing.m) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Today")
+                        .font(PipFont.headline)
+                    Text("^[\(appState.todayEntries.count) moment](inflect: true)")
+                        .font(PipFont.caption)
+                        .foregroundStyle(.secondary)
+                }
+                ScrollView(.horizontal) {
+                    HStack(spacing: 8) {
+                        ForEach(appState.todayEntries.sorted { $0.timestamp < $1.timestamp }) { entry in
+                            PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: entry.mood, intensity: entry.intensity, identity: appState.identity), showsShadow: false, framing: .face)
+                                .frame(width: 34, height: 34)
+                                .padding(3)
+                                .background(MoodColor.soft(entry.mood, scheme: scheme), in: Circle())
+                                .overlay(Circle().strokeBorder(MoodColor.bold(entry.mood).opacity(0.5), lineWidth: 1))
+                                .accessibilityLabel("\(entry.intensity.phrase(for: entry.mood).capitalizedFirst), \(entry.timestamp.formatted(date: .omitted, time: .shortened))")
+                        }
                     }
                 }
+                .scrollIndicators(.hidden)
+                .scrollClipDisabled()
             }
+            .padding(.horizontal, PipSpacing.m)
+            .padding(.vertical, 12)
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: PipRadius.card, style: .continuous))
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
         }
-        .padding(.vertical, 8)
     }
 
     private var petAccessibilityLabel: String {
@@ -256,15 +250,16 @@ struct PetSceneWithClock: View {
     var petScale: CGFloat = 0.62
     var petVerticalPosition: CGFloat = 0.49
     var showsFloor = true
+    var showsBackground = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         if reduceMotion {
-            PetSceneView(identity: identity, state: state, time: nil, petScale: petScale, petVerticalPosition: petVerticalPosition, showsFloor: showsFloor, showsBackground: false)
+            PetSceneView(identity: identity, state: state, time: nil, petScale: petScale, petVerticalPosition: petVerticalPosition, showsFloor: showsFloor, showsBackground: showsBackground)
                 .animation(.smooth(duration: 0.6), value: state.rig)
         } else {
             TimelineView(.animation(minimumInterval: 1.0 / 60)) { context in
-                PetSceneView(identity: identity, state: state, time: context.date.timeIntervalSinceReferenceDate, petScale: petScale, petVerticalPosition: petVerticalPosition, showsFloor: showsFloor, showsBackground: false)
+                PetSceneView(identity: identity, state: state, time: context.date.timeIntervalSinceReferenceDate, petScale: petScale, petVerticalPosition: petVerticalPosition, showsFloor: showsFloor, showsBackground: showsBackground, date: context.date)
                     .animation(.smooth(duration: 0.7), value: state.rig)
             }
         }

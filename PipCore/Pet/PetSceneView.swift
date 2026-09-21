@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The pet in its environment: warm gradient, soft floor, ambient mood glow and small props.
-/// Shared by the app (animated) and widgets (static, `time == nil`).
+/// The pet in its room: sky, horizon and floor lit by the time of day, an ambient mood glow
+/// and small props. Shared by the app (animated) and widgets (static, `time == nil`).
 public struct PetSceneView: View {
     public var identity: PetIdentity
     public var state: PetMoodState
@@ -14,11 +14,14 @@ public struct PetSceneView: View {
     public var showsBackground: Bool
     /// Vertical position of the pet's centre as a fraction of the scene height.
     public var petVerticalPosition: CGFloat
+    /// The moment the room is lit for. Widgets pass their entry date.
+    public var date: Date
 
     @Environment(\.colorScheme) private var scheme
 
-    public init(identity: PetIdentity, state: PetMoodState, time: TimeInterval? = nil, petScale: CGFloat = 0.62, petVerticalPosition: CGFloat = 0.49, showsFloor: Bool = true, showsAccessory: Bool = true, showsBackground: Bool = true) {
+    public init(identity: PetIdentity, state: PetMoodState, time: TimeInterval? = nil, petScale: CGFloat = 0.62, petVerticalPosition: CGFloat = 0.49, showsFloor: Bool = true, showsAccessory: Bool = true, showsBackground: Bool = true, date: Date = .now) {
         self.showsBackground = showsBackground
+        self.date = date
         self.identity = identity
         self.state = state
         self.time = time
@@ -40,13 +43,8 @@ public struct PetSceneView: View {
 
             ZStack {
                 if showsBackground {
-                    LinearGradient(colors: [PipColor.sceneTop, PipColor.sceneBottom], startPoint: .top, endPoint: .bottom)
-                }
-
-                if showsFloor {
-                    SanctuaryArtwork(mood: state.mood)
-                        .frame(width: petSide * 1.15, height: petSide * 1.24)
-                        .position(x: petCenter.x, y: floorY - petSide * 0.43)
+                    // The room fills the frame; its horizon is exactly where the feet land.
+                    PetRoom(mood: state.mood, date: date, horizon: floorY / max(size.height, 1), showsFoliage: showsFloor)
                 }
 
                 // Ambient light behind the pet: additive in the dark, a warm wash in the light.
@@ -60,7 +58,7 @@ public struct PetSceneView: View {
                 if showsFloor {
                     // Stage: the pool of light on the floor the pet sits in.
                     Ellipse()
-                        .fill(RadialGradient(colors: [PipColor.sceneFloor.opacity(dark ? 0.9 : 0.75), PipColor.sceneFloor.opacity(0)], center: .center, startRadius: 0, endRadius: petSide * 0.62))
+                        .fill(RadialGradient(colors: [dark ? Color.white.opacity(0.16) : PipColor.sceneFloor.opacity(0.75), PipColor.sceneFloor.opacity(0)], center: .center, startRadius: 0, endRadius: petSide * 0.62))
                         .frame(width: petSide * 1.3, height: petSide * 0.26)
                         .position(x: petCenter.x, y: floorY + petSide * 0.015)
                 }
@@ -70,7 +68,8 @@ public struct PetSceneView: View {
                     .position(petCenter)
 
                 if showsAccessory, let accessory = state.accessory {
-                    AccessoryOverlay(kind: accessory, time: time, palette: PetPalette.palette(for: identity.species))
+                    let animated = PetAnimator.animate(rig: state.rig, motion: state.motion, time: time)
+                    AccessoryOverlay(kind: accessory, time: time, palette: PetPalette.palette(for: identity.species), live: animated.live, lift: animated.rig.lift, lean: animated.rig.lean)
                         .frame(width: petSide, height: petSide)
                         .position(petCenter)
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
@@ -96,13 +95,20 @@ public struct AccessoryOverlay: View {
     public var kind: PetAccessory
     public var time: TimeInterval?
     public var palette: PetPalette
+    /// Body motion, so held props move with the pet.
+    public var live: LiveMotion
+    public var lift: Double
+    public var lean: Double
 
     @Environment(\.colorScheme) private var scheme
 
-    public init(kind: PetAccessory, time: TimeInterval?, palette: PetPalette) {
+    public init(kind: PetAccessory, time: TimeInterval?, palette: PetPalette, live: LiveMotion = .still, lift: Double = 0, lean: Double = 0) {
         self.kind = kind
         self.time = time
         self.palette = palette
+        self.live = live
+        self.lift = lift
+        self.lean = lean
     }
 
     public var body: some View {
@@ -145,6 +151,72 @@ public struct AccessoryOverlay: View {
                         p.move(to: CGPoint(x: x, y: y))
                         p.addQuadCurve(to: CGPoint(x: x, y: y + 14), control: CGPoint(x: x + side * 4, y: y + 7))
                         ctx.stroke(p, with: .color(ink.opacity(0.7)), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                    }
+                }
+            case .umbrella:
+                // The cloud stays put in the world; the umbrella is held, so it rides the body.
+                let c = CGPoint(x: 100, y: 8 + sin(t * 1.2) * 1.5)
+                let cloudColor = scheme == .dark ? Color(white: 0.55) : Color(red: 0.62, green: 0.68, blue: 0.78)
+                var cloud = Path()
+                cloud.addEllipse(in: CGRect(x: c.x - 22, y: c.y - 5, width: 24, height: 16))
+                cloud.addEllipse(in: CGRect(x: c.x - 10, y: c.y - 13, width: 22, height: 22))
+                cloud.addEllipse(in: CGRect(x: c.x + 2, y: c.y - 6, width: 22, height: 16))
+                ctx.fill(cloud, with: .color(cloudColor.opacity(0.85)))
+
+                var held = ctx
+                held.translateBy(x: CGFloat(live.shiverX), y: CGFloat(-live.hop + lift))
+                held.translateBy(x: 100, y: 168)
+                held.rotate(by: .degrees(lean + live.lean))
+                held.translateBy(x: -100, y: -168)
+                let raise = CGFloat(live.prop)
+                let top = CGPoint(x: 100, y: 46 - raise * 8 + CGFloat(live.headBob) * 0.3)
+                let canopyW: CGFloat = 92, canopyH: CGFloat = 26
+                var canopy = Path()
+                canopy.move(to: CGPoint(x: top.x - canopyW / 2, y: top.y + canopyH))
+                canopy.addQuadCurve(to: CGPoint(x: top.x, y: top.y), control: CGPoint(x: top.x - canopyW * 0.42, y: top.y - canopyH * 0.35))
+                canopy.addQuadCurve(to: CGPoint(x: top.x + canopyW / 2, y: top.y + canopyH), control: CGPoint(x: top.x + canopyW * 0.42, y: top.y - canopyH * 0.35))
+                // Three scallops along the bottom edge.
+                for i in stride(from: 2, through: 0, by: -1) {
+                    let x0 = top.x - canopyW / 2 + canopyW * CGFloat(i + 1) / 3
+                    let x1 = top.x - canopyW / 2 + canopyW * CGFloat(i) / 3
+                    canopy.addQuadCurve(to: CGPoint(x: x1, y: top.y + canopyH), control: CGPoint(x: (x0 + x1) / 2, y: top.y + canopyH - 7))
+                }
+                canopy.closeSubpath()
+                let coral = Color(red: 0.96, green: 0.55, blue: 0.45)
+                held.fill(canopy, with: .linearGradient(Gradient(colors: [coral.opacity(0.98), Color(red: 0.86, green: 0.40, blue: 0.34)]), startPoint: CGPoint(x: top.x - canopyW / 2, y: top.y), endPoint: CGPoint(x: top.x + canopyW / 2, y: top.y + canopyH)))
+                var ribs = Path()
+                for i in 1..<3 {
+                    let x = top.x - canopyW / 2 + canopyW * CGFloat(i) / 3
+                    ribs.move(to: top)
+                    ribs.addQuadCurve(to: CGPoint(x: x, y: top.y + canopyH), control: CGPoint(x: (top.x + x) / 2, y: top.y + canopyH * 0.35))
+                }
+                held.stroke(ribs, with: .color(.white.opacity(0.35)), style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
+                var tip = Path()
+                tip.move(to: top)
+                tip.addLine(to: CGPoint(x: top.x, y: top.y - 6))
+                var handle = Path()
+                handle.move(to: CGPoint(x: top.x, y: top.y + canopyH - 2))
+                handle.addLine(to: CGPoint(x: top.x, y: top.y + canopyH + 56))
+                handle.addQuadCurve(to: CGPoint(x: top.x - 8, y: top.y + canopyH + 56), control: CGPoint(x: top.x - 4, y: top.y + canopyH + 64))
+                let stick = scheme == .dark ? Color(white: 0.85) : Color(red: 0.36, green: 0.30, blue: 0.28)
+                held.stroke(tip, with: .color(stick), style: StrokeStyle(lineWidth: 2.2, lineCap: .round))
+                held.stroke(handle, with: .color(stick), style: StrokeStyle(lineWidth: 2.2, lineCap: .round))
+
+                // Rain that hits the canopy and skips off it, plus a couple of stray drops past the edge.
+                for i in 0..<5 {
+                    let phase = (t * 0.8 + Double(i) * 0.2).truncatingRemainder(dividingBy: 1)
+                    let x = c.x - 34 + CGFloat(i) * 17
+                    let onCanopy = abs(x - top.x) < canopyW / 2 - 4
+                    let landing = onCanopy ? top.y + abs(x - top.x) * 0.22 - 3 : 150
+                    let y = c.y + 12 + phase * (landing - c.y - 12)
+                    var drop = Path()
+                    drop.move(to: CGPoint(x: x, y: y))
+                    drop.addLine(to: CGPoint(x: x - 1, y: y + 4))
+                    ctx.stroke(drop, with: .color(Color(red: 0.45, green: 0.65, blue: 0.95).opacity(0.8 * (1 - phase * 0.4))), style: StrokeStyle(lineWidth: 1.8, lineCap: .round))
+                    if onCanopy, phase > 0.85 {
+                        let k = (phase - 0.85) / 0.15
+                        let splash = Path(ellipseIn: CGRect(x: x - 1.2, y: landing - 2 - k * 4, width: 2.4, height: 2.4))
+                        ctx.fill(splash, with: .color(Color(red: 0.45, green: 0.65, blue: 0.95).opacity(0.7 * (1 - k))))
                     }
                 }
             case .rainCloud:

@@ -66,6 +66,7 @@ struct PetSelectorView: View {
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("Pets")
         .navigationBarTitleDisplayMode(.inline)
+        .pipNavigationTransition()
         .onAppear {
             selection = appState.identity.species
             name = appState.identity.name
@@ -97,8 +98,8 @@ struct PetCard: View {
 
     var body: some View {
         VStack(spacing: PipSpacing.s) {
-            PetSceneWithClock(identity: PetIdentity(species: species), state: state, petScale: 0.78, petVerticalPosition: 0.59)
-                .frame(width: 280, height: 280)
+            RoomWindow(identity: PetIdentity(species: species), state: state)
+                .frame(height: 300)
                 .padding(.top, PipSpacing.s)
             Text(species.defaultName)
                 .font(PipFont.title)
@@ -115,5 +116,19 @@ struct PetCard: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(species.defaultName), \(species.displayName). \(species.blurb)")
+    }
+}
+
+/// A framed view into the pet's room, for cards and onboarding: the same world as the Pet tab,
+/// seen through a rounded window.
+struct RoomWindow: View {
+    var identity: PetIdentity
+    var state: PetMoodState
+
+    var body: some View {
+        PetSceneWithClock(identity: identity, state: state, petScale: 0.72, petVerticalPosition: 0.52, showsFloor: true, showsBackground: true)
+            .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 32, style: .continuous).strokeBorder(.primary.opacity(0.06)))
+            .frame(maxWidth: 440)
     }
 }

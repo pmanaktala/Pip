@@ -13,7 +13,7 @@ struct MoodPickerSheet: View {
     @Environment(\.colorScheme) private var scheme
 
     private var columns: [GridItem] {
-        Array(repeating: GridItem(.flexible(), spacing: 12), count: typeSize.isAccessibilitySize ? 1 : 2)
+        Array(repeating: GridItem(.flexible(), spacing: 8), count: typeSize.isAccessibilitySize ? 2 : 4)
     }
 
     var body: some View {
@@ -24,10 +24,8 @@ struct MoodPickerSheet: View {
                         loggedHeader(for: logged)
                         refinement(for: logged)
                     } else {
-                        Text("How are you feeling?")
-                            .font(PipFont.title)
-                            .padding(.top, PipSpacing.s)
                         picker
+                            .padding(.top, PipSpacing.s)
                     }
                 }
                 .padding(.horizontal, PipSpacing.m)
@@ -35,13 +33,17 @@ struct MoodPickerSheet: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .background(Color(.systemGroupedBackground))
-            .navigationTitle(logged == nil ? "" : "\(appState.identity.name) \(logged!.mood.petDescription)")
+            .navigationTitle(logged == nil ? "How are you feeling?" : "")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if logged != nil {
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { dismiss() }
+                        Button("Done", systemImage: "checkmark") { dismiss() }
                             .font(PipFont.headline)
+                    }
+                } else {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close", systemImage: "xmark") { dismiss() }
                     }
                 }
             }
@@ -55,9 +57,9 @@ struct MoodPickerSheet: View {
     // MARK: Step 1
 
     private var picker: some View {
-        LazyVGrid(columns: columns, spacing: 12) {
+        LazyVGrid(columns: columns, spacing: 18) {
             ForEach(Mood.allCases) { mood in
-                MoodChoice(mood: mood, identity: appState.identity) {
+                MoodChoice(mood: mood) {
                     choose(mood)
                 }
             }
@@ -74,14 +76,15 @@ struct MoodPickerSheet: View {
     /// After logging, the pet reacts on the Pet tab above the sheet; here a single line confirms it.
     private func loggedHeader(for entry: MoodEntry) -> some View {
         HStack(spacing: 12) {
-            PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: entry.mood, intensity: intensity, identity: appState.identity), showsShadow: false, framing: .badge)
-                .frame(width: 44, height: 44)
-                .padding(4)
+            PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: entry.mood, intensity: intensity, identity: appState.identity), showsShadow: false, framing: .face)
+                .frame(width: 52, height: 52)
+                .padding(5)
                 .background(MoodColor.soft(entry.mood, scheme: scheme), in: Circle())
+                .overlay(Circle().strokeBorder(MoodColor.bold(entry.mood).opacity(0.5), lineWidth: 1.5))
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.mood.displayName)
                     .font(PipFont.title2)
-                Text("\(appState.identity.name) \(entry.mood.petDescription).")
+                Text("Logged. \(appState.identity.name) \(entry.mood.petDescription).")
                     .font(PipFont.callout)
                     .foregroundStyle(.secondary)
             }
@@ -89,7 +92,8 @@ struct MoodPickerSheet: View {
         }
         .padding(.top, PipSpacing.s)
         .transition(.move(edge: .top).combined(with: .opacity))
-        .accessibilityHidden(true)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(entry.mood.displayName) logged.")
     }
 
     // MARK: Step 2 (optional)
@@ -105,7 +109,7 @@ struct MoodPickerSheet: View {
                 Text(entry.mood.displayName).tag(MoodIntensity.moderate)
                 Text("Very").tag(MoodIntensity.strong)
             }
-            .pickerStyle(.segmented)
+            .pipTabsPickerStyle()
             .onChange(of: intensity) { _, new in
                 Haptics.selection()
                 withAnimation(.spring(duration: 0.6, bounce: 0.3)) { appState.update(entry, intensity: new) }
@@ -130,8 +134,8 @@ struct MoodPickerSheet: View {
                             .padding(.vertical, 8)
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(on ? .white : .primary)
-                    .background(on ? Color.accentColor : Color(.secondarySystemGroupedBackground), in: Capsule())
+                    .foregroundStyle(on ? MoodColor.onBold : .primary)
+                    .background(on ? MoodColor.bold(entry.mood) : Color(.secondarySystemGroupedBackground), in: Capsule())
                     .animation(.smooth(duration: 0.2), value: on)
                     .accessibilityAddTraits(on ? .isSelected : [])
                 }
@@ -158,31 +162,34 @@ struct MoodPickerSheet: View {
     }
 }
 
-/// One mood: a colour card with the pet's face in that mood and the name. Colour and face together.
+/// One mood: a round token in the mood's colour with its glyph, and the word beneath. Three
+/// cues at once; the pet behind the sheet supplies the fourth by reacting the moment it is tapped.
 struct MoodChoice: View {
     var mood: Mood
-    var identity: PetIdentity
     var action: () -> Void
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
-                PetView(identity: identity, state: PetStateResolver.resolve(mood: mood, identity: identity), showsShadow: false, framing: .badge)
-                    .frame(width: 40, height: 40)
-                    .padding(4)
-                    .background(MoodColor.soft(mood, scheme: scheme), in: Circle())
+            VStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .fill(MoodColor.soft(mood, scheme: scheme))
+                    Circle()
+                        .strokeBorder(MoodColor.bold(mood).opacity(0.55), lineWidth: 1.5)
+                    Image(systemName: mood.symbolName)
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundStyle(MoodColor.text(mood, scheme: scheme))
+                        .symbolRenderingMode(.hierarchical)
+                }
+                .frame(width: 64, height: 64)
                 Text(mood.displayName)
-                    .font(PipFont.headline)
+                    .font(PipFont.caption)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
-                Spacer(minLength: 0)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: PipRadius.tile, style: .continuous))
+            .frame(maxWidth: .infinity)
         }
         .buttonStyle(PressableButtonStyle())
         .accessibilityLabel(mood.displayName)

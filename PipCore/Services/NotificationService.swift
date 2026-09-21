@@ -17,9 +17,35 @@ public final class NotificationService {
 
     public private(set) var isAuthorized = false
     private let center = UNUserNotificationCenter.current()
+    private let router = Router()
+
+    /// Called with the deep link for a tapped notification (`pip://sit` or `pip://home`).
+    public var onOpen: ((URL) -> Void)? {
+        get { router.onOpen }
+        set { router.onOpen = newValue }
+    }
 
     public init() {
+        center.delegate = router
         Task { await refreshAuthorization() }
+    }
+
+    /// Notification taps route like Live Activity taps: company and wind-down open Sit With Pet,
+    /// little moments open the Pet tab. Notifications also show while the app is in front so the
+    /// pet can be heard, quietly, without a sound.
+    private final class Router: NSObject, UNUserNotificationCenterDelegate {
+        var onOpen: ((URL) -> Void)?
+
+        func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+            guard response.actionIdentifier == UNNotificationDefaultActionIdentifier,
+                  let raw = response.notification.request.content.userInfo["url"] as? String,
+                  let url = URL(string: raw) else { return }
+            await MainActor.run { onOpen?(url) }
+        }
+
+        func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+            [.banner]
+        }
     }
 
     public func refreshAuthorization() async {
@@ -58,6 +84,7 @@ public final class NotificationService {
             content.sound = nil
             content.interruptionLevel = .passive
             content.threadIdentifier = plan.category.rawValue
+            content.userInfo = ["url": plan.category == .moments ? "pip://home" : "pip://sit"]
 
             let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: plan.date)
             let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)

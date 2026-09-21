@@ -26,6 +26,8 @@ public struct LiveMotion: Equatable, Sendable {
     public var earTwitch: Double = 0
     /// Extra head drop (nodding off, sighing). Canvas units, positive = lower.
     public var headBob: Double = 0
+    /// 0…1 how far a held prop (the umbrella) is raised. Props follow `hop`, `lean` and `shiverX`.
+    public var prop: Double = 1
 
     public static let still = LiveMotion()
 }
@@ -39,8 +41,7 @@ public enum PetAnimator {
         var live = LiveMotion()
 
         // Breathing – a quick, eased inhale and a slow exhale. Lifts the head a touch.
-        let breathPhase = (t * motion.breathRate).truncatingRemainder(dividingBy: 1)
-        live.breath = breathPhase < 0.42 ? smoothstep(breathPhase / 0.42) : 1 - smoothstep((breathPhase - 0.42) / 0.58)
+        live.breath = breath(phase: t * motion.breathRate)
         live.squash = 1 + motion.breathAmount * live.breath
         live.headBob = -live.breath * 0.8
 
@@ -144,7 +145,155 @@ public enum PetAnimator {
             }
         }
 
+        performBit(motion.bit, interval: motion.bitInterval, t: t, rig: &rig, live: &live)
+        // A hop and a bit can coincide; keep the head inside the 200pt canvas regardless.
+        live.hop = min(live.hop, 26)
+        live.lean = live.lean.clamped(-16, 16)
+
         return (rig, live)
+    }
+
+    /// The breathing curve: a quick, eased inhale (42% of the cycle) and a slow exhale.
+    public static func breath(phase: Double) -> Double {
+        let p = phase - floor(phase)
+        return p < 0.42 ? smoothstep(p / 0.42) : 1 - smoothstep((p - 0.42) / 0.58)
+    }
+
+    // MARK: - Bits
+
+    /// Signature business per mood. Big, eased, and rare enough to be a treat.
+    static func performBit(_ bit: PetBit, interval: Double, t: Double, rig: inout PetRig, live: inout LiveMotion) {
+        switch bit {
+        case .none:
+            break
+
+        case .wiggle:
+            guard let (p, _) = gesture(t, interval: interval, duration: 1.6, seed: 71) else { return }
+            let env = sin(p * .pi)
+            live.lean += sin(p * .pi * 4) * 9 * env
+            live.armSwing = sin(p * .pi * 4) * env
+            live.squash *= 1 + 0.03 * sin(p * .pi * 8) * env
+            rig.eyeArc = max(rig.eyeArc, env)
+            rig.mouthOpen = max(rig.mouthOpen, 0.3 * env)
+            rig.tilt += sin(p * .pi * 2) * 6 * env
+
+        case .zoomies:
+            guard let (p, cycle) = gesture(t, interval: interval, duration: 1.3, seed: 73) else { return }
+            let dir: Double = hash01(cycle + 5) < 0.5 ? -1 : 1
+            let bounce = abs(sin(p * .pi * 2))
+            live.hop += 16 * bounce
+            live.squash *= 1 + 0.06 * bounce - 0.08 * max(0, cos(p * .pi * 4)) * (1 - bounce)
+            live.lean += sin(p * .pi * 2) * 12 * dir
+            live.armSwing = 1
+            rig.headTurn = (rig.headTurn + sin(p * .pi * 2) * 0.9 * dir).clamped(-1, 1)
+            rig.eyeScale *= 1 + 0.15 * sin(p * .pi)
+            rig.mouthOpen = max(rig.mouthOpen, 0.8 * sin(p * .pi))
+
+        case .stretch:
+            guard let (p, _) = gesture(t, interval: interval, duration: 3.2, seed: 79) else { return }
+            let k = p < 0.4 ? smoothstep(p / 0.4) : 1 - smoothstep((p - 0.4) / 0.6)
+            live.squash *= 1 + 0.09 * k
+            live.headBob -= 4 * k
+            rig.armRaise = max(rig.armRaise, 0.75 * k)
+            rig.eyeOpen *= 1 - 0.92 * k
+            rig.mouthOpen = max(rig.mouthOpen, 0.35 * k)
+            rig.mouthCurve = max(rig.mouthCurve, 0.5 * k)
+            rig.headDrop = min(rig.headDrop, rig.headDrop * (1 - k))
+
+        case .curious:
+            guard let (p, cycle) = gesture(t, interval: interval, duration: 2.0, seed: 83) else { return }
+            let side: Double = hash01(cycle + 9) < 0.5 ? -1 : 1
+            let k = p < 0.25 ? smoothstep(p / 0.25) : (p < 0.75 ? 1 : 1 - smoothstep((p - 0.75) / 0.25))
+            rig.tilt += 14 * side * k
+            rig.gazeX = (rig.gazeX + 0.45 * side * k).clamped(-1, 1)
+            rig.eyeScale *= 1 + 0.08 * k
+            rig.earLift = max(rig.earLift, k)
+            if p < 0.3 { live.earTwitch = max(live.earTwitch, sin(p / 0.3 * .pi)) }
+
+        case .flop:
+            guard let (p, cycle) = gesture(t, interval: interval, duration: 4.5, seed: 89) else { return }
+            let side: Double = hash01(cycle + 13) < 0.5 ? -1 : 1
+            if p < 0.45 {
+                // Nodding off: the body slowly keels over and the eyes give up.
+                let k = smoothstep(p / 0.45)
+                rig.lying = min(1, rig.lying + 0.6 * k)
+                rig.eyeOpen *= 1 - 0.95 * k
+                rig.headDrop = max(rig.headDrop, k)
+                live.lean += 9 * side * k
+                live.headBob += 3 * k
+            } else if p < 0.82 {
+                rig.lying = min(1, rig.lying + 0.6)
+                rig.eyeOpen *= 0.05
+                rig.headDrop = 1
+                live.lean += 9 * side
+                live.headBob += 3
+            } else {
+                // Jerk awake: snap upright, eyes wide, a startled little hop, then blink back down.
+                let u = (p - 0.82) / 0.18
+                let snap = 1 - smoothstep(u * 2.5)
+                rig.lying = min(1, rig.lying + 0.6 * snap)
+                live.lean += 9 * side * snap
+                live.hop += 5 * sin(min(u * 2, 1) * .pi)
+                rig.eyeOpen = max(rig.eyeOpen, 1 - smoothstep((u - 0.5) * 2))
+                rig.eyeScale *= 1 + 0.25 * (1 - u)
+                rig.lidHeaviness *= u
+                rig.headDrop *= u
+            }
+
+        case .fidget:
+            guard let (p, _) = gesture(t, interval: interval, duration: 1.1, seed: 97) else { return }
+            let env = sin(p * .pi)
+            let look = sin(p * .pi * 3) * env
+            rig.headTurn = (look * 0.9).clamped(-1, 1)
+            rig.gazeX = look
+            rig.sweat = max(rig.sweat, env)
+            rig.eyeScale *= 1 + 0.1 * env
+            live.earTwitch = max(live.earTwitch, env)
+
+        case .stomp:
+            guard let (p, _) = gesture(t, interval: interval, duration: 1.4, seed: 101) else { return }
+            let env = sin(p * .pi)
+            // Two stomps: lift, then slam (squash), with a lean into each one.
+            let beat = sin(p * .pi * 4)
+            live.hop += 5 * max(0, beat)
+            live.squash *= 1 - 0.14 * max(0, -beat)
+            live.lean += sin(p * .pi * 2) * 5 * env
+            rig.armRaise = max(rig.armRaise, 0.9 * env)
+            rig.browInnerUp = min(rig.browInnerUp, -1)
+            rig.mouthOpen = max(rig.mouthOpen, 0.5 * max(0, -beat))
+            rig.eyeSquint = max(rig.eyeSquint, 0.7 * env)
+
+        case .sniffle:
+            guard let (p, _) = gesture(t, interval: interval, duration: 2.6, seed: 103) else { return }
+            if p < 0.3 {
+                // Two quick sniffs.
+                let k = sin(p / 0.3 * .pi * 2)
+                live.squash *= 1 + 0.025 * abs(k)
+                live.headBob -= 1.5 * abs(k)
+                rig.mouthWobble = max(rig.mouthWobble, 0.8)
+            } else {
+                // A slow shake of the head, and the umbrella dips with it.
+                let u = (p - 0.3) / 0.7
+                let env = sin(u * .pi)
+                rig.headTurn = (sin(u * .pi * 3) * 0.6 * env).clamped(-1, 1)
+                live.prop = 1 - 0.25 * env
+            }
+
+        case .meditate:
+            // Continuous: a slow float, eyes closed, a soft mouth, paws together (arms half raised).
+            live.hop += 4 + 2.5 * sin(t * 0.7)
+            live.lean *= 0.3
+            rig.eyeOpen = 0
+            rig.eyeArc = 0
+            rig.mouthCurve = 0.5
+            rig.mouthOpen = 0
+            rig.armRaise = 0.45
+            rig.headDrop = 0.05
+            rig.tilt = 0
+            rig.gazeX = 0
+            rig.gazeY = 0
+            rig.headTurn = 0
+        }
     }
 
     // MARK: - Helpers

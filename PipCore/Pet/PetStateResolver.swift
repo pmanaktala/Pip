@@ -51,6 +51,8 @@ public enum PetStateResolver {
             motion.tailWagRate = 1.1
             motion.tailWagAmount = 0.6
             motion.breathRate = 0.3
+            motion.bit = .wiggle
+            motion.bitInterval = 9
             env.tintStrength = 0.5
 
         case .excited:
@@ -74,6 +76,8 @@ public enum PetStateResolver {
             motion.breathRate = 0.42
             motion.gazeInterval = 1.6
             motion.swayAmount = 0.6
+            motion.bit = .zoomies
+            motion.bitInterval = 7
             accessory = .sparkles
             env.tintStrength = 0.6
 
@@ -98,6 +102,8 @@ public enum PetStateResolver {
             motion.swayAmount = 0.8
             motion.swayPeriod = 9
             motion.sigh = 0.6
+            motion.bit = .stretch
+            motion.bitInterval = 16
             env.tintStrength = 0.35
 
         case .neutral:
@@ -108,6 +114,8 @@ public enum PetStateResolver {
             rig.tailLift = 0.5
             motion.tailWagRate = 0.4
             motion.tailWagAmount = 0.25
+            motion.bit = .curious
+            motion.bitInterval = 11
             env.tintStrength = 0.3
 
         case .tired:
@@ -131,6 +139,8 @@ public enum PetStateResolver {
             motion.earTwitch = 0.1
             motion.swayAmount = 0.5
             motion.nod = 4
+            motion.bit = .flop
+            motion.bitInterval = 15
             accessory = .zzz
             env.tintStrength = 0.3
             env.dimness = 0.35
@@ -161,6 +171,8 @@ public enum PetStateResolver {
             motion.tailWagAmount = 0.3
             motion.earTwitch = 0.9
             motion.swayAmount = 0.4
+            motion.bit = .fidget
+            motion.bitInterval = 6
             accessory = .stressLines
             env.tintStrength = 0.45
 
@@ -179,6 +191,7 @@ public enum PetStateResolver {
             rig.squash = 0.93
             rig.lying = 0.15
             rig.headDrop = 0.7
+            rig.armRaise = 0.55 // holding the umbrella up
             rig.tilt = 4
             rig.blush = 0.1
             motion.breathRate = 0.16
@@ -189,7 +202,9 @@ public enum PetStateResolver {
             motion.swayAmount = 0.5
             motion.swayPeriod = 10
             motion.sigh = 1
-            accessory = .rainCloud
+            motion.bit = .sniffle
+            motion.bitInterval = 12
+            accessory = .umbrella
             env.tintStrength = 0.35
             env.dimness = 0.25
 
@@ -214,6 +229,8 @@ public enum PetStateResolver {
             motion.blinkInterval = 3
             motion.swayAmount = 1
             motion.swayPeriod = 3
+            motion.bit = .stomp
+            motion.bitInterval = 8
             accessory = .steam
             env.tintStrength = 0.45
         }
@@ -244,7 +261,7 @@ public enum PetStateResolver {
         if intensity == .slight {
             // Slight moods keep their accessory only when it is very characteristic.
             switch state.accessory {
-            case .sparkles, .rainCloud, .steam: state.accessory = nil
+            case .sparkles, .rainCloud, .umbrella, .steam: state.accessory = nil
             default: break
             }
             state.environment.tintStrength *= 0.7

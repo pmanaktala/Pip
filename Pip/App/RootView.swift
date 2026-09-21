@@ -49,6 +49,7 @@ struct MainTabView: View {
                 NavigationStack { SettingsView() }
             }
         }
+        .tabBarMinimizeBehavior(.onScrollDown)
         .onChange(of: appState.pendingRoute, initial: true) { _, route in
             guard let route else { return }
             tab = .pet

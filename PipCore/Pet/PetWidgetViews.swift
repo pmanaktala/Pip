@@ -53,7 +53,7 @@ public struct PetHomeWidgetView: View {
                 .frame(maxWidth: 145)
             VStack(alignment: .leading, spacing: 6) {
                 Text(identity.name)
-                    .font(.system(.title2, design: .serif, weight: .regular))
+                    .font(PipFont.title2)
                 Text(statusLine)
                     .font(PipFont.caption)
                     .foregroundStyle(.secondary)

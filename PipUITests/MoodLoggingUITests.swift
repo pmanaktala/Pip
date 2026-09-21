@@ -21,7 +21,7 @@ final class MoodLoggingUITests: XCTestCase {
         happy.tap()
 
         // The sheet morphs into the optional refinement step; nothing else is required.
-        XCTAssertTrue(app.navigationBars.staticTexts["Pebble looks happy"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["Happy logged."].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Done"].exists)
         app.buttons["Done"].tap()
 
@@ -39,9 +39,30 @@ final class MoodLoggingUITests: XCTestCase {
         app.buttons["Log your mood"].tap()
         app.buttons["Stressed"].tap()
         XCTAssertTrue(app.buttons["Done"].waitForExistence(timeout: 5))
-        app.segmentedControls.buttons["Very"].tap()
+        // Segmented control on iOS 26, tabs picker on iOS 27: both expose the segment as a button.
+        let very = app.buttons["Very"]
+        XCTAssertTrue(very.waitForExistence(timeout: 5))
+        very.tap()
         app.buttons["Done"].tap()
         XCTAssertTrue(app.staticTexts["Very stressed"].waitForExistence(timeout: 5))
+    }
+
+    func testHistoryShowsTodayAndSupportIsReachable() {
+        app.buttons["Log your mood"].tap()
+        app.buttons["Calm"].tap()
+        XCTAssertTrue(app.buttons["Done"].waitForExistence(timeout: 5))
+        app.buttons["Done"].tap()
+
+        app.tabBars.buttons["History"].tap()
+        XCTAssertTrue(app.staticTexts["Today"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Pebble had a gentle day."].exists)
+
+        app.tabBars.buttons["You"].tap()
+        let support = app.buttons["Support and crisis resources"]
+        for _ in 0..<6 where !support.exists { app.swipeUp() }
+        XCTAssertTrue(support.waitForExistence(timeout: 5))
+        support.tap()
+        XCTAssertTrue(app.staticTexts["Call or text 988"].waitForExistence(timeout: 5))
     }
 
     func testPetScreenIsAccessible() {
@@ -53,7 +74,7 @@ final class MoodLoggingUITests: XCTestCase {
         let breathe = app.buttons["Breathe together"]
         XCTAssertTrue(breathe.waitForExistence(timeout: 5))
         breathe.tap()
-        let stop = app.buttons["Stop guided breathing"]
+        let stop = app.buttons["Stop breathing guide"]
         XCTAssertTrue(stop.waitForExistence(timeout: 5))
         stop.tap()
         XCTAssertTrue(breathe.exists)

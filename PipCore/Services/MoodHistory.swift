@@ -85,6 +85,29 @@ public enum MoodHistory {
         return "mixed"
     }
 
+    /// One gentle sentence about the last seven days, or nil when there is too little to say.
+    /// Never a count of missed days, a streak or a score: it describes, it doesn't grade.
+    public static func weekSummary(stamps: [MoodStamp], petName: String, ending: Date = .now, calendar: Calendar = .current) -> String? {
+        let days = recentDays(count: 7, ending: ending, calendar: calendar)
+        guard let first = days.first else { return nil }
+        let inWeek = stamps.filter { $0.time >= first && $0.time < calendar.date(byAdding: .day, value: 1, to: days.last!)! }
+        let loggedDays = Set(inWeek.map { calendar.startOfDay(for: $0.time) })
+        guard inWeek.count >= 2, loggedDays.count >= 2, let lead = dominant(inWeek) else { return nil }
+
+        let brightest = inWeek.max { $0.mood.valence < $1.mood.valence }!
+        let heaviest = inWeek.min { $0.mood.valence < $1.mood.valence }!
+        let spread = brightest.mood.valence - heaviest.mood.valence
+
+        func dayName(_ s: MoodStamp) -> String {
+            calendar.isDateInToday(s.time) ? "today" : s.time.formatted(.dateTime.weekday(.wide))
+        }
+        let tone = "Mostly \(lead.mood.displayName.lowercased()) this week"
+        if spread >= 1.0 {
+            return "\(tone), from \(heaviest.mood.displayName.lowercased()) on \(dayName(heaviest)) to \(brightest.mood.displayName.lowercased()) \(dayName(brightest))."
+        }
+        return "\(tone). \(petName) kept you company on \(loggedDays.count) days."
+    }
+
     /// Dates for a month grid: leading blanks (nil) then each day.
     public static func monthGrid(for month: Date, calendar: Calendar = .current) -> [Date?] {
         guard let interval = calendar.dateInterval(of: .month, for: month) else { return [] }

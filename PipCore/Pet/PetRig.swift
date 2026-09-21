@@ -172,13 +172,44 @@ public struct PetMotionProfile: Equatable, Sendable {
     public var nod: Double = 0
     /// Occasional deep sigh amplitude (sad, calm).
     public var sigh: Double = 0
+    /// The mood's signature bit of theatre, performed now and then (see `PetBit`).
+    public var bit: PetBit = .none
+    /// Average seconds between bits.
+    public var bitInterval: Double = 10
 
     public init() {}
+}
+
+/// A signature piece of business the pet performs every so often: bigger and more theatrical
+/// than idle motion, so the mood has a personality and not just a face. Each bit is a pure,
+/// eased function of time in `PetAnimator`; `meditate` runs continuously.
+public enum PetBit: String, Codable, Sendable, Hashable {
+    case none
+    /// Happy: a little dance, leaning side to side with the arms swinging.
+    case wiggle
+    /// Excited: two big hops with a full-body twist.
+    case zoomies
+    /// Calm: a long slow stretch, eyes closed, then settle.
+    case stretch
+    /// Neutral: a curious head tilt with an ear flick.
+    case curious
+    /// Tired: nod off, keel over, jerk awake.
+    case flop
+    /// Stressed: a darting look left and right, sweat.
+    case fidget
+    /// Frustrated: two stomps and a huff.
+    case stomp
+    /// Sad: a sniffle and a slow shake of the head under the umbrella.
+    case sniffle
+    /// Sitting together: float a little, eyes closed, breathing slow and deep.
+    case meditate
 }
 
 /// Small, optional visual additions around the pet. Rendered by the scene, not the painter.
 public enum PetAccessory: String, Codable, Sendable, Hashable {
     case sparkles, zzz, stressLines, heart, rainCloud, steam
+    /// A rain cloud *and* the umbrella the pet holds up under it.
+    case umbrella
 }
 
 /// Ambient scene changes driven by mood.

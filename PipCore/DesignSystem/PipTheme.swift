@@ -34,6 +34,11 @@ public enum MoodColor {
         bold(mood).opacity(scheme == .dark ? 0.22 : 0.16)
     }
 
+    /// Readable mood-coloured text on a soft tint: the dark ink in light mode, the full colour in dark.
+    public static func text(_ mood: Mood, scheme: ColorScheme) -> Color {
+        scheme == .dark ? bold(mood) : ink(mood)
+    }
+
     /// Dark tone of the mood for text and glyphs on a soft tint.
     public static func ink(_ mood: Mood) -> Color {
         switch mood {
@@ -49,10 +54,11 @@ public enum MoodColor {
     }
 }
 
-/// Type ramp. Everything is a Dynamic Type text style; rounded and heavy for warmth.
+/// Type ramp. Everything is a Dynamic Type text style in one family: SF Rounded, heavy at the
+/// top for warmth, regular for reading. Navigation titles stay native (SF Pro) on purpose.
 public enum PipFont {
-    public static let display = Font.system(.largeTitle, design: .serif, weight: .regular)
-    public static let title = Font.system(.title, design: .serif, weight: .regular)
+    public static let display = Font.system(.largeTitle, design: .rounded, weight: .heavy)
+    public static let title = Font.system(.title, design: .rounded, weight: .bold)
     public static let title2 = Font.system(.title2, design: .rounded, weight: .bold)
     public static let headline = Font.system(.headline, design: .rounded, weight: .bold)
     public static let body = Font.system(.body, design: .rounded)
@@ -118,6 +124,29 @@ public extension View {
         #else
         self
         #endif
+    }
+
+    /// iOS 27 lets custom rows in a scroll view host swipe actions; on iOS 26 rows fall back to
+    /// the context menu they also carry. Apply to the container of the rows.
+    @ViewBuilder
+    func pipSwipeActionsContainer() -> some View {
+        #if swift(>=6.4)
+        if #available(iOS 27, *) {
+            self.swipeActionsContainer()
+        } else {
+            self
+        }
+        #else
+        self
+        #endif
+    }
+
+    /// Whether rows can rely on swipe actions on this OS (see `pipSwipeActionsContainer`).
+    static var pipSupportsSwipeActionsOutsideLists: Bool {
+        #if swift(>=6.4)
+        if #available(iOS 27, *) { return true }
+        #endif
+        return false
     }
 
     /// iOS 27 tabs picker style, segmented on iOS 26.

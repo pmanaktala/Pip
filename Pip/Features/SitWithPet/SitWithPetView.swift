@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Sit with your pet. Nothing to complete. Stay two seconds or ten minutes.
-/// The light drifts slowly through the calm colours; a quiet timer counts the time together.
+/// The pet settles into a meditation with you; with the guide on, its breathing, the ring and
+/// the words all follow one ten-second breath (four in, six out).
 struct SitWithPetView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
@@ -10,36 +11,44 @@ struct SitWithPetView: View {
     @State private var ambience = AmbientSound()
     @State private var startedAt = Date.now
     @State private var guidedBreathing = false
-    @State private var breathStartedAt = Date.now
     @Environment(\.scenePhase) private var scenePhase
+
+    /// One breath every ten seconds when guided; a slow, unhurried one otherwise.
+    private var breathRate: Double { guidedBreathing ? 0.1 : 0.14 }
 
     private var state: PetMoodState {
         var s = PetStateResolver.resolve(mood: .calm, intensity: .moderate, identity: appState.identity)
-        // Sitting together is quieter than a logged "calm": slower breath, no accessory.
-        s.motion.breathRate *= 0.8
-        s.motion.gazeInterval = 7
+        // Sitting together is a meditation, not a logged "calm": floating, eyes closed, deep breaths.
+        s.motion.bit = .meditate
+        s.motion.breathRate = breathRate
+        s.motion.breathAmount = guidedBreathing ? 0.07 : 0.045
+        s.motion.blinkInterval = .infinity
+        s.motion.gazeInterval = .infinity
+        s.motion.sigh = 0
+        s.motion.hopHeight = 0
         s.accessory = nil
         return s
     }
 
     var body: some View {
         ZStack {
-            Color(.systemBackground).ignoresSafeArea()
-            ambientLight
+            PetRoom(mood: .calm, horizon: 0.64)
+                .ignoresSafeArea()
 
             if guidedBreathing {
+                // The ring breathes on the same clock and curve as the pet's chest.
                 TimelineView(.animation(minimumInterval: reduceMotion ? 1 : 1.0 / 30)) { clock in
-                    let phase = clock.date.timeIntervalSince(breathStartedAt).truncatingRemainder(dividingBy: 10)
-                    let expansion = phase < 4 ? phase / 4 : 1 - (phase - 4) / 6
+                    let expansion = PetAnimator.breath(phase: clock.date.timeIntervalSinceReferenceDate * breathRate)
                     Circle()
-                        .stroke(MoodColor.bold(.calm).opacity(0.25), lineWidth: 2)
-                        .frame(width: 280, height: 280)
-                        .scaleEffect(reduceMotion ? 1 : 0.85 + expansion * 0.3)
+                        .stroke(MoodColor.bold(.calm).opacity(0.35), lineWidth: 2)
+                        .frame(width: 300, height: 300)
+                        .scaleEffect(reduceMotion ? 1 : 0.82 + expansion * 0.32)
+                        .offset(y: -30)
                         .accessibilityHidden(true)
                 }
             }
 
-            PetSceneWithClock(identity: appState.identity, state: state, petScale: 0.8, petVerticalPosition: 0.5, showsFloor: true)
+            PetSceneWithClock(identity: appState.identity, state: state, petScale: 0.70, petVerticalPosition: 0.53, showsFloor: false, showsBackground: false)
                 .ignoresSafeArea()
                 .accessibilityElement()
                 .accessibilityLabel("\(appState.identity.name) is sitting with you.")
@@ -59,28 +68,47 @@ struct SitWithPetView: View {
                 }
                 .padding(.horizontal, PipSpacing.m)
                 Spacer()
-                VStack(spacing: 6) {
-                    if guidedBreathing {
-                        TimelineView(.periodic(from: breathStartedAt, by: 1)) { clock in
-                            let phase = clock.date.timeIntervalSince(breathStartedAt).truncatingRemainder(dividingBy: 10)
-                            Text(phase < 4 ? "Breathe in." : "Let it go.")
-                                .font(PipFont.title)
+                VStack(spacing: PipSpacing.m) {
+                    Group {
+                        if guidedBreathing {
+                            TimelineView(.periodic(from: .now, by: 0.25)) { clock in
+                                let phase = (clock.date.timeIntervalSinceReferenceDate * breathRate).truncatingRemainder(dividingBy: 1)
+                                Text(phase < 0.42 ? "Breathe in." : "Let it go.")
+                                    .contentTransition(.opacity)
+                            }
+                        } else {
+                            Text("Nothing to do. Just be.")
                         }
-                    } else {
-                        Text("Nothing to do. Just be.").font(PipFont.title)
                     }
-                    Button(guidedBreathing ? "Stop guided breathing" : "Breathe together") {
-                        Haptics.soft()
-                        breathStartedAt = .now
-                        guidedBreathing.toggle()
+                    .font(PipFont.title)
+                    .multilineTextAlignment(.center)
+                    .animation(.smooth(duration: 0.4), value: guidedBreathing)
+
+                    GlassEffectContainer(spacing: 12) {
+                        HStack(spacing: 12) {
+                            Button {
+                                Haptics.soft()
+                                        guidedBreathing.toggle()
+                            } label: {
+                                Label(guidedBreathing ? "Stop breathing guide" : "Breathe together", systemImage: guidedBreathing ? "stop.fill" : "wind")
+                                    .font(PipFont.headline)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 6)
+                            }
+                            .buttonStyle(.glass)
+                            .buttonBorderShape(.capsule)
+                            .controlSize(.large)
+
+                            Text(timerInterval: startedAt...startedAt.addingTimeInterval(24 * 3600), countsDown: false, showsHours: false)
+                                .monospacedDigit()
+                                .font(PipFont.headline)
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 18)
+                                .padding(.vertical, 14)
+                                .glassEffect(.regular, in: .capsule)
+                                .accessibilityLabel("Time together")
+                        }
                     }
-                    .font(PipFont.callout)
-                    .buttonStyle(.glass)
-                    .padding(.vertical, 12)
-                    Text(timerInterval: startedAt...startedAt.addingTimeInterval(24 * 3600), countsDown: false, showsHours: false)
-                        .monospacedDigit()
-                        .font(PipFont.callout)
-                        .foregroundStyle(.secondary)
                 }
                 .padding(.bottom, PipSpacing.xl)
             }
@@ -93,28 +121,4 @@ struct SitWithPetView: View {
         }
     }
 
-    /// A slow drift between the calm hues, like light moving across a room over a few minutes.
-    private var ambientLight: some View {
-        TimelineView(.animation(minimumInterval: reduceMotion ? 60 : 1 / 20)) { context in
-            let t = context.date.timeIntervalSinceReferenceDate
-            let phase = reduceMotion ? 0 : (t / 90).truncatingRemainder(dividingBy: 1) * 2 * Double.pi
-            let hues: [Color] = [MoodColor.bold(.calm), MoodColor.bold(.sad), MoodColor.bold(.tired), MoodColor.bold(.calm)]
-            let k = (sin(phase) + 1) / 2
-            let color = k < 0.5 ? blend(hues[0], hues[1], k * 2) : blend(hues[1], hues[2], (k - 0.5) * 2)
-            RadialGradient(colors: [color.opacity(scheme == .dark ? 0.35 : 0.22), color.opacity(0)],
-                           center: UnitPoint(x: 0.5 + 0.08 * sin(phase * 0.7), y: 0.42),
-                           startRadius: 0, endRadius: 420)
-                .ignoresSafeArea()
-        }
-    }
-
-    private func blend(_ a: Color, _ b: Color, _ t: Double) -> Color {
-        let ca = UIColor(a), cb = UIColor(b)
-        var (r1, g1, b1, a1): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
-        var (r2, g2, b2, a2): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
-        ca.getRed(&r1, green: &g1, blue: &b1, alpha: &a1)
-        cb.getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
-        let u = CGFloat(t)
-        return Color(red: r1 + (r2 - r1) * u, green: g1 + (g2 - g1) * u, blue: b1 + (b2 - b1) * u)
-    }
 }
