@@ -115,7 +115,7 @@ public extension View {
     /// The compile-time check keeps the project building with the iOS 26 SDK (CI runners).
     @ViewBuilder
     func pipNavigationTransition() -> some View {
-        #if swift(>=6.4) && os(iOS)
+        #if compiler(>=6.4) && os(iOS)
         if #available(iOS 27, *) {
             self.navigationTransition(.crossFade)
         } else {
@@ -130,7 +130,7 @@ public extension View {
     /// the context menu they also carry. Apply to the container of the rows.
     @ViewBuilder
     func pipSwipeActionsContainer() -> some View {
-        #if swift(>=6.4) && os(iOS)
+        #if compiler(>=6.4) && os(iOS)
         if #available(iOS 27, *) {
             self.swipeActionsContainer()
         } else {
@@ -143,7 +143,7 @@ public extension View {
 
     /// Whether rows can rely on swipe actions on this OS (see `pipSwipeActionsContainer`).
     static var pipSupportsSwipeActionsOutsideLists: Bool {
-        #if swift(>=6.4) && os(iOS)
+        #if compiler(>=6.4) && os(iOS)
         if #available(iOS 27, *) { return true }
         #endif
         return false
@@ -152,7 +152,7 @@ public extension View {
     /// iOS 27 tabs picker style, segmented on iOS 26.
     @ViewBuilder
     func pipTabsPickerStyle() -> some View {
-        #if swift(>=6.4) && os(iOS)
+        #if compiler(>=6.4) && os(iOS)
         if #available(iOS 27, *) {
             self.pickerStyle(.tabs)
         } else {

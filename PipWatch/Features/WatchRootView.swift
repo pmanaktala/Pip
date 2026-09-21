@@ -46,7 +46,7 @@ struct WatchHomeView: View {
                     if let entry = state.latestEntry, state.hasFreshMood {
                         Label(entry.intensity.phrase(for: entry.mood).capitalizedFirst, systemImage: entry.mood.symbolName)
                     } else {
-                        Label("How are you?", systemImage: "face.smiling")
+                        Label("How are you?", systemImage: "bubble.left.and.text.bubble.right.fill")
                     }
                 }
                 .buttonStyle(.borderedProminent)

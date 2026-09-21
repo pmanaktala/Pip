@@ -63,23 +63,43 @@ struct PetMomentLiveActivity: Widget {
                     .transition(.scale.combined(with: .opacity))
                     .animation(.spring(duration: 0.4, bounce: 0.3), value: state.pose)
             } compactTrailing: {
-                if sitting {
-                    Text(timerInterval: state.startedAt...state.endsAt, countsDown: false, showsHours: false)
-                        .monospacedDigit()
-                        .font(.system(.caption2, design: .rounded, weight: .bold))
-                        .foregroundStyle(color)
-                        .frame(maxWidth: 44)
-                } else {
-                    Image(systemName: state.mood.symbolName)
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(color)
-                }
+                CompactTrailing(state: state, color: color, sitting: sitting)
             } minimal: {
                 PetView(identity: identity, state: petState, showsShadow: false, framing: .badge)
                     .frame(width: 22, height: 22)
             }
             .widgetURL(URL(string: sitting ? "pip://sit" : "pip://home"))
             .keylineTint(color)
+        }
+    }
+}
+
+/// The compact trailing slot: a timer while sitting together, the mood glyph otherwise. On
+/// iOS 27, islands that are limited in width get just the glyph so the pet badge keeps its room.
+private struct CompactTrailing: View {
+    var state: PetMomentAttributes.ContentState
+    var color: Color
+    var sitting: Bool
+    @Environment(\.self) private var environment
+
+    private var limited: Bool {
+        #if compiler(>=6.4)
+        if #available(iOS 27, *) { return environment.isDynamicIslandLimitedInWidth }
+        #endif
+        return false
+    }
+
+    var body: some View {
+        if sitting, !limited {
+            Text(timerInterval: state.startedAt...state.endsAt, countsDown: false, showsHours: false)
+                .monospacedDigit()
+                .font(.system(.caption2, design: .rounded, weight: .bold))
+                .foregroundStyle(color)
+                .frame(maxWidth: 44)
+        } else {
+            Image(systemName: sitting ? "figure.mind.and.body" : state.mood.symbolName)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(color)
         }
     }
 }

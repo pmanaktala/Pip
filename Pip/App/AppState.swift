@@ -28,6 +28,8 @@ final class AppState {
     var lookTarget: CGPoint?
     var tapStreak = 0
     var lastTapAt: Date = .distantPast
+    /// The mood sheet is up (presented from the tab bar accessory; the Pet tab tilts its camera).
+    var isPickingMood = false
 
     var context: ModelContext { container.mainContext }
     private(set) var logger: MoodLogger

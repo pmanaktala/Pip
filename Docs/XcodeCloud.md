@@ -50,7 +50,7 @@ a release.
 | Setting | Value |
 | --- | --- |
 | Start condition | Branch changes · `main` · auto-cancel builds |
-| Environment | Latest **released** Xcode with the iOS 26+ SDK (Xcode 26 today; Xcode 27 once it ships), macOS latest. iOS 27-only APIs are guarded with `#if swift(>=6.4)` + `#available(iOS 27, *)`, so the project builds with either SDK. |
+| Environment | Latest **released** Xcode with the iOS 26+ SDK (Xcode 26 today; Xcode 27 once it ships), macOS latest. iOS 27-only APIs are guarded with `#if compiler(>=6.4)` + `#available(iOS 27, *)`, so the project builds with either SDK. (`compiler`, not `swift`: the project is in Swift language mode 5, and `#if swift(>=…)` tests the language mode, which silently disabled every guard until 21 Sep 2026.) |
 | Action 1 | **Test** · scheme `Pip` · iPhone 17 Pro · latest iOS · required to pass |
 | Action 2 | **Archive** · platform iOS · scheme `Pip` · Deployment preparation **TestFlight (Internal Testing Only)** |
 | Post-action | **TestFlight Internal Testing** → group `Internal` (redundant if automatic distribution is on, harmless either way) |

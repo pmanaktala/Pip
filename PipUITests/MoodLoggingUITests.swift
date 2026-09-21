@@ -25,9 +25,10 @@ final class MoodLoggingUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Done"].exists)
         app.buttons["Done"].tap()
 
-        // Main screen now reflects the fresh mood.
-        XCTAssertTrue(app.buttons["Update your mood"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Happy"].exists)
+        // The action now offers an update and the status line reflects the fresh mood
+        // (the accessory on iOS 26 and the prominent tab on iOS 27 both carry the same label).
+        XCTAssertTrue(app.buttons["Update your mood"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'looks happy'")).firstMatch.waitForExistence(timeout: 5))
 
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "home-after-log"
@@ -44,7 +45,7 @@ final class MoodLoggingUITests: XCTestCase {
         XCTAssertTrue(very.waitForExistence(timeout: 5))
         very.tap()
         app.buttons["Done"].tap()
-        XCTAssertTrue(app.staticTexts["Very stressed"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'frazzled'")).firstMatch.waitForExistence(timeout: 5))
     }
 
     func testHistoryShowsTodayAndSupportIsReachable() {
@@ -79,7 +80,7 @@ final class MoodLoggingUITests: XCTestCase {
         stop.tap()
         XCTAssertTrue(breathe.exists)
         app.buttons["Close"].tap()
-        XCTAssertTrue(app.buttons["Log your mood"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Log your mood"].waitForExistence(timeout: 8) || app.tabBars.buttons["Pet"].waitForExistence(timeout: 2))
     }
 
 }

@@ -7,7 +7,6 @@ import SwiftUI
 struct PetHomeView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var scheme
-    @State private var showMoodPicker = false
     @State private var showSitWithPet = false
     @State private var showPets = false
     @State private var showWidgets = false
@@ -55,13 +54,6 @@ struct PetHomeView: View {
             #if DEBUG
             .navigationDestination(isPresented: $showWidgets) { WidgetGalleryView() }
             #endif
-            .sheet(isPresented: $showMoodPicker) {
-                MoodPickerSheet()
-                    .presentationDetents([.height(380), .large])
-                    .presentationBackgroundInteraction(.enabled(upThrough: .height(380)))
-                    .presentationBackground(.thinMaterial)
-                    .presentationDragIndicator(.visible)
-            }
             .fullScreenCover(isPresented: $showSitWithPet) {
                 SitWithPetView()
             }
@@ -71,7 +63,6 @@ struct PetHomeView: View {
             #if DEBUG
             .onAppear {
                 switch ProcessInfo.processInfo.environment["PIP_DEBUG"] {
-                case "picker": showMoodPicker = true
                 case "pets": showPets = true
                 case "sit": showSitWithPet = true
                 case "widgets": showWidgets = true
@@ -95,9 +86,9 @@ struct PetHomeView: View {
             // While the mood sheet is up the camera tilts down: the pet rises into the visible
             // third of the screen so its reaction to the tap is the first thing you see.
             PetSceneWithClock(identity: appState.identity, state: appState.displayedState,
-                              petScale: showMoodPicker ? 0.5 : petScale, petVerticalPosition: showMoodPicker ? 0.27 : petVerticalPosition, showsFloor: true, showsBackground: true)
+                              petScale: appState.isPickingMood ? 0.5 : petScale, petVerticalPosition: appState.isPickingMood ? 0.27 : petVerticalPosition, showsFloor: true, showsBackground: true)
                 .contentShape(Rectangle())
-                .animation(.spring(duration: 0.55, bounce: 0.12), value: showMoodPicker)
+                .animation(.spring(duration: 0.55, bounce: 0.12), value: appState.isPickingMood)
                 .gesture(touch(in: geo.size))
         }
         .ignoresSafeArea()
@@ -163,20 +154,20 @@ struct PetHomeView: View {
 
     // MARK: Controls
 
-    /// Everything that floats over the floor: how they feel, the one action, today's moments.
+    /// What floats over the floor: one quiet line and, once there is more than one, today's faces.
+    /// The action itself lives in the tab bar accessory.
     private var controls: some View {
-        VStack(spacing: PipSpacing.m) {
+        VStack(spacing: 10) {
             statusLine
-            moodButton
-            todayStrip
+            todayFaces
         }
         .frame(maxWidth: 520)
         .padding(.horizontal, PipSpacing.l)
-        .padding(.bottom, PipSpacing.s)
+        .padding(.bottom, PipSpacing.m)
         .frame(maxWidth: .infinity)
     }
 
-    /// One quiet line under the pet: how they feel and since when, or an invitation.
+    /// How they feel and since when, or what they are up to.
     private var statusLine: some View {
         Group {
             if let entry = appState.latestEntry, appState.hasFreshMood {
@@ -185,7 +176,7 @@ struct PetHomeView: View {
                     Text("\(appState.identity.name) \(entry.mood.petDescription) · \(entry.timestamp.formatted(.relative(presentation: .named)))")
                 }
             } else {
-                Text("Ready when you are.")
+                Text(PetLife.describe(appState.identity.name, at: .now))
             }
         }
         .font(PipFont.callout)
@@ -195,83 +186,24 @@ struct PetHomeView: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// No fresh mood: a prominent glass capsule. Fresh mood: the same capsule carries the mood colour.
-    private var moodButton: some View {
-        Button {
-            Haptics.light()
-            showMoodPicker = true
-        } label: {
-            HStack(spacing: 12) {
-                if let entry = appState.latestEntry, appState.hasFreshMood {
-                    PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: entry.mood, intensity: entry.intensity, identity: appState.identity), showsShadow: false, framing: .face)
-                        .frame(width: 32, height: 32)
-                        .padding(3)
-                        .background(.white.opacity(0.28), in: Circle())
-                        .padding(.leading, -6)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(entry.intensity.phrase(for: entry.mood).capitalizedFirst)
-                            .font(PipFont.headline)
-                        Text("Tap to update")
-                            .font(PipFont.caption)
-                            .opacity(0.8)
-                    }
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.up")
-                        .font(.subheadline.weight(.bold))
-                        .opacity(0.8)
-                } else {
-                    Image(systemName: "face.smiling")
-                        .font(.title3.weight(.semibold))
-                    Text("How are you feeling?")
-                        .font(PipFont.headline)
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.up")
-                        .font(.subheadline.weight(.bold))
-                        .opacity(0.8)
-                }
-            }
-            .padding(.horizontal, 4)
-            .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.glassProminent)
-        .buttonBorderShape(.capsule)
-        .controlSize(.extraLarge)
-        .tint(mood.map(MoodColor.bold) ?? Color.accentColor)
-        .foregroundStyle(mood == nil ? Color.white : MoodColor.onBold)
-        .accessibilityLabel(appState.hasFreshMood ? "Update your mood" : "Log your mood")
-        .animation(.smooth(duration: 0.6), value: mood)
-    }
-
-    /// Today's moments as a row of small faces on their mood tint, in glass on the floor.
     @ViewBuilder
-    private var todayStrip: some View {
-        if !appState.todayEntries.isEmpty {
-            HStack(spacing: PipSpacing.m) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Today")
-                        .font(PipFont.headline)
-                    Text("^[\(appState.todayEntries.count) moment](inflect: true)")
-                        .font(PipFont.caption)
-                        .foregroundStyle(.secondary)
+    private var todayFaces: some View {
+        if appState.todayEntries.count > 1 {
+            HStack(spacing: -6) {
+                ForEach(appState.todayEntries.sorted { $0.timestamp < $1.timestamp }.suffix(8)) { entry in
+                    PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: entry.mood, intensity: entry.intensity, identity: appState.identity), showsShadow: false, framing: .face)
+                        .frame(width: 26, height: 26)
+                        .padding(2)
+                        .background(MoodColor.soft(entry.mood, scheme: scheme), in: Circle())
+                        .overlay(Circle().strokeBorder(Color(.systemBackground).opacity(0.9), lineWidth: 1.5))
+                        .accessibilityLabel("\(entry.intensity.phrase(for: entry.mood).capitalizedFirst), \(entry.timestamp.formatted(date: .omitted, time: .shortened))")
                 }
-                ScrollView(.horizontal) {
-                    HStack(spacing: 8) {
-                        ForEach(appState.todayEntries.sorted { $0.timestamp < $1.timestamp }) { entry in
-                            PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: entry.mood, intensity: entry.intensity, identity: appState.identity), showsShadow: false, framing: .face)
-                                .frame(width: 34, height: 34)
-                                .padding(3)
-                                .background(MoodColor.soft(entry.mood, scheme: scheme), in: Circle())
-                                .overlay(Circle().strokeBorder(MoodColor.bold(entry.mood).opacity(0.5), lineWidth: 1))
-                                .accessibilityLabel("\(entry.intensity.phrase(for: entry.mood).capitalizedFirst), \(entry.timestamp.formatted(date: .omitted, time: .shortened))")
-                        }
-                    }
-                }
-                .scrollIndicators(.hidden)
-                .scrollClipDisabled()
             }
-            .padding(.horizontal, PipSpacing.m)
-            .padding(.vertical, 12)
-            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: PipRadius.card, style: .continuous))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .glassEffect(.regular, in: .capsule)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("^[\(appState.todayEntries.count) moment](inflect: true) today")
             .transition(.opacity.combined(with: .move(edge: .bottom)))
         }
     }
@@ -299,13 +231,22 @@ struct PetSceneWithClock: View {
     var showsFloor = true
     var showsBackground = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.self) private var environment
+
+    /// 60 fps normally; 30 when the system asks for less (iOS 27's reduced-resource hint).
+    private var frameInterval: Double {
+        #if compiler(>=6.4)
+        if #available(iOS 27, *), environment.systemPrefersReducedResourceUsage { return 1.0 / 30 }
+        #endif
+        return 1.0 / 60
+    }
 
     var body: some View {
         if reduceMotion {
             PetSceneView(identity: identity, state: state, time: nil, petScale: petScale, petVerticalPosition: petVerticalPosition, showsFloor: showsFloor, showsBackground: showsBackground)
                 .animation(.smooth(duration: 0.6), value: state.rig)
         } else {
-            TimelineView(.animation(minimumInterval: 1.0 / 60)) { context in
+            TimelineView(.animation(minimumInterval: frameInterval)) { context in
                 PetSceneView(identity: identity, state: state, time: context.date.timeIntervalSinceReferenceDate, petScale: petScale, petVerticalPosition: petVerticalPosition, showsFloor: showsFloor, showsBackground: showsBackground, date: context.date)
                     .animation(.smooth(duration: 0.7), value: state.rig)
             }

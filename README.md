@@ -9,7 +9,8 @@ A small, Apple-native iOS app: a cute pet that visually reflects your mood, and 
 - **Apple Health** State of Mind sync, optional and write-only.
 - **Private by design:** no accounts, no tracking, no analytics, no servers. Local-first with private CloudKit mirroring so history survives reinstalls.
 
-Requires iOS 26. Built with the iOS 27 SDK; iOS 27-only niceties are guarded with availability checks.
+Requires iOS 26. Built with the iOS 27 SDK; iOS 27-only niceties (the prominent tab, swipe actions outside lists, the tabs picker, cross-fade navigation, reduced-resource frame rates) are guarded with `#if compiler(>=6.4)` and `#available(iOS 27, *)`.
+- **Apple Intelligence, on the device only:** the pet writes the History sentences from your entries with the system language model; nothing leaves the phone, and fixed phrases stand in wherever it is unavailable.
 
 ## Project
 

@@ -186,6 +186,7 @@ struct MoodChoice: View {
                     Image(systemName: mood.symbolName)
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(MoodColor.onBold)
+                        .symbolColorRenderingMode(.gradient)
                         .frame(width: 20, height: 20)
                         .background(MoodColor.bold(mood), in: Circle())
                         .overlay(Circle().strokeBorder(Color(.systemBackground).opacity(0.9), lineWidth: 1.5))
