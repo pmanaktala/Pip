@@ -482,12 +482,12 @@ public enum PetAnimator {
             }
 
         case .pageTurn:
-            // A flick of the right paw turns the page, a glance up as if something landed, back
-            // down to the book.
+            // The right paw climbs to the top corner of the page and flicks it over, a glance up as
+            // if something landed, back down to the book.
             if p < 0.5 {
                 let k = sin(p / 0.5 * .pi)
-                rig.armRaise = max(rig.armRaise, 0.3 * k)
-                rig.armHold *= 1 - 0.3 * k
+                rig.armRaise = max(rig.armRaise, 0.9 * k)
+                rig.armSymmetric = 0
                 live.prop = 1 - k
             } else {
                 let u = (p - 0.5) / 0.5

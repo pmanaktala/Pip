@@ -186,7 +186,7 @@ public struct AccessoryOverlay: View {
                 // Where the canopy wants to be: over the crown, drawn toward the holding paw so the
                 // shaft passes the cheek rather than the face.
                 let raise = CGFloat(live.prop)
-                let goal = CGPoint(x: p.head.center.x + (hand.x - p.head.center.x) * 0.5, y: p.head.top - 24 + (1 - raise) * 10)
+                let goal = CGPoint(x: p.head.center.x + (hand.x - p.head.center.x) * 0.35, y: p.head.top - 24 + (1 - raise) * 10)
                 let dx = goal.x - hand.x, dy = goal.y - hand.y
                 let shaftLen = max(30, sqrt(dx * dx + dy * dy))
                 let dir = CGPoint(x: dx / shaftLen, y: dy / shaftLen)
@@ -205,7 +205,7 @@ public struct AccessoryOverlay: View {
                 var canopyCtx = held
                 canopyCtx.translateBy(x: top.x, y: top.y)
                 canopyCtx.rotate(by: .radians(tiltAngle))
-                let canopyW: CGFloat = 108, canopyH: CGFloat = 28
+                let canopyW: CGFloat = 112, canopyH: CGFloat = 28
                 var canopy = Path()
                 canopy.move(to: CGPoint(x: -canopyW / 2, y: canopyH))
                 canopy.addQuadCurve(to: CGPoint(x: 0, y: 0), control: CGPoint(x: -canopyW * 0.42, y: -canopyH * 0.35))
@@ -296,17 +296,17 @@ public struct AccessoryOverlay: View {
                 ctx.fill(Path(roundedRect: base, cornerRadius: 2.5), with: .linearGradient(Gradient(colors: [shell, shellShade]), startPoint: CGPoint(x: base.midX, y: base.minY), endPoint: CGPoint(x: base.midX, y: base.maxY)))
                 // Lid: leans back toward the pet, so it is a hair narrower at the top.
                 var lid = Path()
-                lid.move(to: CGPoint(x: 70, y: 121))
-                lid.addLine(to: CGPoint(x: 130, y: 121))
+                lid.move(to: CGPoint(x: 70, y: 115))
+                lid.addLine(to: CGPoint(x: 130, y: 115))
                 lid.addLine(to: CGPoint(x: 133, y: 156))
                 lid.addLine(to: CGPoint(x: 67, y: 156))
                 lid.closeSubpath()
                 let lidRounded = lid.strokedPath(StrokeStyle(lineWidth: 3, lineJoin: .round)).union(lid)
-                ctx.fill(lidRounded, with: .linearGradient(Gradient(colors: [shellShade, shell]), startPoint: CGPoint(x: 100, y: 121), endPoint: CGPoint(x: 100, y: 156)))
+                ctx.fill(lidRounded, with: .linearGradient(Gradient(colors: [shellShade, shell]), startPoint: CGPoint(x: 100, y: 115), endPoint: CGPoint(x: 100, y: 156)))
                 // Screen light leaking around the lid's top edge.
-                ctx.fill(Path(roundedRect: CGRect(x: 71, y: 118.5, width: 58, height: 2.5), cornerRadius: 1.2), with: .color(glowColor.opacity(0.85 * flicker)))
+                ctx.fill(Path(roundedRect: CGRect(x: 71, y: 112.5, width: 58, height: 2.5), cornerRadius: 1.2), with: .color(glowColor.opacity(0.85 * flicker)))
                 // A small light on the back of the lid.
-                ctx.fill(Path(ellipseIn: CGRect(x: 97, y: 135, width: 6, height: 6)), with: .color(.white.opacity(scheme == .dark ? 0.55 : 0.9)))
+                ctx.fill(Path(ellipseIn: CGRect(x: 97, y: 132, width: 6, height: 6)), with: .color(.white.opacity(scheme == .dark ? 0.55 : 0.9)))
 
             case .book:
                 // An open book held between the paws: its lower corners sit in the hands, so it

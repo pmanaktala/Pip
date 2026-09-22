@@ -98,8 +98,10 @@ public enum PenguinPainter: PetPainter {
         var angle: CGFloat = 0.2 + raise * 2.0 + out * 0.5 + lift * 0.3 * (0.3 + raise + out)
         angle = angle * (1 - forward) + (-0.05 + max(0, lift) * 0.25) * forward
         len *= 1 - 0.2 * forward
-        angle = angle * (1 - hold) + (-0.75) * hold
-        len *= 1 - 0.1 * hold
+        // Held across the chest; a raise inside the hold bends the tip up toward the page's top corner.
+        let climb = CGFloat(rig.armRaise).clamped(0, 1) * (side == 1 ? 1 : sym)
+        angle = angle * (1 - hold) + (-0.75 - climb * 0.6) * hold
+        len *= 1 - 0.1 * hold - 0.15 * hold * climb
         angle = angle * (1 - face) + 3.7 * face
         len *= 1 - 0.2 * face
         angle = angle * (1 - cross) + (-0.55) * cross
@@ -108,9 +110,9 @@ public enum PenguinPainter: PetPainter {
         return (root, tip, dir, len)
     }
 
-    /// The right flipper's tip in body space (the hand, for held props).
-    public static func flipperTip(_ p: PetPaintContext) -> CGPoint {
-        flipper(p, side: 1).tip
+    /// A flipper's tip as right-side geometry (the hand, for held props); the caller mirrors for the left.
+    public static func flipperTip(_ p: PetPaintContext, side: CGFloat) -> CGPoint {
+        flipper(p, side: side).tip
     }
 
     /// A tiny wedge of a beak. Smiles lift its corners; opening drops a small lower mandible.

@@ -180,8 +180,9 @@ public enum PetDraw {
     /// Where the paw ends up for the rig, in body space, for `side` (+1 = the pet's right, drawn
     /// as written; -1 = the pet's left, mirrored). Rest hangs beside the belly; `armRaise` lifts the
     /// right paw (both when `armSymmetric`); `armOut` spreads wide; `armForward` reaches down to
-    /// the lap; `armHold` brings both paws up to the chest; `armToFace` brings the *left* paw to the
-    /// eye; `armCross` folds across the chest and wins over everything.
+    /// the lap; `armHold` brings both paws up to the chest (and a raise inside a hold climbs to the
+    /// top corner of what is held); `armToFace` brings the *left* paw to the eye; `armCross` folds
+    /// across the chest and wins over everything.
     public static func armEnd(_ p: PetPaintContext, side: CGFloat) -> (end: CGPoint, control: CGPoint) {
         let t = p.torso, h = p.head, rig = p.rig
         let cross = CGFloat(rig.armCross).clamped(0, 1)
@@ -197,17 +198,20 @@ public enum PetDraw {
 
         let root = armRoot(p)
         let rest = CGPoint(x: root.x + 7, y: root.y + 22)
-        let up = CGPoint(x: root.x + 18, y: root.y - 24)
+        let up = CGPoint(x: root.x + 14, y: root.y - 28)
         let wide = CGPoint(x: root.x + 30 + lift * 3, y: root.y + 4 - lift * 6)
         let lap = CGPoint(x: root.x - 10, y: t.bottom - 12 - max(0, lift) * 4)
         let chest = CGPoint(x: t.centerX + t.hipWidth * 0.2, y: t.top + t.height * 0.42)
+        // Within a hold, a raise climbs to the top outer corner of what is held (a page flick).
+        let chestUp = CGPoint(x: chest.x + 6, y: chest.y - 22)
         let eye = CGPoint(x: t.centerX + t.hipWidth * 0.14, y: h.center.y + h.height * 0.12)
         let folded = CGPoint(x: t.centerX - t.hipWidth * 0.12, y: root.y + 10)
 
         var end = lerp(rest, up, raised)
         end = lerp(end, wide, out)
         end = lerp(end, lap, forward)
-        end = lerp(end, chest, hold)
+        let climb = CGFloat(rig.armRaise).clamped(0, 1) * (side == 1 ? 1 : sym)
+        end = lerp(end, lerp(chest, chestUp, climb), hold)
         end = lerp(end, eye, face)
         end = lerp(end, folded, cross)
 
@@ -238,7 +242,7 @@ public enum PetDraw {
     public static func handPoint(_ p: PetPaintContext, species: PetSpecies, side: CGFloat) -> CGPoint {
         let point: CGPoint
         switch species {
-        case .penguin: point = PenguinPainter.flipperTip(p)
+        case .penguin: point = PenguinPainter.flipperTip(p, side: side)
         default: point = armEnd(p, side: side).end
         }
         return side == 1 ? point : CGPoint(x: 200 - point.x, y: point.y)
