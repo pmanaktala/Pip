@@ -37,7 +37,9 @@ final class MoodLoggingUITests: XCTestCase {
     }
 
     func testIntensityRefinementUpdatesEntry() {
-        app.buttons["Log your mood"].tap()
+        let logButton = app.buttons["Log your mood"]
+        XCTAssertTrue(logButton.waitForExistence(timeout: 8))
+        logButton.tap()
         app.buttons["Stressed"].tap()
         XCTAssertTrue(app.buttons["Done"].waitForExistence(timeout: 5))
         // Segmented control on iOS 26, tabs picker on iOS 27: both expose the segment as a button.
@@ -71,7 +73,10 @@ final class MoodLoggingUITests: XCTestCase {
         XCTAssertTrue(pet.waitForExistence(timeout: 5), "The pet must expose a VoiceOver label describing its mood")
     }
     func testBreathingCanStartAndStop() {
-        app.buttons["Sit with Pebble"].tap()
+        // Wait for the room like every other test does: a cold runner can still be launching.
+        let sit = app.buttons["Sit with Pebble"]
+        XCTAssertTrue(sit.waitForExistence(timeout: 8))
+        sit.tap()
         let breathe = app.buttons["Breathe together"]
         XCTAssertTrue(breathe.waitForExistence(timeout: 5))
         breathe.tap()
