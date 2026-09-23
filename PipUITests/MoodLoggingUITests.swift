@@ -80,7 +80,7 @@ final class MoodLoggingUITests: XCTestCase {
         let breathe = app.buttons["Breathe together"]
         XCTAssertTrue(breathe.waitForExistence(timeout: 5))
         breathe.tap()
-        let stop = app.buttons["Stop breathing guide"]
+        let stop = app.buttons["Just sit"]
         XCTAssertTrue(stop.waitForExistence(timeout: 5))
         stop.tap()
         XCTAssertTrue(breathe.exists)

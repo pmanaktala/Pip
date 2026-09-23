@@ -3,8 +3,8 @@
 A small, Apple-native iOS app: a cute pet that visually reflects your mood, and — quietly — an extremely low-friction mood tracker.
 
 - **One tap** to log a mood; the pet reacts with pose, expression and motion.
-- **Five pets** (cat, dog, capybara, penguin, red panda), each with a personality.
-- **Widgets** everywhere: Home Screen, Lock Screen, StandBy. **Live Activities** for pet moments.
+- **Three companions** (Pebble the penguin, Mochi the cat, Biscuit the dog) that notice you, answer the mood you log, and keep you company in it.
+- **Widgets** everywhere: Home Screen, Lock Screen, StandBy, watch faces. A **Live Activity** that keeps you company after you log — no timers.
 - **Apple Watch** companion with complications; moods logged on the wrist reach the phone in seconds (WatchConnectivity), with iCloud as the backup.
 - **Apple Health** State of Mind sync, optional and write-only.
 - **Private by design:** no accounts, no tracking, no analytics, no servers. Local-first with private CloudKit mirroring so history survives reinstalls.
@@ -25,11 +25,13 @@ Requires iOS 26. Built with the iOS 27 SDK; iOS 27-only niceties (the prominent 
 | `AppStore/` | Metadata, review notes, release checklist |
 | `scripts/` | `privacy-audit.sh` (run in CI and Xcode Cloud), `xcode-cloud-workflow.py` (creates the Xcode Cloud workflows via the App Store Connect API) |
 | `ci_scripts/` | Xcode Cloud hooks: toolchain check, privacy audit + build-number stamping, TestFlight notes |
-| `Docs/` | `CharacterSpec.md`, `Design/Principles.md` (design and care rules), `XcodeCloud.md` (pipeline setup) |
+| `Docs/` | `Pets/Bible.md` (the pets: research, cast, motion, surfaces), `Design/Principles.md` (design and care rules), `XcodeCloud.md` (pipeline setup) |
 
 ### How the pet works
 
-`Mood × intensity × species × personality` → `PetStateResolver` → a `PetMoodState` containing a flat, numeric **`PetRig`** (ears, tail, eyes, brows, mouth, body) plus a motion profile. `PetView` draws the rig in a `Canvas`; because the rig is `Animatable`, mood changes interpolate as movement rather than crossfading images. `PetAnimator` layers deterministic idle motion (breathing, blinking, gaze, tail) on top, so widgets can render the exact same pet statically.
+The rules are in [Docs/Pets/Bible.md](Docs/Pets/Bible.md). In short: a mood (or, when none is fresh, the pet's own day) is a **stance** — a resting pose, a prop, an idle character and a repertoire. `PetDirector` turns a scene (species, stance, recent events, a finger on the pet) and the clock into a `PetPose`: the stance, idle layers (breath, blinks, glances, sway, tail), one vignette at a time, event clips (arrival, the reaction to a log, boops, petting) and follow-through. It is a pure function of wall-clock time, so the phone, the watch and the widgets show the same pet. `PetRenderer` draws a pose in a 200 × 200 `Canvas` at three detail levels. `PetPresence` owns the live pet on the phone and the watch and passes pet events between them.
+
+Review the art on the Mac with PetLab: `tools/PetLab/build.sh && /tmp/petlab poses|stances|reactions|vignettes|director|tokens <out.png> [species]`.
 
 ### Data
 

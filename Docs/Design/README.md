@@ -4,9 +4,9 @@ Pip is a quiet place to visit a companion and acknowledge a feeling. The charact
 
 ## Character direction
 
-All five companions retain their identities and signature accessories. Rounder heads, soft directional shading, glossy eyes and front paws give them more presence. Expressions still come from the animatable rig, so mood changes, idle movement, waves, widgets and Live Activities use the same artwork. The illustration is native vector artwork, not a set of static image swaps.
+Three companions — Pebble, Mochi and Biscuit — drawn flat with one form shadow, a soft rim and lid-driven expressions. Expressions still come from the animatable rig, so mood changes, idle movement, waves, widgets and Live Activities use the same artwork. The illustration is native vector artwork, not a set of static image swaps.
 
-`Characters.png` is generated from the real renderer by `CharacterRenderTests`. It shows neutral, happy, sad, excited and stressed at moderate intensity. Resolver tests cover every mood, intensity and species. See `../CharacterSpec.md` for geometry and rendering rules.
+`Characters.png` is rendered by PetLab (`tools/PetLab`, command `cast`) from the real renderer: every companion in every mood stance, with the badge faces used by tokens. `PetRenderTests` renders the same sheet on the simulator. The rules are in `../Pets/Bible.md`.
 
 ## Surfaces and interactions
 

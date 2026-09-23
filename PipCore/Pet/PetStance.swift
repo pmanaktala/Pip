@@ -130,11 +130,11 @@ public enum PetStance: Codable, Hashable, Sendable {
         var p = PetPose()
         switch m {
         case .happy:
-            p.smile = 0.7; p.smileEyes = 0.35; p.blush = 0.45; p.earL = 0.4; p.earR = 0.4; p.tailUp = 0.5
-            p.headTilt = 4; p.armL = 12; p.armR = 12
+            p.smile = 0.7; p.smileEyes = 0.6; p.blush = 0.6; p.earL = 0.4; p.earR = 0.4; p.tailUp = 0.5
+            p.headTilt = 6; p.armL = 22; p.armR = 22
         case .excited:
-            p.smile = 0.9; p.mouthOpen = 0.35; p.eyeWide = 0.18; p.earL = 0.9; p.earR = 0.9; p.tailUp = 1
-            p.armL = 30; p.armR = 30; p.squash = -0.1; p.blush = 0.3; p.headNod = -0.1
+            p.smile = 0.9; p.mouthOpen = 0.5; p.eyeWide = 0.18; p.earL = 0.9; p.earR = 0.9; p.tailUp = 1
+            p.armL = 55; p.armR = 55; p.squash = -0.12; p.blush = 0.45; p.headNod = -0.15; p.smileEyes = 0.25
         case .calm:
             p.smile = 0.35; p.lidL = 0.35; p.lidR = 0.35; p.smileEyes = 0.2; p.slump = 0.1; p.headTilt = 3; p.blush = 0.15
         case .neutral:

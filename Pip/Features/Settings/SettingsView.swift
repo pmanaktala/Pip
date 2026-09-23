@@ -63,12 +63,11 @@ struct SettingsView: View {
             }
 
             Section {
-                Toggle("Mood changes", isOn: $prefs.liveActivitiesEnabled)
-                Toggle("Pet moments", isOn: $prefs.petMomentsEnabled)
+                Toggle("Keep me company", isOn: $prefs.liveActivitiesEnabled)
             } header: {
-                Text("Live Activities")
+                Text("Lock Screen")
             } footer: {
-                Text("Short Lock Screen moments after you log a mood, and the occasional invitation to sit together. They end on their own.")
+                Text("After you log a mood, \(appState.identity.name) stays on your Lock Screen and in the Dynamic Island for a while — longer after a hard one. Nothing counts down; it leaves on its own.")
             }
 
             Section {

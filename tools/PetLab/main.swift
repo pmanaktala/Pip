@@ -12,6 +12,7 @@ struct PetLab {
         switch command {
         case "check": LabCheck.choices(); return
         case "tokens": view = AnyView(LabTokens.sheet())
+        case "cast": view = AnyView(LabCast.sheet())
         case "reactions": view = AnyView(LabFilm.strips(species: species(args), rows: LabFilm.reactions(species(args))))
         case "vignettes": view = AnyView(LabFilm.strips(species: species(args), rows: LabFilm.vignettes(species(args)), size: 90))
         case "stances":

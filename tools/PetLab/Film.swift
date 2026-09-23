@@ -86,3 +86,24 @@ enum LabTokens {
         }.padding(12).background(Color.white)
     }
 }
+
+enum LabCast {
+    @MainActor static func sheet() -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ForEach(PetSpecies.allCases, id: \.self) { s in
+                HStack(spacing: 10) {
+                    ForEach(Mood.allCases, id: \.self) { m in
+                        let st = PetStance.mood(m, .moderate)
+                        VStack(spacing: 4) {
+                            LabPet(species: s, pose: st.holds(s)[0], prop: st.prop).frame(width: 150, height: 150)
+                            LabPet(species: s, pose: PetStance.tokenFace(m, s), detail: .badge).frame(width: 40, height: 40)
+                                .background(Circle().fill(m.tint.alpha(0.2).color))
+                            Text("\(s.defaultName) · \(m.displayName)").font(.system(size: 11, weight: .medium, design: .rounded)).foregroundStyle(.black)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(24).background(Color(red: 0.96, green: 0.95, blue: 0.93))
+    }
+}

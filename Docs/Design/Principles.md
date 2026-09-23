@@ -28,16 +28,17 @@ opens the app on a bad day. These are the rules every screen is judged against.
 
 ## Character: professional, not kids-app
 
-- One construction per species (`Docs/CharacterSpec.md`): mirrored paired parts, one upper-left
-  key light, one line weight, a single prop that carries the species.
-- **Moods change the pose before the face.** A sad pet sinks and holds an umbrella; a tired one
-  lies down and nods off. Verify at 24pt (badge), 40–120pt (face) and full screen.
-- **Personality is behaviour.** Idle motion is scheduled and eased (breath, blink, weight
-  shifts) and every mood has a signature *bit* — the wiggle, the zoomies, the flop, the stomp —
-  performed every so often, with alternates so a mood has more than one trick. When you sit
-  together the pet meditates with you; with the guide on, its breathing follows yours.
+- One construction per species (`Docs/Pets/Bible.md`): flat colour with one form shadow, a rim in
+  the coat's own darker tone, mirrored paired parts, emotion from the lids.
+- **Mirror, then accompany.** The pet answers a log with a short reaction, then keeps you company
+  in the mood: a blanket when you're sad, slow breaths when you're stressed, cocoa when you're calm.
+  Verify at 24pt (badge), 60pt (face) and full screen.
+- **Personality is behaviour.** Idle motion is layered and eased (breath, blinks, glances, sway)
+  and each stance has a repertoire of short vignettes played one at a time and never back to back.
+  Only the pet answers touch — a tap elsewhere in the room just draws its eyes. When you sit
+  together it closes its eyes and breathes; with the guide on, its chest follows the guide.
 - **The pet has its own day, but your mood comes first.** A fresh mood is always the mood. Once
-  it has faded (8 hours) the pet gets on with life (`PetLife`): asleep under a nightcap at night,
+  it has faded (8 hours) the pet gets on with its day (`PetDay`): asleep under a nightcap at night,
   a stretch at dawn, at a small laptop on weekday office hours, a book in the evening and at
   weekends. Props are drawn in the same canvas and follow the body. Widgets share the schedule.
 - Reduce Motion stills everything and keeps the pose.
