@@ -16,18 +16,8 @@ final class AppState {
     private(set) var identity: PetIdentity = .placeholder
     private(set) var latestEntry: MoodEntry?
     private(set) var todayEntries: [MoodEntry] = []
-    /// Set while the user is choosing a mood so the pet previews it.
-    var preview: (mood: Mood, intensity: MoodIntensity)?
-    /// A transient reaction (the user poked the pet).
-    var poke: PetMoodState?
-    var reactionTask: Task<Void, Never>?
-    /// A finger resting on the pet (see PetInteraction).
-    var isPetting = false
-    var purrTask: Task<Void, Never>?
-    /// Where a finger is, in -1…1 around the head, while one is on the room.
-    var lookTarget: CGPoint?
-    var tapStreak = 0
-    var lastTapAt: Date = .distantPast
+    /// The live pet: its stance, what just happened to it, a finger on it (Docs/Pets/Bible.md).
+    let pet: PetPresence
     /// The mood sheet is up (presented from the tab bar accessory; the Pet tab tilts its camera).
     var isPickingMood = false
 
@@ -41,34 +31,15 @@ final class AppState {
         let preferences = preferences ?? Preferences.shared
         self.preferences = preferences
         self.logger = MoodLogger(context: container.mainContext, sideEffects: sideEffects)
+        self.pet = PetPresence(snapshot: PipQueries.buildSnapshot(in: container.mainContext))
         Haptics.isEnabled = { [preferences] in preferences.hapticsEnabled }
         refresh()
         observeRemoteChanges()
+        // Reactions played here are played on the watch too, if it is showing the pet.
+        pet.broadcast = { event in DeviceSync.shared.send(event) }
     }
 
     // MARK: Derived state
-
-    /// What the pet should look like right now: the mood, with any reaction, petting or
-    /// finger-following layered on top.
-    var displayedState: PetMoodState {
-        var state: PetMoodState
-        if let poke {
-            state = poke
-        } else if let preview {
-            state = PetStateResolver.resolve(mood: preview.mood, intensity: preview.intensity, identity: identity)
-        } else {
-            state = snapshot.state()
-            #if DEBUG
-            // Screenshot automation: `PIP_MOOD=excited` forces the displayed mood.
-            if let forced = ProcessInfo.processInfo.environment["PIP_MOOD"], let mood = Mood(rawValue: forced) {
-                state = PetStateResolver.resolve(mood: mood, intensity: .moderate, identity: identity)
-            }
-            #endif
-        }
-        if isPetting { state = pettingOverlay(state) }
-        else if let lookTarget { state = lookOverlay(state, target: lookTarget) }
-        return state
-    }
 
     var snapshot: PetSnapshot {
         PetSnapshot(identity: identity,
@@ -97,6 +68,18 @@ final class AppState {
         latestEntry = PipQueries.latestEntry(in: context)
         todayEntries = PipQueries.entries(on: .now, in: context)
         logger.refreshSnapshot()
+        pet.update(petSnapshot)
+    }
+
+    /// The snapshot the pet is drawn from (honours the DEBUG `PIP_MOOD` override).
+    var petSnapshot: PetSnapshot {
+        var s = snapshot
+        #if DEBUG
+        if let forced = ProcessInfo.processInfo.environment["PIP_MOOD"], let mood = Mood(rawValue: forced) {
+            s.mood = mood; s.intensity = .moderate; s.loggedAt = Date.now.addingTimeInterval(-600)
+        }
+        #endif
+        return s
     }
 
     private func observeRemoteChanges() {
@@ -110,17 +93,17 @@ final class AppState {
 
     @discardableResult
     func log(mood: Mood, intensity: MoodIntensity = .moderate, contexts: [MoodContext] = [], note: String? = nil) -> MoodEntry {
-        preview = nil
         let entry = logger.log(mood: mood, intensity: intensity, contexts: contexts, note: note)
         latestEntry = entry
         todayEntries = PipQueries.entries(on: .now, in: context)
-        react(to: entry)
+        pet.logged(mood, intensity: intensity, snapshot: snapshot)
         return entry
     }
 
     func update(_ entry: MoodEntry, intensity: MoodIntensity? = nil, contexts: [MoodContext]? = nil, note: String?? = nil) {
         logger.update(entry, intensity: intensity, contexts: contexts, note: note)
         todayEntries = PipQueries.entries(on: .now, in: context)
+        pet.update(petSnapshot)
         DeviceSync.shared.send(entry)
     }
 
@@ -151,39 +134,6 @@ final class AppState {
         DeviceSync.shared.send(identity: identity)
     }
 
-    /// Reaction to a freshly logged mood, visible on the Pet tab behind the sheet: the pet jumps
-    /// into the new mood (positive) or sinks into it (negative), then settles into the resolved state.
-    func react(to entry: MoodEntry) {
-        reactionTask?.cancel()
-        let target = PetStateResolver.resolve(mood: entry.mood, intensity: entry.intensity, identity: identity)
-        var burst = target
-        if entry.mood.valence >= 0 {
-            burst.rig.lift -= 14
-            burst.rig.squash = min(1.1, burst.rig.squash + 0.06)
-            burst.rig.armRaise = 1
-            burst.rig.armSymmetric = 1
-            burst.rig.eyeArc = max(burst.rig.eyeArc, 0.6)
-            burst.accessory = entry.mood == .calm ? .heart : .sparkles
-        } else {
-            burst.rig.squash = max(0.9, burst.rig.squash - 0.05)
-            burst.rig.headDrop = min(1, burst.rig.headDrop + 0.2)
-        }
-        burst.motion.hopHeight = 0
-        // Then the new mood's signature bit, straight away and back to back, so the change is a
-        // performance rather than a pose swap; after that the normal, rarer schedule resumes.
-        var encore = target
-        encore.motion.bitInterval = max(target.motion.bit.duration, 0.1)
-        withAnimation(.spring(duration: 0.4, bounce: 0.4)) { poke = burst }
-        reactionTask = Task { @MainActor in
-            try? await Task.sleep(for: .seconds(0.9))
-            guard !Task.isCancelled else { return }
-            withAnimation(.smooth(duration: 0.4)) { poke = encore }
-            try? await Task.sleep(for: .seconds(min(target.motion.bit.duration * 1.5, 5)))
-            guard !Task.isCancelled else { return }
-            withAnimation(.smooth(duration: 0.6)) { poke = nil }
-        }
-    }
-
     #if DEBUG
     /// Fills two weeks of plausible entries for screenshots and previews.
     func seedDemoData() {
@@ -192,7 +142,7 @@ final class AppState {
         let moods: [Mood] = [.calm, .happy, .tired, .stressed, .excited, .neutral, .sad, .frustrated, .happy, .calm]
         for dayOffset in 0..<14 {
             let day = cal.date(byAdding: .day, value: -dayOffset, to: .now)!
-            let count = Int(PetAnimator.hash01(Double(dayOffset)) * 3) + (dayOffset % 4 == 3 ? 0 : 1)
+            let count = Int(PetMath.hash01(Double(dayOffset)) * 3) + (dayOffset % 4 == 3 ? 0 : 1)
             for i in 0..<count {
                 let hour = [9, 14, 20][i % 3]
                 let mood = moods[(dayOffset * 3 + i) % moods.count]
@@ -221,13 +171,9 @@ final class AppState {
         }
     }
 
-    /// Occasional foreground moments (wind-down, company, random). Rate-limited by the scheduler.
-    func evaluatePetMoments() {
-        PetMomentManager.shared.endExpired()
-        guard preferences.hasCompletedOnboarding else { return }
-        let scheduler = PetMomentScheduler()
-        guard let d = scheduler.foreground(snapshot: snapshot, petMomentsEnabled: preferences.petMomentsEnabled) else { return }
-        PetMomentManager.shared.start(kind: d.kind, mood: d.mood, intensity: d.intensity, message: d.message, identity: identity)
+    /// Company that has outstayed its time leaves the Lock Screen when the app comes back.
+    func tidyLiveActivities() {
+        PetCompanyManager.shared.endExpired()
     }
 
     // MARK: Deletion

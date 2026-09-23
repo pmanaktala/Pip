@@ -63,7 +63,7 @@ public final class PetProfile {
     public var id: UUID = UUID()
     public var speciesRaw: String = PetSpecies.penguin.rawValue
     public var name: String = PetSpecies.penguin.defaultName
-    public var personalityRaw: String = PetPersonality.chaotic.rawValue
+    public var personalityRaw: String = PetPersonality.earnest.rawValue
     /// Comma-separated accessory identifiers for future customisation.
     public var accessoriesRaw: String = ""
     public var createdAt: Date = Date.now

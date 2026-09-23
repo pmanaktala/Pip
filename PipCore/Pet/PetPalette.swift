@@ -1,90 +1,66 @@
 import SwiftUI
 
-/// Colours for one species: three tones for fur/feathers plus a handful of accents.
-/// Pets keep their own colours in dark mode so they stay recognisable; the scene adapts instead.
+/// A colour as plain components, so palettes can be mixed and shaded without UIKit or AppKit.
+public struct PetRGB: Equatable, Sendable {
+    public var r: Double, g: Double, b: Double, a: Double
+
+    public init(_ r: Double, _ g: Double, _ b: Double, _ a: Double = 1) {
+        self.r = r; self.g = g; self.b = b; self.a = a
+    }
+
+    public var color: Color { Color(.sRGB, red: r, green: g, blue: b, opacity: a) }
+
+    public func mix(_ o: PetRGB, _ t: Double) -> PetRGB {
+        PetRGB(r + (o.r - r) * t, g + (o.g - g) * t, b + (o.b - b) * t, a + (o.a - a) * t)
+    }
+
+    public func alpha(_ v: Double) -> PetRGB { PetRGB(r, g, b, v) }
+
+    /// A darker, slightly cooler tone of the same colour: the form shadow.
+    public var shade: PetRGB { mix(PetRGB(0.20, 0.16, 0.30), 0.22) }
+    /// The rim: a deeper tone of the colour, never black.
+    public var rim: PetRGB { mix(PetRGB(0.12, 0.08, 0.16), 0.48) }
+}
+
+/// The colours of one species. Pets keep their colours in dark mode; the room adapts instead.
 public struct PetPalette: Sendable {
-    /// Main fur / feather colour.
-    public var base: Color
-    /// Core-shadow tone of the base (darker, slightly more saturated).
-    public var shade: Color
-    /// Rim-light tone of the base.
-    public var light: Color
-    /// Belly, muzzle, face mask.
-    public var belly: Color
-    public var earInner: Color
-    /// Stripes, patches, tail rings.
-    public var marking: Color
-    /// Nose / beak / feet.
-    public var nose: Color
-    /// Facial ink: eyes, mouth, brows. Near-black, tinted to the species.
-    public var ink: Color
-    public var blush: Color
+    /// Main coat.
+    public var coat: PetRGB
+    /// Face, muzzle, chest and belly.
+    public var cream: PetRGB
+    /// Stripes, ear tips, the dog's ears.
+    public var marking: PetRGB
+    /// Inner ears, nose, pads.
+    public var pink: PetRGB
+    /// Beak and feet (penguin); nose (dog).
+    public var accent: PetRGB
+    /// Eyes, mouth lines, closed-eye strokes.
+    public var ink: PetRGB
+    public var blush: PetRGB
+    /// Held things (mug band, blanket, nightcap), a quiet colour per pet.
+    public var prop: PetRGB
 
     public static func palette(for species: PetSpecies) -> PetPalette {
         switch species {
-        case .cat:
-            PetPalette(
-                base: Color(red: 0.98, green: 0.70, blue: 0.34),
-                shade: Color(red: 0.88, green: 0.52, blue: 0.20),
-                light: Color(red: 0.99, green: 0.85, blue: 0.62),
-                belly: Color(red: 1.0, green: 0.95, blue: 0.87),
-                earInner: Color(red: 0.98, green: 0.74, blue: 0.70),
-                marking: Color(red: 0.80, green: 0.48, blue: 0.24),
-                nose: Color(red: 0.92, green: 0.56, blue: 0.56),
-                ink: Color(red: 0.22, green: 0.16, blue: 0.14),
-                blush: Color(red: 0.96, green: 0.50, blue: 0.45)
-            )
-        case .dog:
-            PetPalette(
-                base: Color(red: 0.98, green: 0.88, blue: 0.72),
-                shade: Color(red: 0.86, green: 0.70, blue: 0.50),
-                light: Color(red: 0.99, green: 0.94, blue: 0.84),
-                belly: Color(red: 1.0, green: 0.97, blue: 0.92),
-                earInner: Color(red: 0.52, green: 0.35, blue: 0.24),
-                marking: Color(red: 0.62, green: 0.42, blue: 0.28),
-                nose: Color(red: 0.22, green: 0.17, blue: 0.16),
-                ink: Color(red: 0.21, green: 0.16, blue: 0.14),
-                blush: Color(red: 0.96, green: 0.55, blue: 0.50)
-            )
-        case .capybara:
-            PetPalette(
-                base: Color(red: 0.78, green: 0.58, blue: 0.38),
-                shade: Color(red: 0.58, green: 0.40, blue: 0.24),
-                light: Color(red: 0.88, green: 0.72, blue: 0.54),
-                belly: Color(red: 0.90, green: 0.75, blue: 0.56),
-                earInner: Color(red: 0.56, green: 0.38, blue: 0.24),
-                marking: Color(red: 0.50, green: 0.35, blue: 0.23),
-                nose: Color(red: 0.36, green: 0.25, blue: 0.18),
-                ink: Color(red: 0.19, green: 0.13, blue: 0.11),
-                blush: Color(red: 0.96, green: 0.55, blue: 0.48)
-            )
         case .penguin:
-            PetPalette(
-                base: Color(red: 0.20, green: 0.22, blue: 0.26),
-                shade: Color(red: 0.12, green: 0.13, blue: 0.16),
-                light: Color(red: 0.32, green: 0.34, blue: 0.40),
-                belly: Color(red: 0.98, green: 0.97, blue: 0.94),
-                earInner: Color(red: 0.98, green: 0.80, blue: 0.40),
-                marking: Color(red: 0.98, green: 0.80, blue: 0.40),
-                nose: Color(red: 0.98, green: 0.64, blue: 0.26),
-                ink: Color(red: 0.10, green: 0.11, blue: 0.16),
-                blush: Color(red: 0.98, green: 0.58, blue: 0.55)
-            )
-        case .redPanda:
-            PetPalette(
-                base: Color(red: 0.93, green: 0.49, blue: 0.21),
-                shade: Color(red: 0.74, green: 0.32, blue: 0.11),
-                light: Color(red: 0.96, green: 0.62, blue: 0.36),
-                belly: Color(red: 0.31, green: 0.20, blue: 0.15),
-                earInner: Color(red: 0.98, green: 0.93, blue: 0.86),
-                marking: Color(red: 0.98, green: 0.93, blue: 0.86),
-                nose: Color(red: 0.20, green: 0.14, blue: 0.12),
-                ink: Color(red: 0.19, green: 0.13, blue: 0.11),
-                blush: Color(red: 0.98, green: 0.50, blue: 0.42)
-            )
+            PetPalette(coat: PetRGB(0.24, 0.26, 0.33), cream: PetRGB(0.98, 0.96, 0.91), marking: PetRGB(0.17, 0.18, 0.24),
+                       pink: PetRGB(0.97, 0.66, 0.64), accent: PetRGB(0.99, 0.67, 0.30), ink: PetRGB(0.13, 0.12, 0.17),
+                       blush: PetRGB(0.99, 0.56, 0.56, 0.5), prop: PetRGB(0.93, 0.42, 0.38))
+        case .cat:
+            PetPalette(coat: PetRGB(0.96, 0.64, 0.35), cream: PetRGB(1.0, 0.95, 0.87), marking: PetRGB(0.86, 0.47, 0.22),
+                       pink: PetRGB(0.97, 0.63, 0.62), accent: PetRGB(0.97, 0.63, 0.62), ink: PetRGB(0.20, 0.13, 0.12),
+                       blush: PetRGB(0.99, 0.50, 0.46, 0.45), prop: PetRGB(0.34, 0.62, 0.72))
+        case .dog:
+            PetPalette(coat: PetRGB(0.94, 0.77, 0.51), cream: PetRGB(1.0, 0.96, 0.88), marking: PetRGB(0.60, 0.39, 0.26),
+                       pink: PetRGB(0.96, 0.58, 0.60), accent: PetRGB(0.20, 0.14, 0.14), ink: PetRGB(0.18, 0.13, 0.13),
+                       blush: PetRGB(0.99, 0.52, 0.48, 0.45), prop: PetRGB(0.24, 0.62, 0.58))
         }
     }
+}
 
-    /// Ambient colour associated with a mood; always paired with shape/pose so colour is never the sole cue.
-    public static func ambient(for mood: Mood) -> Color { MoodColor.bold(mood) }
+public extension GraphicsContext {
+    func fill(_ path: Path, _ rgb: PetRGB) { fill(path, with: .color(rgb.color)) }
+    func stroke(_ path: Path, _ rgb: PetRGB, width: CGFloat, cap: CGLineCap = .round, join: CGLineJoin = .round) {
+        stroke(path, with: .color(rgb.color), style: StrokeStyle(lineWidth: width, lineCap: cap, lineJoin: join))
+    }
 }

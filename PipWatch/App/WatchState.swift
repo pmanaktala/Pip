@@ -15,8 +15,8 @@ final class WatchState {
     private(set) var identity: PetIdentity = .placeholder
     private(set) var latestEntry: MoodEntry?
     private(set) var todayEntries: [MoodEntry] = []
-    private(set) var reaction: PetMoodState?
-    private var reactionTask: Task<Void, Never>?
+    /// The same live pet as the phone's: same stance, same clock, reactions shared both ways.
+    let pet: PetPresence
     private let logger: MoodLogger
     private var remoteChangeObserver: (any NSObjectProtocol)?
     private static var remoteChangeHandler: (@MainActor () -> Void)?
@@ -28,11 +28,14 @@ final class WatchState {
         let preferences = preferences ?? Preferences.shared
         self.preferences = preferences
         self.logger = MoodLogger(context: container.mainContext, sideEffects: [DeviceSyncSideEffect()])
+        self.pet = PetPresence(snapshot: PipQueries.buildSnapshot(in: container.mainContext))
         Haptics.isEnabled = { [preferences] in preferences.hapticsEnabled }
         refresh()
         // Straight to the phone over WatchConnectivity; iCloud catches up on its own.
         DeviceSync.shared.start(container: container)
         DeviceSync.shared.onRemoteChange = { [weak self] in self?.refresh() }
+        DeviceSync.shared.onPetEvent = { [weak self] event in self?.pet.receive(event) }
+        pet.broadcast = { event in DeviceSync.shared.send(event) }
         remoteChangeObserver = NotificationCenter.default.addObserver(forName: .NSPersistentStoreRemoteChange, object: nil, queue: .main) { _ in
             Task { @MainActor in WatchState.remoteChangeHandler?() }
         }
@@ -44,6 +47,7 @@ final class WatchState {
         latestEntry = PipQueries.latestEntry(in: context)
         todayEntries = PipQueries.entries(on: .now, in: context)
         logger.refreshSnapshot()
+        pet.update(snapshot)
     }
 
     var snapshot: PetSnapshot {
@@ -56,8 +60,6 @@ final class WatchState {
         return Date.now.timeIntervalSince(t) < PetSnapshot.freshness
     }
 
-    var displayedState: PetMoodState { reaction ?? snapshot.state() }
-
     // MARK: Actions
 
     @discardableResult
@@ -66,36 +68,7 @@ final class WatchState {
         latestEntry = entry
         todayEntries = PipQueries.entries(on: .now, in: context)
         Haptics.success()
-        // The new mood's signature bit, straight away, so the log is a performance.
-        var encore = PetStateResolver.resolve(mood: mood, intensity: intensity, identity: identity)
-        encore.motion.bitInterval = max(encore.motion.bit.duration, 0.1)
-        show(encore, for: min(encore.motion.bit.duration * 1.5, 5))
+        pet.logged(mood, intensity: intensity, snapshot: snapshot)
         return entry
-    }
-
-    /// A tap on the pet: the same hello the phone gives, in character.
-    func poke() {
-        let reaction = PetReaction.tap(on: snapshot.state(), streak: 1)
-        Haptics.soft()
-        reactionTask?.cancel()
-        withAnimation(.spring(duration: 0.35, bounce: 0.4)) { self.reaction = reaction.first }
-        reactionTask = Task { @MainActor in
-            try? await Task.sleep(for: .seconds(reaction.hold))
-            guard !Task.isCancelled else { return }
-            withAnimation(.spring(duration: 0.45, bounce: 0.3)) { self.reaction = reaction.second }
-            try? await Task.sleep(for: .seconds(reaction.settle))
-            guard !Task.isCancelled else { return }
-            withAnimation(.smooth(duration: 0.5)) { self.reaction = nil }
-        }
-    }
-
-    private func show(_ state: PetMoodState, for seconds: Double) {
-        reactionTask?.cancel()
-        withAnimation(.spring(duration: 0.4, bounce: 0.35)) { reaction = state }
-        reactionTask = Task { @MainActor in
-            try? await Task.sleep(for: .seconds(seconds))
-            guard !Task.isCancelled else { return }
-            withAnimation(.smooth(duration: 0.6)) { reaction = nil }
-        }
     }
 }

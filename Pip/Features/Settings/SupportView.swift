@@ -9,7 +9,7 @@ struct SupportView: View {
         List {
             Section {
                 HStack(alignment: .top, spacing: PipSpacing.m) {
-                    PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: .calm, intensity: .slight, identity: appState.identity), showsShadow: false, framing: .face)
+                    PetView(species: appState.identity.species, mood: .calm, intensity: .slight, framing: .face)
                         .frame(width: 56, height: 56)
                     Text("Pip is a companion for noticing how you feel. It isn’t therapy, a diagnosis, or a substitute for care from a person who knows you. If things feel heavy, reaching out is always the right move.")
                         .font(PipFont.body)

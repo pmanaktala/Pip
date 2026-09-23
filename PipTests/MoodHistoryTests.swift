@@ -46,7 +46,7 @@ struct MoodHistoryTests {
         let data = try JSONEncoder().encode(snapshot)
         let decoded = try JSONDecoder().decode(PetSnapshot.self, from: data)
         #expect(decoded == snapshot)
-        #expect(decoded.state().mood == .excited)
+        #expect(decoded.freshMood() == .excited)
     }
 
     @Test func snapshotFadesOldMoodsAndSleepsAtNight() {
@@ -56,10 +56,10 @@ struct MoodHistoryTests {
         let loggedAt = cal.date(from: DateComponents(year: 2026, month: 9, day: 12, hour: 10))!
         let snapshot = PetSnapshot(identity: id, mood: .stressed, intensity: .strong, loggedAt: loggedAt)
         let soon = loggedAt.addingTimeInterval(3600)
-        #expect(snapshot.state(at: soon, calendar: cal).intensity == .strong)
+        #expect(snapshot.stance(at: soon, calendar: cal) == .mood(.stressed, .strong))
         let later = loggedAt.addingTimeInterval(9 * 3600)
-        #expect(snapshot.state(at: later, calendar: cal).intensity == .slight)
+        #expect(snapshot.freshMood(at: later) == nil)
         let night = cal.date(from: DateComponents(year: 2026, month: 9, day: 13, hour: 1))!
-        #expect(snapshot.state(at: night, calendar: cal).mood == .tired)
+        #expect(snapshot.stance(at: night, calendar: cal) == .life(.sleeping))
     }
 }

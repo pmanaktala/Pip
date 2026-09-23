@@ -38,22 +38,13 @@ public struct PetSnapshot: Codable, Equatable, Sendable {
 
     public static let placeholder = PetSnapshot(identity: .placeholder, mood: .calm, intensity: .moderate, loggedAt: .now)
 
-    /// The resolved pet state. Falls back to a resting pose when nothing has been logged.
-    public var state: PetMoodState {
-        if let mood { return PetStateResolver.resolve(mood: mood, intensity: intensity ?? .moderate, identity: identity) }
-        return PetStateResolver.resting(identity: identity)
-    }
-
-    /// Moods older than this are treated as "faded": the pet drifts back toward resting.
+    /// Moods older than this are treated as "faded": the pet gets on with its own day.
     public static let freshness: TimeInterval = 8 * 60 * 60
 
-    /// State adjusted for the passage of time. A fresh mood is the mood; once it has faded the
-    /// pet gets on with its own day (`PetLife`): asleep at night, at work, reading, lounging.
-    public func state(at date: Date = .now, calendar: Calendar = .current) -> PetMoodState {
-        guard let mood, let loggedAt, date.timeIntervalSince(loggedAt) <= Self.freshness else {
-            return PetLife.activity(at: date, calendar: calendar).state(identity: identity)
-        }
-        return PetStateResolver.resolve(mood: mood, intensity: intensity ?? .moderate, identity: identity)
+    /// The fresh mood at `date`, if there is one.
+    public func freshMood(at date: Date = .now) -> Mood? {
+        guard let mood, let loggedAt, date.timeIntervalSince(loggedAt) <= Self.freshness else { return nil }
+        return mood
     }
 }
 

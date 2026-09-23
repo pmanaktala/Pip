@@ -1,57 +1,44 @@
 import SwiftUI
 
-/// Sit with your pet. Nothing to complete. Stay two seconds or ten minutes.
-/// The pet settles into a meditation with you; with the guide on, its breathing, the ring and
-/// the words all follow one ten-second breath (four in, six out).
+/// Sit with your pet. Nothing to complete, nothing counting. Stay two seconds or ten minutes.
+/// The pet closes its eyes and breathes; with the guide on, its chest, the ring and the words
+/// follow one ten-second breath (four in, six out).
 struct SitWithPetView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.colorScheme) private var scheme
     @State private var ambience = AmbientSound()
-    @State private var startedAt = Date.now
     @State private var guidedBreathing = false
     @Environment(\.scenePhase) private var scenePhase
 
-    /// One breath every ten seconds when guided; a slow, unhurried one otherwise.
-    private var breathRate: Double { guidedBreathing ? 0.1 : 0.14 }
-
-    private var state: PetMoodState {
-        var s = PetStateResolver.resolve(mood: .calm, intensity: .moderate, identity: appState.identity)
-        // Sitting together is a meditation, not a logged "calm": floating, eyes closed, deep breaths.
-        s.motion.bit = .meditate
-        s.motion.breathRate = breathRate
-        s.motion.breathAmount = guidedBreathing ? 0.07 : 0.045
-        s.motion.blinkInterval = .infinity
-        s.motion.gazeInterval = .infinity
-        s.motion.sigh = 0
-        s.motion.hopHeight = 0
-        s.accessory = nil
-        return s
-    }
+    private let floor: CGFloat = 0.62
+    private let petScale: CGFloat = 0.72
 
     var body: some View {
         ZStack {
-            PetRoom(mood: .calm, horizon: 0.64)
+            PetRoom(mood: .calm, horizon: floor)
                 .ignoresSafeArea()
 
-            if guidedBreathing {
-                // The ring breathes on the same clock and curve as the pet's chest.
-                TimelineView(.animation(minimumInterval: reduceMotion ? 1 : 1.0 / 30)) { clock in
-                    let expansion = PetAnimator.breath(phase: clock.date.timeIntervalSinceReferenceDate * breathRate)
-                    Circle()
-                        .stroke(MoodColor.bold(.calm).opacity(0.35), lineWidth: 2)
-                        .frame(width: 300, height: 300)
-                        .scaleEffect(reduceMotion ? 1 : 0.82 + expansion * 0.32)
-                        .offset(y: -30)
-                        .accessibilityHidden(true)
+            GeometryReader { geo in
+            TimelineView(.animation(minimumInterval: reduceMotion ? 1 : 1.0 / 60, paused: reduceMotion)) { clock in
+                let breath = PetBreath.guide(at: clock.date)
+                ZStack {
+                    if guidedBreathing {
+                        Circle()
+                            .stroke(MoodColor.bold(.calm).opacity(0.35), lineWidth: 2)
+                            .frame(width: 300, height: 300)
+                            .scaleEffect(reduceMotion ? 1 : 0.8 + breath * 0.34)
+                            .position(x: geo.size.width / 2, y: geo.size.height * floor - geo.size.width * petScale * 0.5)
+                            .accessibilityHidden(true)
+                    }
+                    PetStage(scene: PetScene(species: appState.identity.species, stance: .meditating, breathGuide: guidedBreathing ? breath : nil),
+                             live: !reduceMotion, petScale: petScale, floor: floor, showsRoom: false)
                 }
             }
-
-            PetSceneWithClock(identity: appState.identity, state: state, petScale: 0.70, petVerticalPosition: 0.53, showsFloor: false, showsBackground: false)
-                .ignoresSafeArea()
-                .accessibilityElement()
-                .accessibilityLabel("\(appState.identity.name) is sitting with you.")
+            }
+            .ignoresSafeArea()
+            .accessibilityElement()
+            .accessibilityLabel(PetStance.meditating.describe(appState.identity.name))
 
             VStack {
                 HStack {
@@ -72,9 +59,9 @@ struct SitWithPetView: View {
                     Group {
                         if guidedBreathing {
                             TimelineView(.periodic(from: .now, by: 0.25)) { clock in
-                                let phase = (clock.date.timeIntervalSinceReferenceDate * breathRate).truncatingRemainder(dividingBy: 1)
-                                Text(phase < 0.42 ? "Breathe in." : "Let it go.")
+                                Text(PetBreath.isInhaling(at: clock.date) ? "Breathe in." : "Let it go.")
                                     .contentTransition(.opacity)
+                                    .animation(.smooth(duration: 0.6), value: PetBreath.isInhaling(at: clock.date))
                             }
                         } else {
                             Text("Nothing to do. Just be.")
@@ -82,33 +69,19 @@ struct SitWithPetView: View {
                     }
                     .font(PipFont.title)
                     .multilineTextAlignment(.center)
-                    .animation(.smooth(duration: 0.4), value: guidedBreathing)
 
-                    GlassEffectContainer(spacing: 12) {
-                        HStack(spacing: 12) {
-                            Button {
-                                Haptics.soft()
-                                        guidedBreathing.toggle()
-                            } label: {
-                                Label(guidedBreathing ? "Stop breathing guide" : "Breathe together", systemImage: guidedBreathing ? "stop.fill" : "wind")
-                                    .font(PipFont.headline)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 6)
-                            }
-                            .buttonStyle(.glass)
-                            .buttonBorderShape(.capsule)
-                            .controlSize(.large)
-
-                            Text(timerInterval: startedAt...startedAt.addingTimeInterval(24 * 3600), countsDown: false, showsHours: false)
-                                .monospacedDigit()
-                                .font(PipFont.headline)
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 18)
-                                .padding(.vertical, 14)
-                                .glassEffect(.regular, in: .capsule)
-                                .accessibilityLabel("Time together")
-                        }
+                    Button {
+                        Haptics.soft()
+                        withAnimation(.smooth(duration: 0.5)) { guidedBreathing.toggle() }
+                    } label: {
+                        Label(guidedBreathing ? "Just sit" : "Breathe together", systemImage: guidedBreathing ? "leaf" : "wind")
+                            .font(PipFont.headline)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 6)
                     }
+                    .buttonStyle(.glass)
+                    .buttonBorderShape(.capsule)
+                    .controlSize(.large)
                 }
                 .padding(.bottom, PipSpacing.xl)
             }
@@ -120,5 +93,4 @@ struct SitWithPetView: View {
             else { ambience.stop() }
         }
     }
-
 }

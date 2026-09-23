@@ -1,19 +1,34 @@
 import CoreGraphics
 import Foundation
 
-/// The pets available in v1. Kept deliberately small.
+/// The companions. Three distinct silhouettes, each finished to the same standard
+/// (see `Docs/Pets/Bible.md` §2). Earlier builds also offered a capybara and a red panda; those
+/// choices decode as the penguin.
 public enum PetSpecies: String, Codable, CaseIterable, Sendable, Identifiable, Hashable {
-    case cat, dog, capybara, penguin, redPanda
+    case penguin, cat, dog
 
     public var id: String { rawValue }
+
+    /// Tolerates retired species so old profiles, snapshots and watch messages still decode.
+    public init?(rawValue: String) {
+        switch rawValue {
+        case "penguin", "capybara", "redPanda": self = .penguin
+        case "cat": self = .cat
+        case "dog": self = .dog
+        default: return nil
+        }
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = PetSpecies(rawValue: raw) ?? .penguin
+    }
 
     public var displayName: String {
         switch self {
         case .cat: "Cat"
         case .dog: "Dog"
-        case .capybara: "Capybara"
         case .penguin: "Penguin"
-        case .redPanda: "Red Panda"
         }
     }
 
@@ -21,38 +36,46 @@ public enum PetSpecies: String, Codable, CaseIterable, Sendable, Identifiable, H
         switch self {
         case .cat: "Mochi"
         case .dog: "Biscuit"
-        case .capybara: "Juniper"
         case .penguin: "Pebble"
-        case .redPanda: "Rusty"
         }
     }
 
     public var defaultPersonality: PetPersonality {
         switch self {
-        case .cat: .dramatic
-        case .dog: .optimistic
-        case .capybara: .serene
-        case .penguin: .chaotic
-        case .redPanda: .sleepy
+        case .cat: .independent
+        case .dog: .wholehearted
+        case .penguin: .earnest
         }
     }
-
 
     /// One-line personality blurb shown in the pet selector.
     public var blurb: String {
         switch self {
-        case .cat: "A little dramatic. Feels everything at full volume."
-        case .dog: "Relentlessly optimistic. Even bad days have a tail wag."
-        case .capybara: "Deeply unbothered. Sits with you through anything."
-        case .penguin: "Chaotic and enthusiastic. Waddles into every feeling."
-        case .redPanda: "Sleepy and soft. Most moods are a reason for a nap."
+        case .penguin: "Earnest and a little clumsy. Flaps when it’s happy for you."
+        case .cat: "Independent, secretly devoted. Slow-blinks when you’re around."
+        case .dog: "Wholehearted. The whole back end wags when you show up."
         }
     }
 }
 
 /// Subtle behavioural flavour. Same mood, slightly different reaction.
 public enum PetPersonality: String, Codable, CaseIterable, Sendable, Hashable {
-    case dramatic, optimistic, serene, chaotic, sleepy
+    case earnest, independent, wholehearted
+
+    /// Maps personalities from earlier builds onto the current three.
+    public init?(rawValue: String) {
+        switch rawValue {
+        case "earnest", "chaotic", "serene": self = .earnest
+        case "independent", "dramatic", "sleepy": self = .independent
+        case "wholehearted", "optimistic": self = .wholehearted
+        default: return nil
+        }
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = PetPersonality(rawValue: raw) ?? .earnest
+    }
 
     public var displayName: String { rawValue.capitalized }
 }

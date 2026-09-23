@@ -1,128 +1,141 @@
 import SwiftUI
 
-/// Props — one per pet. They carry most of the character's charm, and the neck props
-/// double as a clean seam between head and body. Draw them through the head context
-/// after the face so they tilt with the head.
-public enum PetProps {
+/// The few things a pet holds or wears. Each belongs to a stance (Bible §4) and is drawn in the
+/// pet's own transform so it moves with the body, in the paws.
+public enum PetProp: String, Codable, Sendable, Hashable, CaseIterable {
+    /// A warm mug held at the chest (calm, the evening). Rises to the mouth for a sip.
+    case mug
+    /// A book held open in both paws (reading).
+    case book
+    /// A blanket round the shoulders (tired, sad, winding down, asleep).
+    case blanket
+    /// A nightcap (asleep).
+    case nightcap
+    /// A ball on the floor beside the pet (playing).
+    case ball
 
-    public static let coral = Color(red: 0.95, green: 0.40, blue: 0.36)
-    public static let coralShade = Color(red: 0.78, green: 0.27, blue: 0.25)
-    public static let teal = Color(red: 0.26, green: 0.66, blue: 0.70)
-    public static let tealShade = Color(red: 0.17, green: 0.50, blue: 0.55)
-    public static let leafGreen = Color(red: 0.46, green: 0.74, blue: 0.38)
-    public static let leafShade = Color(red: 0.30, green: 0.56, blue: 0.26)
-    public static let gold = Color(red: 0.98, green: 0.78, blue: 0.28)
-    public static let goldShade = Color(red: 0.82, green: 0.58, blue: 0.14)
-    public static let yuzu = Color(red: 0.99, green: 0.70, blue: 0.22)
-    public static let yuzuShade = Color(red: 0.86, green: 0.52, blue: 0.12)
+    var isWorn: Bool { self == .nightcap }
+    /// Drawn after the body and before the arms (the paws go over or beside it).
+    var drawnBehindArms: Bool { self == .blanket || self == .ball }
+}
 
-    /// A knitted scarf: a band around the neck with one end hanging over the chest.
-    public static func scarf(_ ctx: inout GraphicsContext, _ p: PetPaintContext, color: Color = coral, shade: Color = coralShade) {
-        let h = p.head
-        let y = h.bottom - h.height * 0.1
-        let w = h.width * 0.74, bandH = h.height * 0.16
-        let band = CGRect(x: h.center.x - w / 2, y: y - bandH / 2, width: w, height: bandH)
-        var bandPath = Path(roundedRect: band, cornerRadius: bandH / 2)
-        // The band bows a little, like fabric.
-        bandPath = bandPath.union(Path(ellipseIn: CGRect(x: band.minX + w * 0.1, y: band.minY + bandH * 0.3, width: w * 0.8, height: bandH * 1.1)))
-        // Hanging end on the pet's right, with a fringe.
-        let tailW = bandH * 1.15, tailH = h.height * 0.34
-        let tail = CGRect(x: h.center.x + w * 0.16, y: band.midY, width: tailW, height: tailH)
-        let tailPath = Path(roundedRect: tail, cornerRadius: tailW * 0.3).applying(CGAffineTransform(translationX: tail.midX, y: tail.minY).rotated(by: -0.12).translatedBy(x: -tail.midX, y: -tail.minY))
-        PetDraw.form(&ctx, tailPath, in: tail, base: color, shade: shade, light: .white, strength: 0.9)
-        if p.detail == .full {
-            var fringe = Path()
-            for i in 0..<3 {
-                let fx = tail.minX + tailW * (0.2 + 0.3 * CGFloat(i))
-                fringe.move(to: CGPoint(x: fx, y: tail.maxY - 2))
-                fringe.addLine(to: CGPoint(x: fx + 1, y: tail.maxY + 5))
-            }
-            ctx.stroke(fringe.applying(CGAffineTransform(translationX: tail.midX, y: tail.minY).rotated(by: -0.12).translatedBy(x: -tail.midX, y: -tail.minY)), with: .color(shade), style: StrokeStyle(lineWidth: 2.4, lineCap: .round))
-            var knit = Path()
-            for i in 0..<4 {
-                let kx = band.minX + w * (0.2 + 0.2 * CGFloat(i))
-                knit.move(to: CGPoint(x: kx, y: band.minY + 3))
-                knit.addLine(to: CGPoint(x: kx - 3, y: band.maxY - 3))
-            }
-            PetDraw.form(&ctx, bandPath, in: band, base: color, shade: shade, light: .white, strength: 0.9)
-            ctx.stroke(knit, with: .color(shade.opacity(0.6)), style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
-        } else {
-            PetDraw.form(&ctx, bandPath, in: band, base: color, shade: shade, light: .white, strength: 0.9)
+enum PetPropArt {
+    static func held(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure, _ prop: PetProp) {
+        switch prop {
+        case .mug: mug(ctx, p, fig)
+        case .book: book(ctx, p, fig)
+        case .blanket: blanket(ctx, p, fig)
+        case .ball: ball(ctx, p)
+        case .nightcap: break
         }
     }
 
-    /// A thin collar with a little bell: a band that curves *around* the neck, so it sits on the
-    /// body rather than floating under the chin, with the bell hanging from its lowest point.
-    public static func collar(_ ctx: inout GraphicsContext, _ p: PetPaintContext, color: Color = coral, shade: Color = coralShade) {
-        let h = p.head
-        let y = h.bottom - h.height * 0.1
-        let w = h.width * 0.64, bandH = h.height * 0.07
-        let dip = h.height * 0.09
+    /// Between the two paws, so it is always in the hands.
+    static func between(_ p: PetPaint, _ fig: PetFigure) -> CGPoint {
+        let r = fig.paw(p.species, angle: p.pose.armR), l = fig.paw(p.species, angle: p.pose.armL)
+        return CGPoint(x: 100 + (r.x - l.x) / 2, y: (r.y + l.y) / 2)
+    }
+
+    static func mug(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure) {
+        let c = between(p, fig)
+        let body = CGRect(x: c.x - 11, y: c.y - 14, width: 22, height: 20)
+        let cup = Path(roundedRect: body, cornerSize: CGSize(width: 5, height: 5), style: .continuous)
+        var handle = Path()
+        handle.addEllipse(in: CGRect(x: body.maxX - 4, y: body.minY + 4, width: 11, height: 11))
+        ctx.stroke(handle, PetRGB(0.97, 0.95, 0.92).rim, width: 4.6)
+        ctx.stroke(handle, PetRGB(0.97, 0.95, 0.92), width: 2.8)
+        PetDraw.solid(ctx, cup, PetRGB(0.98, 0.96, 0.92), rim: p.rim, depth: 3)
+        var band = ctx
+        band.clip(to: cup)
+        band.fill(Path(CGRect(x: body.minX, y: body.minY + 7, width: body.width, height: 5)), p.palette.prop)
+        // Cocoa at the rim.
+        ctx.fill(PetDraw.ellipse(CGPoint(x: body.midX, y: body.minY + 1.2), 9.5, 2.2), PetRGB(0.52, 0.33, 0.24))
+        // Steam, rising and fading.
+        let t = p.time ?? 0.6
+        for i in 0..<2 {
+            let phase = (t * 0.45 + Double(i) * 0.5).truncatingRemainder(dividingBy: 1)
+            let x = body.midX + CGFloat(i == 0 ? -3.5 : 3.5) + CGFloat(sin(phase * 6 + Double(i))) * 2
+            let y = body.minY - 4 - CGFloat(phase) * 18
+            var wisp = Path()
+            wisp.move(to: CGPoint(x: x, y: y + 6))
+            wisp.addQuadCurve(to: CGPoint(x: x, y: y - 3), control: CGPoint(x: x + 4, y: y + 1.5))
+            ctx.stroke(wisp, PetRGB(1, 1, 1, 0.75 * sin(phase * .pi)), width: 2)
+        }
+    }
+
+    static func book(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure) {
+        let c = between(p, fig)
+        let w: CGFloat = 44, h: CGFloat = 28
+        let r = CGRect(x: c.x - w / 2, y: c.y - h + 6, width: w, height: h)
+        // Page edges peeking over the top, then the cover facing us.
+        let pages = Path(roundedRect: r.offsetBy(dx: 0, dy: -2.5).insetBy(dx: 2, dy: 0), cornerSize: CGSize(width: 3, height: 3))
+        ctx.fill(pages, PetRGB(0.99, 0.97, 0.92))
+        ctx.stroke(pages, PetRGB(0.85, 0.82, 0.76), width: 1)
+        let cover = Path(roundedRect: r, cornerSize: CGSize(width: 3.5, height: 3.5), style: .continuous)
+        PetDraw.solid(ctx, cover, p.palette.prop, rim: p.rim, depth: 3)
+        var spine = Path()
+        spine.move(to: CGPoint(x: r.midX, y: r.minY + 1))
+        spine.addLine(to: CGPoint(x: r.midX, y: r.maxY - 1))
+        ctx.stroke(spine, p.palette.prop.rim.alpha(0.6), width: 1.6)
+        ctx.fill(Path(roundedRect: CGRect(x: r.midX + 6, y: r.minY + 7, width: 12, height: 3), cornerSize: CGSize(width: 1.5, height: 1.5)), PetRGB(1, 1, 1, 0.55))
+    }
+
+    static func blanket(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure) {
+        let floor = PetFigure.floor
+        let top = fig.neck.y - 4 + CGFloat(p.pose.slump) * 4
+        let w: CGFloat = p.species == .penguin ? 50 : 52
+        let color = PetRGB(0.62, 0.66, 0.80).mix(p.palette.prop, 0.25)
+        PetDraw.mirrored(ctx, axis: 100) { c, _ in
+            // One side of the drape: over the shoulder, down the side, open at the front.
+            var side = Path()
+            side.move(to: CGPoint(x: 100 + 4, y: top))
+            side.addQuadCurve(to: CGPoint(x: 100 + w, y: top + 34), control: CGPoint(x: 100 + w * 0.8, y: top - 2))
+            side.addQuadCurve(to: CGPoint(x: 100 + w + 2, y: floor - 1), control: CGPoint(x: 100 + w + 6, y: top + 60))
+            side.addLine(to: CGPoint(x: 100 + 16, y: floor - 1))
+            side.addQuadCurve(to: CGPoint(x: 100 + 4, y: top), control: CGPoint(x: 100 + 26, y: top + 30))
+            side.closeSubpath()
+            PetDraw.solid(c, side, color, rim: p.rim, depth: 6)
+            // A knit stripe near the hem.
+            var hem = c
+            hem.clip(to: side)
+            hem.fill(Path(CGRect(x: 100, y: floor - 14, width: w + 10, height: 4)), PetRGB(0.98, 0.96, 0.92, 0.75))
+        }
+    }
+
+    static func ball(_ ctx: GraphicsContext, _ p: PetPaint) {
+        let c = CGPoint(x: 158, y: PetFigure.floor - 11)
+        let ball = PetDraw.ellipse(c, 11, 11)
+        PetDraw.solid(ctx, ball, p.palette.prop, rim: p.rim, depth: 4)
+        var stripe = ctx
+        stripe.clip(to: ball)
+        var s = Path()
+        s.move(to: CGPoint(x: c.x - 12, y: c.y + 3))
+        s.addQuadCurve(to: CGPoint(x: c.x + 12, y: c.y - 3), control: CGPoint(x: c.x, y: c.y - 5))
+        stripe.stroke(s, PetRGB(1, 1, 1, 0.9), width: 3)
+    }
+
+    /// Worn on the head; the tip droops toward the lean.
+    static func nightcap(_ head: GraphicsContext, _ p: PetPaint, _ fig: PetFigure) {
+        let ry = fig.headRY
+        let color = PetRGB(0.52, 0.56, 0.84)
+        var cap = Path()
+        cap.move(to: CGPoint(x: -fig.headRX * 0.78, y: -ry * 0.5))
+        cap.addQuadCurve(to: CGPoint(x: fig.headRX * 0.78, y: -ry * 0.5), control: CGPoint(x: 0, y: -ry * 1.35))
+        cap.addQuadCurve(to: CGPoint(x: fig.headRX * 0.95, y: -ry * 0.1), control: CGPoint(x: fig.headRX * 1.1, y: -ry * 0.62))
+        cap.closeSubpath()
+        var cone = Path()
+        cone.move(to: CGPoint(x: -fig.headRX * 0.72, y: -ry * 0.62))
+        cone.addQuadCurve(to: CGPoint(x: fig.headRX * 1.05, y: -ry * 0.05), control: CGPoint(x: fig.headRX * 0.2, y: -ry * 1.9))
+        cone.addQuadCurve(to: CGPoint(x: fig.headRX * 0.7, y: -ry * 0.55), control: CGPoint(x: fig.headRX * 0.85, y: -ry * 0.5))
+        cone.closeSubpath()
+        PetDraw.solid(head, cone, color, rim: p.rim, depth: 5)
+        // Band.
         var band = Path()
-        band.move(to: CGPoint(x: h.center.x - w / 2, y: y))
-        band.addQuadCurve(to: CGPoint(x: h.center.x + w / 2, y: y), control: CGPoint(x: h.center.x, y: y + dip * 2))
-        let bandStroke = band.strokedPath(StrokeStyle(lineWidth: bandH, lineCap: .round))
-        let bandBox = CGRect(x: h.center.x - w / 2, y: y - bandH / 2, width: w, height: dip + bandH)
-        PetDraw.form(&ctx, bandStroke, in: bandBox, base: color, shade: shade, light: .white, strength: 0.6)
-        let r = bandH * 1.05
-        let bell = CGRect(x: h.center.x - r, y: y + dip + bandH * 0.15, width: r * 2, height: r * 2)
-        PetDraw.form(&ctx, Path(ellipseIn: bell), in: bell, base: gold, shade: goldShade, light: .white, strength: 0.8)
-        if p.detail == .full {
-            var slit = Path()
-            slit.move(to: CGPoint(x: bell.midX, y: bell.midY + r * 0.2))
-            slit.addLine(to: CGPoint(x: bell.midX, y: bell.maxY - r * 0.25))
-            ctx.stroke(slit, with: .color(goldShade), style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
-            ctx.fill(Path(ellipseIn: CGRect(x: bell.midX - r * 0.45, y: bell.minY + r * 0.35, width: r * 0.35, height: r * 0.25)), with: .color(.white.opacity(0.7)))
-        }
-    }
-
-    /// A bandana knotted at the back, hanging over the chest.
-    public static func bandana(_ ctx: inout GraphicsContext, _ p: PetPaintContext, color: Color = teal, shade: Color = tealShade) {
-        let h = p.head
-        let y = h.bottom - h.height * 0.08
-        let w = h.width * 0.7, bandH = h.height * 0.11
-        let band = CGRect(x: h.center.x - w / 2, y: y - bandH / 2, width: w, height: bandH)
-        var tri = Path()
-        tri.move(to: CGPoint(x: band.minX + w * 0.18, y: band.midY))
-        tri.addLine(to: CGPoint(x: band.maxX - w * 0.18, y: band.midY))
-        tri.addQuadCurve(to: CGPoint(x: h.center.x + w * 0.06, y: band.maxY + h.height * 0.3), control: CGPoint(x: h.center.x + w * 0.3, y: band.maxY + h.height * 0.2))
-        tri.addQuadCurve(to: CGPoint(x: band.minX + w * 0.18, y: band.midY), control: CGPoint(x: h.center.x - w * 0.24, y: band.maxY + h.height * 0.2))
-        tri.closeSubpath()
-        PetDraw.form(&ctx, tri, in: tri.boundingRect, base: color, shade: shade, light: .white, strength: 0.8)
-        PetDraw.form(&ctx, Path(roundedRect: band, cornerRadius: bandH / 2), in: band, base: color, shade: shade, light: .white, strength: 0.6)
-        if p.detail == .full {
-            var dots = ctx
-            dots.clip(to: tri)
-            for (dx, dy) in [(-0.1, 0.05), (0.08, 0.08), (-0.02, 0.17), (0.14, 0.15), (-0.14, 0.14)] {
-                let c = CGPoint(x: h.center.x + CGFloat(dx) * w, y: band.maxY + CGFloat(dy) * h.height)
-                dots.fill(Path(ellipseIn: CGRect(x: c.x - 2, y: c.y - 2, width: 4, height: 4)), with: .color(.white.opacity(0.8)))
-            }
-        }
-    }
-
-    /// A single leaf resting on the crown.
-    public static func leaf(_ ctx: inout GraphicsContext, _ p: PetPaintContext, at anchor: CGPoint, size: CGFloat, angle: CGFloat = -0.5) {
-        var leaf = Path()
-        leaf.move(to: .zero)
-        leaf.addQuadCurve(to: CGPoint(x: size, y: 0), control: CGPoint(x: size * 0.5, y: -size * 0.55))
-        leaf.addQuadCurve(to: .zero, control: CGPoint(x: size * 0.5, y: size * 0.55))
-        leaf.closeSubpath()
-        let t = CGAffineTransform(translationX: anchor.x, y: anchor.y).rotated(by: angle)
-        let path = leaf.applying(t)
-        PetDraw.form(&ctx, path, in: path.boundingRect, base: leafGreen, shade: leafShade, light: .white, strength: 0.8)
-        var vein = Path()
-        vein.move(to: CGPoint(x: size * 0.1, y: 0))
-        vein.addLine(to: CGPoint(x: size * 0.9, y: 0))
-        ctx.stroke(vein.applying(t), with: .color(leafShade.opacity(0.7)), style: StrokeStyle(lineWidth: 1.4, lineCap: .round))
-    }
-
-    /// A little yuzu balanced on the head — the capybara's signature.
-    public static func yuzu(_ ctx: inout GraphicsContext, _ p: PetPaintContext, at center: CGPoint, radius r: CGFloat) {
-        let rect = CGRect(x: center.x - r, y: center.y - r, width: r * 2, height: r * 2)
-        PetDraw.form(&ctx, Path(ellipseIn: rect), in: rect, base: yuzu, shade: yuzuShade, light: .white, strength: 1)
-        if p.detail == .full {
-            ctx.fill(Path(ellipseIn: CGRect(x: center.x - r * 0.15, y: center.y - r * 0.95, width: r * 0.3, height: r * 0.24)), with: .color(yuzuShade))
-        }
-        leaf(&ctx, p, at: CGPoint(x: center.x + r * 0.05, y: center.y - r * 0.9), size: r * 1.1, angle: -0.9)
+        band.move(to: CGPoint(x: -fig.headRX * 0.8, y: -ry * 0.52))
+        band.addQuadCurve(to: CGPoint(x: fig.headRX * 0.78, y: -ry * 0.52), control: CGPoint(x: 0, y: -ry * 0.92))
+        head.stroke(band, PetRGB(0.98, 0.96, 0.92).rim, width: 9 + p.rim * 2)
+        head.stroke(band, PetRGB(0.98, 0.96, 0.92), width: 9)
+        let pom = PetDraw.ellipse(CGPoint(x: fig.headRX * 1.08, y: -ry * 0.02), 6, 6)
+        PetDraw.solid(head, pom, PetRGB(0.98, 0.96, 0.92), rim: p.rim, depth: 2)
     }
 }

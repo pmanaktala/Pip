@@ -50,7 +50,7 @@ struct MoodPickerSheet: View {
         }
         .onDisappear {
             if let logged { commitNote(logged) }
-            appState.preview = nil
+            appState.pet.preview(nil)
         }
     }
 
@@ -78,7 +78,7 @@ struct MoodPickerSheet: View {
     /// After logging, the pet reacts on the Pet tab above the sheet; here a single line confirms it.
     private func loggedHeader(for entry: MoodEntry) -> some View {
         HStack(spacing: 12) {
-            PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: entry.mood, intensity: intensity, identity: appState.identity), showsShadow: false, framing: .face)
+            PetView(species: appState.identity.species, mood: entry.mood, intensity: intensity, framing: .face)
                 .frame(width: 52, height: 52)
                 .padding(5)
                 .background(MoodColor.soft(entry.mood, scheme: scheme), in: Circle())
@@ -177,7 +177,7 @@ struct MoodChoice: View {
         Button(action: action) {
             VStack(spacing: 8) {
                 ZStack(alignment: .bottomTrailing) {
-                    PetView(identity: identity, state: PetStateResolver.resolve(mood: mood, identity: identity), showsShadow: false, framing: .face)
+                    PetView(species: identity.species, mood: mood, framing: .face)
                         .frame(width: 66, height: 66)
                         .padding(3)
                         .background(MoodColor.bold(mood).opacity(scheme == .dark ? 0.12 : 0.1), in: Circle())

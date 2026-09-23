@@ -103,15 +103,15 @@ public final class NotificationService {
     static func plan(for day: Date, enabled: [Category], calendar: Calendar) -> Plan? {
         guard !enabled.isEmpty else { return nil }
         let seed = Double(calendar.ordinality(of: .day, in: .era, for: day) ?? 0)
-        let roll = PetAnimator.hash01(seed)
+        let roll = PetMath.hash01(seed)
         guard roll < 0.45 else { return nil } // most days: nothing
-        let category = enabled[Int(PetAnimator.hash01(seed + 7) * Double(enabled.count)) % enabled.count]
-        let variant = Int(PetAnimator.hash01(seed + 13) * 3)
+        let category = enabled[Int(PetMath.hash01(seed + 7) * Double(enabled.count)) % enabled.count]
+        let variant = Int(PetMath.hash01(seed + 13) * 3)
 
         switch category {
         case .company:
-            let hour = 14 + Int(PetAnimator.hash01(seed + 3) * 5) // 14…18
-            let minute = Int(PetAnimator.hash01(seed + 5) * 60)
+            let hour = 14 + Int(PetMath.hash01(seed + 3) * 5) // 14…18
+            let minute = Int(PetMath.hash01(seed + 5) * 60)
             let date = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day)!
             let bodies: [(String) -> String] = [
                 { "\($0) wants some company." },
@@ -120,7 +120,7 @@ public final class NotificationService {
             ]
             return Plan(category: .company, date: date, body: bodies[variant])
         case .sleepy:
-            let minute = 15 + Int(PetAnimator.hash01(seed + 5) * 45)
+            let minute = 15 + Int(PetMath.hash01(seed + 5) * 45)
             let date = calendar.date(bySettingHour: 21, minute: minute, second: 0, of: day)!
             let bodies: [(String) -> String] = [
                 { "\($0) looks sleepy." },
@@ -129,8 +129,8 @@ public final class NotificationService {
             ]
             return Plan(category: .sleepy, date: date, body: bodies[variant])
         case .moments:
-            let hour = 9 + Int(PetAnimator.hash01(seed + 3) * 10) // 9…18
-            let minute = Int(PetAnimator.hash01(seed + 5) * 60)
+            let hour = 9 + Int(PetMath.hash01(seed + 3) * 10) // 9…18
+            let minute = Int(PetMath.hash01(seed + 5) * 60)
             let date = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day)!
             let bodies: [(String) -> String] = [
                 { "\($0) is watching something out the window." },

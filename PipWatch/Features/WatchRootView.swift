@@ -26,12 +26,24 @@ struct WatchHomeView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            PetSceneWithClock(identity: state.identity, state: state.displayedState, petScale: 0.6, petVerticalPosition: 0.36, showsFloor: false, showsBackground: true)
+            PetStage(scene: state.pet.scene, petScale: 0.72, floor: 0.62, showsFoliage: false, mood: state.hasFreshMood ? state.latestEntry?.mood : nil)
                 .ignoresSafeArea()
-                .onTapGesture { state.poke() }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    Haptics.soft()
+                    state.pet.tap(onHead: true)
+                }
+                .onLongPressGesture(minimumDuration: 0.4, maximumDistance: 30) {
+                    // Resting a finger on the pet: petting, with the same afterglow as the phone.
+                    Haptics.soft()
+                    state.pet.beginPetting()
+                    Task { try? await Task.sleep(for: .seconds(1.6)); state.pet.endPetting() }
+                }
                 .accessibilityElement()
-                .accessibilityLabel("\(state.identity.name) \(state.displayedState.mood.petDescription).")
-                .accessibilityHint("Double tap to say hello.")
+                .accessibilityLabel(state.pet.statusLine)
+                .accessibilityHint("Double tap to boop \(state.identity.name).")
+                .onAppear { state.pet.startClock(); state.pet.arrive(now: .now.addingTimeInterval(0.3)) }
+                .onDisappear { state.pet.stopClock() }
 
             VStack(spacing: 6) {
                 Text(statusLine)
@@ -73,10 +85,7 @@ struct WatchHomeView: View {
     }
 
     private var statusLine: String {
-        if let entry = state.latestEntry, state.hasFreshMood {
-            return "\(state.identity.name) \(entry.mood.petDescription)"
-        }
-        return "Ready when you are."
+        state.pet.statusLine.replacingOccurrences(of: "\(state.identity.name) ", with: "").capitalizedFirst
     }
 }
 
@@ -98,7 +107,7 @@ struct WatchMoodPicker: View {
                         dismiss()
                     } label: {
                         VStack(spacing: 3) {
-                            PetView(identity: state.identity, state: PetStateResolver.resolve(mood: mood, identity: state.identity), showsShadow: false, framing: .face)
+                            PetView(species: state.identity.species, mood: mood, framing: .face)
                                 .frame(width: 44, height: 44)
                                 .padding(3)
                                 .background(MoodColor.soft(mood, scheme: scheme), in: Circle())
@@ -122,63 +131,19 @@ struct WatchMoodPicker: View {
     }
 }
 
-/// Sitting together on the wrist: the pet meditates, a quiet timer counts. Nothing to complete.
+/// Sitting together on the wrist: the pet closes its eyes and breathes. Nothing counts.
 struct WatchSitView: View {
     @Environment(WatchState.self) private var state
-    @State private var startedAt = Date.now
-
-    private var meditating: PetMoodState {
-        var s = PetStateResolver.resolve(mood: .calm, intensity: .moderate, identity: state.identity)
-        s.motion.bit = .meditate
-        s.motion.breathRate = 0.1
-        s.motion.breathAmount = 0.06
-        s.motion.blinkInterval = .infinity
-        s.motion.gazeInterval = .infinity
-        s.motion.sigh = 0
-        s.motion.hopHeight = 0
-        s.accessory = nil
-        return s
-    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            PetSceneWithClock(identity: state.identity, state: meditating, petScale: 0.66, petVerticalPosition: 0.45, showsFloor: false, showsBackground: true)
+            PetStage(scene: PetScene(species: state.identity.species, stance: .meditating), petScale: 0.72, floor: 0.66, showsFoliage: false, mood: .calm)
                 .ignoresSafeArea()
                 .accessibilityElement()
-                .accessibilityLabel("\(state.identity.name) is sitting with you.")
-            VStack(spacing: 2) {
-                Text("Just be.")
-                    .font(.headline)
-                Text(timerInterval: startedAt...startedAt.addingTimeInterval(24 * 3600), countsDown: false, showsHours: false)
-                    .monospacedDigit()
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.bottom, 6)
-        }
-        .onAppear { startedAt = .now }
-    }
-}
-
-/// The scene on a frame clock, honouring Reduce Motion (same as the phone's helper).
-struct PetSceneWithClock: View {
-    var identity: PetIdentity
-    var state: PetMoodState
-    var petScale: CGFloat = 0.62
-    var petVerticalPosition: CGFloat = 0.49
-    var showsFloor = true
-    var showsBackground = true
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        if reduceMotion {
-            PetSceneView(identity: identity, state: state, time: nil, petScale: petScale, petVerticalPosition: petVerticalPosition, showsFloor: showsFloor, showsBackground: showsBackground)
-                .animation(.smooth(duration: 0.6), value: state.rig)
-        } else {
-            TimelineView(.animation(minimumInterval: 1.0 / 30)) { context in
-                PetSceneView(identity: identity, state: state, time: context.date.timeIntervalSinceReferenceDate, petScale: petScale, petVerticalPosition: petVerticalPosition, showsFloor: showsFloor, showsBackground: showsBackground, date: context.date)
-                    .animation(.smooth(duration: 0.7), value: state.rig)
-            }
+                .accessibilityLabel(PetStance.meditating.describe(state.identity.name))
+            Text("Just be.")
+                .font(.headline)
+                .padding(.bottom, 6)
         }
     }
 }

@@ -32,6 +32,7 @@ struct PipApp: App {
         // Fast path to the Watch; iCloud remains the store of record.
         DeviceSync.shared.start(container: container)
         DeviceSync.shared.onRemoteChange = { [state] in state.refresh() }
+        DeviceSync.shared.onPetEvent = { [state] event in state.pet.receive(event) }
         _appState = State(initialValue: state)
         _health = State(initialValue: health)
         _notifications = State(initialValue: notifications)
@@ -52,7 +53,7 @@ struct PipApp: App {
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             appState.refresh()
-            appState.evaluatePetMoments()
+            appState.tidyLiveActivities()
             Task {
                 await health.syncPending(context: appState.context, preferences: appState.preferences)
                 await notifications.refreshAuthorization()

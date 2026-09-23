@@ -6,6 +6,6 @@ struct PipWidgetsBundle: WidgetBundle {
     var body: some Widget {
         PetHomeWidget()
         PetLockScreenWidget()
-        PetMomentLiveActivity()
+        PetCompanyLiveActivity()
     }
 }

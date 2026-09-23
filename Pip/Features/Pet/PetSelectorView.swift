@@ -5,13 +5,14 @@ struct PetSelectorView: View {
     @Environment(AppState.self) private var appState
     @State private var selection: PetSpecies = .penguin
     @State private var name = ""
-    @State private var greeting: [PetSpecies: PetMoodState] = [:]
+    /// When each pet last said hello (it greets you as it scrolls into view).
+    @State private var greetedAt: [PetSpecies: Date] = [:]
 
     var body: some View {
         VStack(spacing: 0) {
             TabView(selection: $selection) {
                 ForEach(PetSpecies.allCases) { species in
-                    PetCard(species: species, state: greeting[species] ?? previewState(for: species))
+                    PetCard(species: species, greetedAt: greetedAt[species])
                         .tag(species)
                         .padding(.horizontal, PipSpacing.m)
                 }
@@ -76,29 +77,18 @@ struct PetSelectorView: View {
         }
     }
 
-    private func previewState(for species: PetSpecies) -> PetMoodState {
-        PetStateResolver.resolve(mood: .calm, intensity: .slight, identity: PetIdentity(species: species))
-    }
-
-    /// A little hello when a pet scrolls into view, then back to resting.
     private func greet(_ species: PetSpecies) {
-        withAnimation(.spring(duration: 0.6, bounce: 0.35)) {
-            greeting[species] = PetStateResolver.resolve(mood: .happy, intensity: .strong, identity: PetIdentity(species: species))
-        }
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(1.6))
-            withAnimation(.smooth(duration: 0.8)) { greeting[species] = nil }
-        }
+        greetedAt[species] = .now
     }
 }
 
 struct PetCard: View {
     var species: PetSpecies
-    var state: PetMoodState
+    var greetedAt: Date?
 
     var body: some View {
         VStack(spacing: PipSpacing.s) {
-            RoomWindow(identity: PetIdentity(species: species), state: state)
+            RoomWindow(scene: PetScene(species: species, stance: .mood(.happy, .slight), events: greetedAt.map { [PetEvent(.arrive, at: $0)] } ?? []))
                 .frame(height: 300)
                 .padding(.top, PipSpacing.s)
             Text(species.defaultName)
@@ -122,11 +112,10 @@ struct PetCard: View {
 /// A framed view into the pet's room, for cards and onboarding: the same world as the Pet tab,
 /// seen through a rounded window.
 struct RoomWindow: View {
-    var identity: PetIdentity
-    var state: PetMoodState
+    var scene: PetScene
 
     var body: some View {
-        PetSceneWithClock(identity: identity, state: state, petScale: 0.72, petVerticalPosition: 0.52, showsFloor: true, showsBackground: true)
+        PetStage(scene: scene, petScale: 0.62, floor: 0.8, showsFoliage: false)
             .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 32, style: .continuous).strokeBorder(.primary.opacity(0.06)))
             .frame(maxWidth: 440)

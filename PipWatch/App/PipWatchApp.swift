@@ -16,7 +16,7 @@ struct PipWatchApp: App {
                 .modelContainer(state.container)
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { state.refresh() }
+            if phase == .active { state.refresh(); state.pet.arrive(now: .now.addingTimeInterval(0.3)) }
         }
     }
 }

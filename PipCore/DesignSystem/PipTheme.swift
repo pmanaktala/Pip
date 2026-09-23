@@ -16,18 +16,7 @@ public enum MoodColor {
     /// Consistent dark foreground on saturated mood surfaces, including yellow and mint.
     public static let onBold = Color(red: 0.12, green: 0.16, blue: 0.18)
 
-    public static func bold(_ mood: Mood) -> Color {
-        switch mood {
-        case .happy: Color(red: 0.99, green: 0.74, blue: 0.20)
-        case .excited: Color(red: 0.98, green: 0.45, blue: 0.40)
-        case .calm: Color(red: 0.26, green: 0.72, blue: 0.64)
-        case .neutral: Color(red: 0.58, green: 0.60, blue: 0.80)
-        case .tired: Color(red: 0.42, green: 0.42, blue: 0.78)
-        case .stressed: Color(red: 0.98, green: 0.56, blue: 0.24)
-        case .sad: Color(red: 0.34, green: 0.58, blue: 0.90)
-        case .frustrated: Color(red: 0.90, green: 0.34, blue: 0.36)
-        }
-    }
+    public static func bold(_ mood: Mood) -> Color { mood.tint.color }
 
     /// Light tint for backgrounds: strong enough to read as the mood, soft enough for text.
     public static func soft(_ mood: Mood, scheme: ColorScheme) -> Color {
@@ -79,28 +68,6 @@ public enum PipRadius {
     public static let card: CGFloat = 24
     public static let tile: CGFloat = 20
     public static let chip: CGFloat = 14
-}
-
-/// Ambient theming derived from a mood. Always paired with the pet's pose so colour is never the only cue.
-public struct MoodTheme: Sendable {
-    public var ambient: Color
-    public var strength: Double
-
-    public init(mood: Mood?, intensity: MoodIntensity = .moderate, environment: PetEnvironment? = nil) {
-        if let mood {
-            ambient = PetPalette.ambient(for: mood)
-            strength = environment?.tintStrength ?? 0.4
-        } else {
-            ambient = PetPalette.ambient(for: .neutral)
-            strength = 0.25
-        }
-    }
-
-    /// Glow behind the pet, tuned per colour scheme: additive light in the dark, a soft wash in the light.
-    public func glow(for scheme: ColorScheme, radius: CGFloat) -> RadialGradient {
-        let alpha = scheme == .dark ? 0.22 * strength + 0.04 : 0.42 * strength + 0.08
-        return RadialGradient(colors: [ambient.opacity(alpha), ambient.opacity(alpha * 0.4), ambient.opacity(0)], center: .center, startRadius: 0, endRadius: radius)
-    }
 }
 
 // MARK: - Glass helpers

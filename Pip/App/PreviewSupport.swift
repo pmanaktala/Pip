@@ -54,7 +54,7 @@ struct PreviewHost<Content: View>: View {
 }
 
 #Preview("History") {
-    PreviewHost(species: .redPanda) { NavigationStack { HistoryView() } }
+    PreviewHost(species: .cat) { NavigationStack { HistoryView() } }
 }
 
 #Preview("Pets") {
@@ -70,6 +70,6 @@ struct PreviewHost<Content: View>: View {
 }
 
 #Preview("Sit With Pet") {
-    PreviewHost(species: .capybara) { SitWithPetView() }
+    PreviewHost(species: .dog) { SitWithPetView() }
 }
 #endif

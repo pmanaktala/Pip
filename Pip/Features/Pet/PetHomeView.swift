@@ -10,13 +10,24 @@ struct PetHomeView: View {
     @State private var showSitWithPet = false
     @State private var showPets = false
     @State private var showWidgets = false
-    @State private var touchBegan: Date?
-    @State private var touchMoved = false
-    @State private var holdTask: Task<Void, Never>?
+    @State private var touch = TouchState()
+    @State private var purr: Task<Void, Never>?
+    @Environment(\.scenePhase) private var scenePhase
+
+    /// A finger on the room: where it started, whether it began on the pet, whether it moved.
+    struct TouchState {
+        var began: Date?
+        var start: CGPoint = .zero
+        var onHead = false
+        var onBody = false
+        var moved = false
+        var hold: Task<Void, Never>?
+        var onPet: Bool { onHead || onBody }
+    }
 
     private var mood: Mood? { appState.hasFreshMood ? appState.latestEntry?.mood : nil }
-    private let petScale: CGFloat = 0.66
-    private let petVerticalPosition: CGFloat = 0.47
+    private var petScale: CGFloat { appState.isPickingMood ? 0.5 : 0.7 }
+    private var floor: CGFloat { appState.isPickingMood ? 0.36 : 0.64 }
 
     var body: some View {
         NavigationStack {
@@ -67,7 +78,7 @@ struct PetHomeView: View {
                 case "sit": showSitWithPet = true
                 case "widgets": showWidgets = true
                 case "poke":
-                    Task { try? await Task.sleep(for: .seconds(1.5)); appState.pokePet() }
+                    Task { try? await Task.sleep(for: .seconds(1.5)); appState.pet.tap(onHead: true) }
                 case "react":
                     Task { try? await Task.sleep(for: .seconds(1.5)); appState.log(mood: .excited) }
                 default: break
@@ -79,62 +90,105 @@ struct PetHomeView: View {
 
     // MARK: Room
 
-    /// The whole tab is the pet's room. A tap says hello; a held finger is petting; while a
-    /// finger is anywhere in the room the pet's eyes follow it.
+    /// The whole tab is the pet's room. Only the pet answers touch: a tap on its head is a boop,
+    /// on its body a tickle, and a finger that rests or strokes is petting. A tap anywhere else
+    /// just draws its eyes (Bible §6).
     private var room: some View {
         GeometryReader { geo in
             // While the mood sheet is up the camera tilts down: the pet rises into the visible
-            // third of the screen so its reaction to the tap is the first thing you see.
-            PetSceneWithClock(identity: appState.identity, state: appState.displayedState,
-                              petScale: appState.isPickingMood ? 0.5 : petScale, petVerticalPosition: appState.isPickingMood ? 0.27 : petVerticalPosition, showsFloor: true, showsBackground: true)
-                .contentShape(Rectangle())
-                .animation(.spring(duration: 0.55, bounce: 0.12), value: appState.isPickingMood)
-                .gesture(touch(in: geo.size))
+            // part of the screen so its reaction is the first thing you see.
+            ZStack {
+                PetRoom(mood: mood, horizon: floor)
+                PetStage(scene: appState.pet.scene, petScale: petScale, floor: floor, showsRoom: false)
+            }
+            .contentShape(Rectangle())
+            .animation(.spring(duration: 0.55, bounce: 0.12), value: appState.isPickingMood)
+            .gesture(touchGesture(in: geo.size))
         }
         .ignoresSafeArea()
         .accessibilityElement()
-        .accessibilityLabel(petAccessibilityLabel)
-        .accessibilityHint("Double tap to say hello.")
-        .accessibilityAction { appState.pokePet() }
+        .accessibilityLabel(appState.pet.statusLine)
+        .accessibilityHint("Double tap to boop \(appState.identity.name).")
+        .accessibilityAction { boop(onHead: true) }
         .accessibilityAction(named: "Pet \(appState.identity.name)") {
-            appState.startPetting()
-            Task { try? await Task.sleep(for: .seconds(2)); appState.stopPetting() }
+            startPetting()
+            Task { try? await Task.sleep(for: .seconds(2)); stopPetting() }
         }
         .accessibilitySortPriority(1)
+        .onAppear {
+            appState.pet.startClock()
+            appState.pet.arrive(now: .now.addingTimeInterval(0.35))
+        }
+        .onDisappear { appState.pet.stopClock() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { appState.pet.arrive(now: .now.addingTimeInterval(0.3)); appState.pet.startClock() }
+            else if phase == .background { appState.pet.stopClock() }
+        }
     }
 
-    /// One recogniser for all three: it starts on touch-down, so the eyes follow immediately;
-    /// a hold longer than a beat (or a stroke) becomes petting; a quick release is a tap.
-    private func touch(in size: CGSize) -> some Gesture {
+    private func touchGesture(in size: CGSize) -> some Gesture {
         DragGesture(minimumDistance: 0, coordinateSpace: .local)
             .onChanged { value in
-                let head = CGPoint(x: size.width / 2, y: size.height * petVerticalPosition - size.width * petScale * 0.2)
-                appState.look(at: CGPoint(x: (value.location.x - head.x) / (size.width * 0.38),
-                                          y: (value.location.y - head.y) / (size.height * 0.3)))
-                if touchBegan == nil {
-                    touchBegan = .now
-                    // A still finger sends no more changes, so the hold is timed rather than polled.
-                    holdTask = Task { @MainActor in
-                        try? await Task.sleep(for: .seconds(0.45))
-                        guard !Task.isCancelled, touchBegan != nil else { return }
-                        appState.startPetting()
+                let species = appState.identity.species
+                let head = PetStage.headRect(in: size, species: species, petScale: petScale, floor: floor)
+                if touch.began == nil {
+                    touch.began = .now
+                    touch.start = value.location
+                    touch.onHead = head.insetBy(dx: -10, dy: -10).contains(value.location)
+                    touch.onBody = !touch.onHead && PetStage.bodyRect(in: size, species: species, petScale: petScale, floor: floor).insetBy(dx: -8, dy: -8).contains(value.location)
+                    if touch.onPet {
+                        // A still finger sends no more changes, so the hold is timed rather than polled.
+                        touch.hold = Task { @MainActor in
+                            try? await Task.sleep(for: .seconds(0.4))
+                            guard !Task.isCancelled, touch.began != nil, touch.onPet else { return }
+                            startPetting()
+                        }
                     }
                 }
-                if abs(value.translation.width) + abs(value.translation.height) > 24 { touchMoved = true }
-                let held = Date.now.timeIntervalSince(touchBegan ?? .now)
-                if !appState.isPetting, touchMoved, held > 0.2 { appState.startPetting() }
+                // Eyes follow the finger, wherever it is.
+                appState.pet.look(at: CGPoint(x: (value.location.x - head.midX) / (size.width * 0.4),
+                                              y: (value.location.y - head.midY) / (size.height * 0.3)))
+                if hypot(value.location.x - touch.start.x, value.location.y - touch.start.y) > 14 {
+                    touch.moved = true
+                    // A stroke across the pet is petting.
+                    if touch.onPet, !appState.pet.isPetting { startPetting() }
+                }
             }
             .onEnded { _ in
-                holdTask?.cancel()
-                if appState.isPetting {
-                    appState.stopPetting()
-                } else if !touchMoved {
-                    appState.pokePet()
+                touch.hold?.cancel()
+                if appState.pet.isPetting {
+                    stopPetting()
+                } else if touch.onPet, !touch.moved {
+                    boop(onHead: touch.onHead)
                 }
-                appState.look(at: nil)
-                touchBegan = nil
-                touchMoved = false
+                appState.pet.look(at: nil)
+                touch = TouchState()
             }
+    }
+
+    private func boop(onHead: Bool) {
+        Haptics.soft()
+        appState.pet.tap(onHead: onHead)
+    }
+
+    private func startPetting() {
+        guard !appState.pet.isPetting else { return }
+        appState.pet.beginPetting()
+        Haptics.soft()
+        purr = Task { @MainActor in
+            // A slow purr in the fingertips for as long as the hand stays.
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(0.7))
+                guard !Task.isCancelled else { return }
+                Haptics.soft()
+            }
+        }
+    }
+
+    private func stopPetting() {
+        purr?.cancel()
+        purr = nil
+        appState.pet.endPetting()
     }
 
     /// The name floats over the sky like a large title; the line under it is who they are.
@@ -142,9 +196,11 @@ struct PetHomeView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(appState.identity.name)
                 .font(PipFont.display)
-            Text("\(appState.identity.species.displayName) · \(appState.identity.personality.displayName)")
+            Text(appState.pet.statusPhrase)
                 .font(PipFont.callout)
                 .foregroundStyle(.secondary)
+                .contentTransition(.opacity)
+                .animation(.smooth(duration: 0.5), value: appState.pet.statusPhrase)
         }
         .padding(.horizontal, PipSpacing.l)
         .padding(.top, PipSpacing.xs)
@@ -154,36 +210,14 @@ struct PetHomeView: View {
 
     // MARK: Controls
 
-    /// What floats over the floor: one quiet line and, once there is more than one, today's faces.
-    /// The action itself lives in the tab bar accessory.
+    /// What floats over the floor: once there is more than one, today's faces.
+    /// The action itself lives in the tab bar.
     private var controls: some View {
-        VStack(spacing: 10) {
-            statusLine
-            todayFaces
-        }
-        .frame(maxWidth: 520)
-        .padding(.horizontal, PipSpacing.l)
-        .padding(.bottom, PipSpacing.m)
-        .frame(maxWidth: .infinity)
-    }
-
-    /// How they feel and since when, or what they are up to.
-    private var statusLine: some View {
-        Group {
-            if let entry = appState.latestEntry, appState.hasFreshMood {
-                HStack(spacing: 6) {
-                    Circle().fill(MoodColor.bold(entry.mood)).frame(width: 7, height: 7)
-                    Text("\(appState.identity.name) \(entry.mood.petDescription) · \(entry.timestamp.formatted(.relative(presentation: .named)))")
-                }
-            } else {
-                Text(PetLife.describe(appState.identity.name, at: .now))
-            }
-        }
-        .font(PipFont.callout)
-        .foregroundStyle(.secondary)
-        .contentTransition(.numericText())
-        .animation(.smooth(duration: 0.4), value: mood)
-        .accessibilityElement(children: .combine)
+        todayFaces
+            .frame(maxWidth: 520)
+            .padding(.horizontal, PipSpacing.l)
+            .padding(.bottom, PipSpacing.m)
+            .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder
@@ -191,7 +225,7 @@ struct PetHomeView: View {
         if appState.todayEntries.count > 1 {
             HStack(spacing: -6) {
                 ForEach(appState.todayEntries.sorted { $0.timestamp < $1.timestamp }.suffix(8)) { entry in
-                    PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: entry.mood, intensity: entry.intensity, identity: appState.identity), showsShadow: false, framing: .face)
+                    PetView(species: appState.identity.species, mood: entry.mood, intensity: entry.intensity, framing: .face)
                         .frame(width: 26, height: 26)
                         .padding(2)
                         .background(MoodColor.soft(entry.mood, scheme: scheme), in: Circle())
@@ -208,9 +242,6 @@ struct PetHomeView: View {
         }
     }
 
-    private var petAccessibilityLabel: String {
-        "\(appState.identity.name) \(appState.displayedState.mood.petDescription)."
-    }
 }
 
 /// A button that squishes under the finger — every primary action in Pip should feel physical.
@@ -222,34 +253,3 @@ struct PressableButtonStyle: ButtonStyle {
     }
 }
 
-/// Wraps the scene in a frame clock, honouring Reduce Motion.
-struct PetSceneWithClock: View {
-    var identity: PetIdentity
-    var state: PetMoodState
-    var petScale: CGFloat = 0.62
-    var petVerticalPosition: CGFloat = 0.49
-    var showsFloor = true
-    var showsBackground = true
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.self) private var environment
-
-    /// 60 fps normally; 30 when the system asks for less (iOS 27's reduced-resource hint).
-    private var frameInterval: Double {
-        #if compiler(>=6.4)
-        if #available(iOS 27, *), environment.systemPrefersReducedResourceUsage { return 1.0 / 30 }
-        #endif
-        return 1.0 / 60
-    }
-
-    var body: some View {
-        if reduceMotion {
-            PetSceneView(identity: identity, state: state, time: nil, petScale: petScale, petVerticalPosition: petVerticalPosition, showsFloor: showsFloor, showsBackground: showsBackground)
-                .animation(.smooth(duration: 0.6), value: state.rig)
-        } else {
-            TimelineView(.animation(minimumInterval: frameInterval)) { context in
-                PetSceneView(identity: identity, state: state, time: context.date.timeIntervalSinceReferenceDate, petScale: petScale, petVerticalPosition: petVerticalPosition, showsFloor: showsFloor, showsBackground: showsBackground, date: context.date)
-                    .animation(.smooth(duration: 0.7), value: state.rig)
-            }
-        }
-    }
-}

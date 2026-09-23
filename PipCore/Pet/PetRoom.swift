@@ -59,10 +59,10 @@ public struct PetRoom: View {
                     // Dust in the light by day; stars at night, more of them the darker it gets.
                     let starCount = 10 + Int(light.night * 26)
                     for i in 0..<starCount {
-                        let x = (i < 10 ? 0.45 + PetAnimator.hash01(Double(i) * 7.1) * 0.5 : PetAnimator.hash01(Double(i) * 5.3)) * size.width
-                        let y = PetAnimator.hash01(Double(i) * 3.7 + 9) * floorY * (i < 10 ? 0.8 : 0.7)
-                        let r = 0.8 + PetAnimator.hash01(Double(i) * 1.3) * 1.2
-                        let alpha = i < 10 ? (scheme == .dark ? 0.35 : 0.7) : 0.85 * light.night * (0.5 + 0.5 * PetAnimator.hash01(Double(i) * 2.9))
+                        let x = (i < 10 ? 0.45 + PetMath.hash01(Double(i) * 7.1) * 0.5 : PetMath.hash01(Double(i) * 5.3)) * size.width
+                        let y = PetMath.hash01(Double(i) * 3.7 + 9) * floorY * (i < 10 ? 0.8 : 0.7)
+                        let r = 0.8 + PetMath.hash01(Double(i) * 1.3) * 1.2
+                        let alpha = i < 10 ? (scheme == .dark ? 0.35 : 0.7) : 0.85 * light.night * (0.5 + 0.5 * PetMath.hash01(Double(i) * 2.9))
                         context.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r * 2, height: r * 2)), with: .color(.white.opacity(alpha)))
                     }
                     guard showsFoliage, size.width > 200 else { return }
@@ -122,7 +122,7 @@ public struct RoomLight: Sendable, Equatable {
         self.hour = hour
         let frames = dark ? Self.darkFrames : Self.lightFrames
         let f = Self.blend(frames, at: hour)
-        let tint = mood.map(MoodColor.bold)
+        let tint = mood.map(\.tint)
         let amount = dark ? 0.07 : 0.14
 
         // The sun rises on the left around 6:30, is overhead at 13:00 and sets on the right around 19:30;
@@ -133,13 +133,14 @@ public struct RoomLight: Sendable, Equatable {
         keyY = 0.72 - 0.6 * sin(progress * .pi)
         night = hour < 5 || hour >= 21 ? 1 : (hour < 6.5 ? (6.5 - hour) / 1.5 : (hour >= 19.5 ? (hour - 19.5) / 1.5 : 0))
 
-        skyTop = tint.map { Self.mix(f.skyTop, $0, amount) } ?? f.skyTop
-        skyHorizon = tint.map { Self.mix(f.skyHorizon, $0, amount * 0.6) } ?? f.skyHorizon
-        floorFar = tint.map { Self.mix(f.floorFar, $0, amount * 0.7) } ?? f.floorFar
-        floorNear = tint.map { Self.mix(f.floorNear, $0, amount * 0.5) } ?? f.floorNear
-        keyLight = f.keyLight
+        func tinted(_ c: PetRGB, _ k: Double) -> Color { (tint.map { c.mix($0, k) } ?? c).color }
+        skyTop = tinted(f.skyTop, amount)
+        skyHorizon = tinted(f.skyHorizon, amount * 0.6)
+        floorFar = tinted(f.floorFar, amount * 0.7)
+        floorNear = tinted(f.floorNear, amount * 0.5)
+        keyLight = f.keyLight.color
         keyStrength = f.keyStrength
-        foliage = tint.map { Self.mix(f.foliage, $0, 0.35) } ?? f.foliage
+        foliage = tinted(f.foliage, 0.35)
     }
 
     // MARK: Keyframes
@@ -184,7 +185,7 @@ public struct RoomLight: Sendable, Equatable {
     ]
 
     struct Blended {
-        var skyTop: Color, skyHorizon: Color, floorFar: Color, floorNear: Color, keyLight: Color, keyStrength: Double, foliage: Color
+        var skyTop: PetRGB, skyHorizon: PetRGB, floorFar: PetRGB, floorNear: PetRGB, keyLight: PetRGB, keyStrength: Double, foliage: PetRGB
     }
 
     static func blend(_ frames: [Frame], at hour: Double) -> Blended {
@@ -197,19 +198,26 @@ public struct RoomLight: Sendable, Equatable {
         // Ease so the room lingers in each phase and moves through the transitions.
         let raw = (h - a.hour) / span
         let t = raw * raw * (3 - 2 * raw)
-        func c(_ x: (Double, Double, Double), _ y: (Double, Double, Double)) -> Color {
-            Color(red: x.0 + (y.0 - x.0) * t, green: x.1 + (y.1 - x.1) * t, blue: x.2 + (y.2 - x.2) * t)
+        func c(_ x: (Double, Double, Double), _ y: (Double, Double, Double)) -> PetRGB {
+            PetRGB(x.0 + (y.0 - x.0) * t, x.1 + (y.1 - x.1) * t, x.2 + (y.2 - x.2) * t)
         }
         return Blended(skyTop: c(a.skyTop, b.skyTop), skyHorizon: c(a.skyHorizon, b.skyHorizon), floorFar: c(a.floorFar, b.floorFar), floorNear: c(a.floorNear, b.floorNear), keyLight: c(a.keyLight, b.keyLight), keyStrength: a.keyStrength + (b.keyStrength - a.keyStrength) * t, foliage: c(a.foliage, b.foliage))
     }
 
-    static func mix(_ a: Color, _ b: Color, _ t: Double) -> Color {
-        let ca = UIColor(a), cb = UIColor(b)
-        var (r1, g1, b1, a1): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
-        var (r2, g2, b2, a2): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
-        ca.getRed(&r1, green: &g1, blue: &b1, alpha: &a1)
-        cb.getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
-        let u = CGFloat(t)
-        return Color(red: r1 + (r2 - r1) * u, green: g1 + (g2 - g1) * u, blue: b1 + (b2 - b1) * u)
+}
+
+public extension Mood {
+    /// The mood's colour as components (the room tints with it; `MoodColor.bold` draws it).
+    var tint: PetRGB {
+        switch self {
+        case .happy: PetRGB(0.99, 0.74, 0.20)
+        case .excited: PetRGB(0.98, 0.45, 0.40)
+        case .calm: PetRGB(0.26, 0.72, 0.64)
+        case .neutral: PetRGB(0.58, 0.60, 0.80)
+        case .tired: PetRGB(0.42, 0.42, 0.78)
+        case .stressed: PetRGB(0.98, 0.56, 0.24)
+        case .sad: PetRGB(0.34, 0.58, 0.90)
+        case .frustrated: PetRGB(0.90, 0.34, 0.36)
+        }
     }
 }

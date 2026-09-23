@@ -113,18 +113,18 @@
 		A1000000000000000000C049 /* Exceptions for "PipCore" folder in "PipWatch" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				LiveActivities/PetMomentAttributes.swift,
-				LiveActivities/PetMomentBanner.swift,
-				LiveActivities/PetMomentManager.swift,
+				LiveActivities/PetCompany.swift,
+				LiveActivities/PetCompanyManager.swift,
+				LiveActivities/PetCompanyViews.swift,
 			);
 			target = A1000000000000000000C04E /* PipWatch */;
 		};
 		A1000000000000000000C04A /* Exceptions for "PipCore" folder in "PipWatchWidgetsExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				LiveActivities/PetMomentAttributes.swift,
-				LiveActivities/PetMomentBanner.swift,
-				LiveActivities/PetMomentManager.swift,
+				LiveActivities/PetCompany.swift,
+				LiveActivities/PetCompanyManager.swift,
+				LiveActivities/PetCompanyViews.swift,
 			);
 			target = A1000000000000000000C04F /* PipWatchWidgetsExtension */;
 		};

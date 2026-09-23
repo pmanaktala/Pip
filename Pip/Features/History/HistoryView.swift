@@ -113,7 +113,7 @@ struct HistoryView: View {
     private var weekSummary: some View {
         if let summary = weekWords ?? MoodHistory.weekSummary(stamps: stamps, petName: appState.identity.name) {
             HStack(alignment: .top, spacing: 12) {
-                PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: .calm, intensity: .slight, identity: appState.identity), showsShadow: false, framing: .face)
+                PetView(species: appState.identity.species, mood: .calm, intensity: .slight, framing: .face)
                     .frame(width: 44, height: 44)
                 Text(summary)
                     .font(PipFont.body)
@@ -142,7 +142,7 @@ struct HistoryView: View {
                             .font(PipFont.caption)
                             .foregroundStyle(cal.isDateInToday(day) ? Color.accentColor : Color.secondary)
                         if let stamp {
-                            PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: stamp.mood, intensity: stamp.intensity, identity: appState.identity), showsShadow: false, framing: .face)
+                            PetView(species: appState.identity.species, mood: stamp.mood, intensity: stamp.intensity, framing: .face)
                                 .frame(width: 32, height: 32)
                                 .padding(2)
                                 .background(Color(.secondarySystemGroupedBackground).opacity(0.7), in: Circle())
@@ -252,7 +252,7 @@ struct HistoryView: View {
                 .clipShape(RoundedRectangle(cornerRadius: PipRadius.card, style: .continuous))
             } else if entries.isEmpty {
                 VStack(spacing: PipSpacing.s) {
-                    PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: .calm, intensity: .slight, identity: appState.identity))
+                    PetView(species: appState.identity.species, mood: .calm, intensity: .slight, framing: .full)
                         .frame(width: 140, height: 140)
                     Text("Nothing here yet. \(appState.identity.name) is in no hurry.")
                         .font(PipFont.callout)
@@ -277,7 +277,7 @@ struct HistoryView: View {
     /// Swipe to delete on iOS 27; the context menu works everywhere.
     private func entryRow(_ entry: MoodEntry) -> some View {
         HStack(alignment: .top, spacing: 12) {
-            PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: entry.mood, intensity: entry.intensity, identity: appState.identity), showsShadow: false, framing: .face)
+            PetView(species: appState.identity.species, mood: entry.mood, intensity: entry.intensity, framing: .face)
                 .frame(width: 40, height: 40)
                 .padding(4)
                 .background(MoodColor.soft(entry.mood, scheme: scheme), in: Circle())

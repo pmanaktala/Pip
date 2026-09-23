@@ -18,7 +18,7 @@ struct SettingsView: View {
                     PetSelectorView()
                 } label: {
                     HStack(spacing: PipSpacing.m) {
-                        PetView(identity: appState.identity, state: PetStateResolver.resolve(mood: .happy, intensity: .slight, identity: appState.identity), showsShadow: false, framing: .face)
+                        PetView(species: appState.identity.species, mood: .happy, intensity: .slight, framing: .face)
                             .frame(width: 72, height: 72)
                             .background(Color(.tertiarySystemFill), in: Circle())
                         VStack(alignment: .leading, spacing: 2) {

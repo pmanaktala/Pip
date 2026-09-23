@@ -22,6 +22,9 @@ public final class DeviceSync: NSObject {
     private var sharedStore: SharedStateStore = .shared
     /// Called after a remote change has been merged, so the UI can refresh.
     public var onRemoteChange: (@MainActor () -> Void)?
+    /// Called when the other device's pet did something (a boop, petting, a wave), so this
+    /// device's pet can do it too while both are on screen.
+    public var onPetEvent: (@MainActor (PetEvent) -> Void)?
     /// Transfers requested before the session finished activating; flushed on activation.
     private var pending: [[String: Any]] = []
     private var pendingIdentity: PetIdentity?
@@ -45,6 +48,14 @@ public final class DeviceSync: NSObject {
         // value wins, and it survives the counterpart app being closed.
         latestForContext = info["entry"] as? [String: Any]
         pushContext()
+    }
+
+    /// A pet event is only worth anything live: sent as a message when the other app is up,
+    /// dropped otherwise (never queued — a boop from an hour ago means nothing).
+    public func send(_ event: PetEvent) {
+        guard let session, session.activationState == .activated, session.isReachable,
+              let data = try? JSONEncoder().encode(event) else { return }
+        session.sendMessage(["petEvent": data], replyHandler: nil, errorHandler: nil)
     }
 
     public func sendDeletion(of id: UUID) {
@@ -95,6 +106,10 @@ public final class DeviceSync: NSObject {
     // MARK: Merging
 
     private func merge(_ userInfo: [String: Any]) {
+        if let data = userInfo["petEvent"] as? Data, let event = try? JSONDecoder().decode(PetEvent.self, from: data) {
+            onPetEvent?(event)
+            return
+        }
         Self.log.info("received \(userInfo.keys.joined(separator: ","), privacy: .public)")
         guard let container else { Self.log.error("no container to merge into"); return }
         let context = container.mainContext

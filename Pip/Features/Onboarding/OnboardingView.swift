@@ -13,6 +13,7 @@ struct OnboardingView: View {
     @State private var species: PetSpecies = .penguin
     @State private var name = ""
     @State private var wave = false
+    @State private var greetAt = Date.now
     @FocusState private var nameFocused: Bool
 
     var body: some View {
@@ -34,7 +35,8 @@ struct OnboardingView: View {
             .padding(.top, PipSpacing.l)
         }
         .animation(.spring(duration: 0.5, bounce: 0.1), value: step)
-        .onAppear { wave = true }
+        .onAppear { wave = true; greetAt = .now.addingTimeInterval(0.6) }
+        .onChange(of: species) { _, _ in greetAt = .now }
     }
 
 
@@ -45,7 +47,7 @@ struct OnboardingView: View {
         switch step {
         case .welcome:
             VStack(spacing: PipSpacing.m) {
-                RoomWindow(identity: PetIdentity(species: .penguin), state: PetStateResolver.resolve(mood: wave ? .happy : .calm, identity: PetIdentity(species: .penguin)))
+                RoomWindow(scene: PetScene(species: .penguin, stance: .mood(.happy, .slight), events: wave ? [PetEvent(.arrive, at: greetAt)] : []))
                     .frame(height: 300)
                 Text("Meet your mood companion")
                     .font(PipFont.display)
@@ -61,7 +63,7 @@ struct OnboardingView: View {
                     .font(PipFont.title)
                 TabView(selection: $species) {
                     ForEach(PetSpecies.allCases) { s in
-                        PetCard(species: s, state: PetStateResolver.resolve(mood: .happy, intensity: .slight, identity: PetIdentity(species: s)))
+                        PetCard(species: s, greetedAt: greetAt)
                             .tag(s)
                     }
                 }
@@ -72,7 +74,7 @@ struct OnboardingView: View {
             }
         case .name:
             VStack(spacing: PipSpacing.m) {
-                AnimatedPetView(identity: PetIdentity(species: species), state: PetStateResolver.resolve(mood: .excited, intensity: .slight, identity: PetIdentity(species: species)))
+                LivePetView(scene: PetScene(species: species, stance: .mood(.excited, .slight)))
                     .frame(width: 200, height: 200)
                 Text("Give them a name")
                     .font(PipFont.title)
@@ -105,7 +107,7 @@ struct OnboardingView: View {
 
     private func permissionStep(symbol: String, title: String, body: String) -> some View {
         VStack(spacing: PipSpacing.m) {
-            AnimatedPetView(identity: PetIdentity(species: species), state: PetStateResolver.resolve(mood: .calm, identity: PetIdentity(species: species)))
+            LivePetView(scene: PetScene(species: species, stance: .mood(.calm, .moderate)))
                 .frame(width: 180, height: 180)
             Image(systemName: symbol)
                 .font(.title)
