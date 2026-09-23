@@ -135,7 +135,7 @@ struct MoodAccessoryView: View {
         } label: {
             HStack(spacing: 10) {
                 if let entry = fresh {
-                    PetView(species: appState.identity.species, mood: entry.mood, intensity: entry.intensity, framing: .face)
+                    PetView(species: appState.identity.species, mood: entry.mood, intensity: entry.intensity)
                         .frame(width: 26, height: 26)
                         .padding(2)
                         .background(MoodColor.soft(entry.mood, scheme: scheme), in: Circle())

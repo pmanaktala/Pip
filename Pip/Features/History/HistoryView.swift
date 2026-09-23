@@ -113,7 +113,7 @@ struct HistoryView: View {
     private var weekSummary: some View {
         if let summary = weekWords ?? MoodHistory.weekSummary(stamps: stamps, petName: appState.identity.name) {
             HStack(alignment: .top, spacing: 12) {
-                PetView(species: appState.identity.species, mood: .calm, intensity: .slight, framing: .face)
+                PetView(species: appState.identity.species, mood: .calm, intensity: .slight)
                     .frame(width: 44, height: 44)
                 Text(summary)
                     .font(PipFont.body)
@@ -142,7 +142,7 @@ struct HistoryView: View {
                             .font(PipFont.caption)
                             .foregroundStyle(cal.isDateInToday(day) ? Color.accentColor : Color.secondary)
                         if let stamp {
-                            PetView(species: appState.identity.species, mood: stamp.mood, intensity: stamp.intensity, framing: .face)
+                            PetView(species: appState.identity.species, mood: stamp.mood, intensity: stamp.intensity)
                                 .frame(width: 32, height: 32)
                                 .padding(2)
                                 .background(Color(.secondarySystemGroupedBackground).opacity(0.7), in: Circle())
@@ -277,7 +277,7 @@ struct HistoryView: View {
     /// Swipe to delete on iOS 27; the context menu works everywhere.
     private func entryRow(_ entry: MoodEntry) -> some View {
         HStack(alignment: .top, spacing: 12) {
-            PetView(species: appState.identity.species, mood: entry.mood, intensity: entry.intensity, framing: .face)
+            PetView(species: appState.identity.species, mood: entry.mood, intensity: entry.intensity)
                 .frame(width: 40, height: 40)
                 .padding(4)
                 .background(MoodColor.soft(entry.mood, scheme: scheme), in: Circle())

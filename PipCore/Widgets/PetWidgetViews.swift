@@ -229,7 +229,7 @@ public struct PetAccessoryView: View {
                     Text(moment.identity.name)
                         .font(.system(.headline, design: .rounded, weight: .bold))
                         .widgetAccentable()
-                    Text(moment.status.replacingOccurrences(of: "\(moment.identity.name) ", with: "").capitalizedFirst)
+                    Text(moment.stance.phrase(moment.identity.name))
                         .font(.system(.caption, design: .rounded))
                         .lineLimit(2)
                         .foregroundStyle(.secondary)

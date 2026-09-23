@@ -88,6 +88,15 @@ public enum PetStance: Codable, Hashable, Sendable {
         }
     }
 
+    /// The same without the subject — "Reading", "Sitting close" — for where the name is shown.
+    public func phrase(_ name: String) -> String {
+        let line = describe(name)
+        let prefix = name + " is "
+        guard line.hasPrefix(prefix) else { return line }
+        let rest = line.dropFirst(prefix.count)
+        return rest.prefix(1).uppercased() + rest.dropFirst()
+    }
+
     // MARK: Pose
 
     /// The resting pose. Intensity scales how far the mood departs from neutral.
@@ -168,6 +177,24 @@ public enum PetStance: Codable, Hashable, Sendable {
             p.armL = -57; p.armR = -57; p.lidL = 0.45; p.lidR = 0.45; p.smile = 0.3; p.slump = 0.15; p.headTilt = 4
         }
         return p
+    }
+
+    /// The mood's face turned up for small tokens (pickers, history, widgets), where the resting
+    /// pose is too subtle to tell eight feelings apart at 40 pt. Each one is the peak of its reaction.
+    public static func tokenFace(_ m: Mood, _ s: PetSpecies) -> PetPose {
+        var p = PetStance.mood(m, .strong).rest(s)
+        p.armL = 0; p.armR = 0; p.gazeX = 0; p.gazeY = 0; p.headTurn = 0; p.headNod = 0; p.slump = 0
+        switch m {
+        case .happy: p.smileEyes = 0.95; p.smile = 0.9; p.blush = 0.8; p.headTilt = 8
+        case .excited: p.smileEyes = 1; p.mouthOpen = 0.9; p.smile = 1; p.blush = 0.6; p.sparkles = 0.8; p.eyeWide = 0
+        case .calm: p.lidL = 1; p.lidR = 1; p.smile = 0.55; p.blush = 0.3; p.headTilt = 6
+        case .neutral: p.smile = 0.1; p.headTilt = 3
+        case .tired: p.lidL = 0.7; p.lidR = 0.7; p.mouthOpen = 0.45; p.mouthRound = 0.8; p.headTilt = -8
+        case .stressed: p.eyeWide = 0.25; p.browShow = 1; p.browSlant = -0.9; p.sweat = 1; p.smile = -0.5
+        case .sad: p.lidSlant = -1; p.browShow = 1; p.browSlant = -1; p.tears = 0.9; p.smile = -0.6; p.lidL = 0.35; p.lidR = 0.35
+        case .frustrated: p.lidSlant = 1; p.browShow = 1; p.browSlant = 1; p.cheekPuff = 1; p.smile = -0.5; p.steam = 1; p.headTurn = 0
+        }
+        return p.clamped()
     }
 
     // MARK: Behaviour

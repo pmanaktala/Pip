@@ -69,7 +69,7 @@ public struct PetPoseView: View, Animatable {
         let (zoom, focusY): (CGFloat, CGFloat) = switch framing {
         case .full: (1, 100)
         case .face: (1.5, head.y + 16)
-        case .badge: (2.0, head.y + 2)
+        case .badge: species == .penguin ? (2.0, head.y + 2) : (1.78, head.y - 5)
         case .icon: (1.62, head.y + 12)
         }
         guard zoom != 1 else { return }
@@ -96,14 +96,23 @@ public struct PetView: View {
         self.showsShadow = showsShadow
     }
 
-    /// A pet with a mood's resting face — for mood tokens, history and pickers.
-    public init(species: PetSpecies, mood: Mood, intensity: MoodIntensity = .moderate, framing: PetFraming = .face) {
+    /// A mood as the pet's face — for mood tokens, history and pickers. Uses the mood's
+    /// turned-up token face so eight feelings stay distinct at small sizes.
+    public init(species: PetSpecies, mood: Mood, intensity: MoodIntensity = .moderate, framing: PetFraming = .badge) {
         self.init(species: species, stance: .mood(mood, intensity), framing: framing, showsShadow: false)
+        self.token = mood
     }
 
     public var body: some View {
-        PetPoseView(species: species, pose: PetDirector.hold(scene, index: hold), prop: scene.prop, framing: framing, showsShadow: showsShadow)
+        if let token {
+            PetPoseView(species: species, pose: PetStance.tokenFace(token, species), framing: framing, showsShadow: false)
+        } else {
+            PetPoseView(species: species, pose: PetDirector.hold(scene, index: hold), prop: scene.prop, framing: framing, showsShadow: showsShadow)
+        }
     }
+
+    /// Set when the view stands for a mood (a token) rather than the pet's current state.
+    private var token: Mood?
 }
 
 /// A pet on the director's clock. Honours Reduce Motion (holds the stance's rest pose) and the

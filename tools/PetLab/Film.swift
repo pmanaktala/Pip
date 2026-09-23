@@ -66,3 +66,23 @@ enum LabFilm {
         return Row(title: "\(stance)".replacingOccurrences(of: "PipCore.", with: ""), frames: out)
     }
 }
+
+enum LabTokens {
+    @MainActor static func sheet() -> some View {
+        VStack(spacing: 10) {
+            ForEach(PetSpecies.allCases, id: \.self) { s in
+                HStack(spacing: 10) {
+                    ForEach(Mood.allCases, id: \.self) { m in
+                        VStack(spacing: 2) {
+                            LabPet(species: s, pose: PetStance.tokenFace(m, s), detail: .badge)
+                                .frame(width: 66, height: 66).background(Circle().fill(m.tint.alpha(0.2).color))
+                            LabPet(species: s, pose: PetStance.tokenFace(m, s), detail: .badge)
+                                .frame(width: 30, height: 30)
+                            Text(m.displayName).font(.system(size: 10)).foregroundStyle(.black)
+                        }
+                    }
+                }
+            }
+        }.padding(12).background(Color.white)
+    }
+}

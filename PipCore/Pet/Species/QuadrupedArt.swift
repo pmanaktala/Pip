@@ -126,8 +126,8 @@ enum QuadrupedArt {
             PetDraw.eye(c, at: center, style: s,
                         lid: side > 0 ? pose.lidR : pose.lidL, slant: pose.lidSlant, smile: pose.smileEyes, squeeze: pose.squeeze,
                         gazeX: pose.gazeX * Double(side), gazeY: pose.gazeY, wide: pose.eyeWide, blink: pose.blink)
-            if let brows, !badge {
-                PetDraw.brow(c, over: CGPoint(x: center.x + 1, y: center.y - fig.eyeH * 1.05), width: 9, show: pose.browShow, slant: pose.browSlant, raise: pose.browRaise, color: brows, thickness: 2.6)
+            if let brows {
+                PetDraw.brow(c, over: CGPoint(x: center.x + 1, y: center.y - fig.eyeH * 1.05), width: 9, show: pose.browShow, slant: pose.browSlant, raise: pose.browRaise, color: brows, thickness: badge ? 3.2 : 2.6)
             }
         }
     }

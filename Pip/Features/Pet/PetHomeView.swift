@@ -26,8 +26,8 @@ struct PetHomeView: View {
     }
 
     private var mood: Mood? { appState.hasFreshMood ? appState.latestEntry?.mood : nil }
-    private var petScale: CGFloat { appState.isPickingMood ? 0.5 : 0.7 }
-    private var floor: CGFloat { appState.isPickingMood ? 0.36 : 0.64 }
+    private var petScale: CGFloat { appState.isPickingMood ? 0.42 : 0.7 }
+    private var floor: CGFloat { appState.isPickingMood ? 0.43 : 0.64 }
 
     var body: some View {
         NavigationStack {
@@ -225,7 +225,7 @@ struct PetHomeView: View {
         if appState.todayEntries.count > 1 {
             HStack(spacing: -6) {
                 ForEach(appState.todayEntries.sorted { $0.timestamp < $1.timestamp }.suffix(8)) { entry in
-                    PetView(species: appState.identity.species, mood: entry.mood, intensity: entry.intensity, framing: .face)
+                    PetView(species: appState.identity.species, mood: entry.mood, intensity: entry.intensity)
                         .frame(width: 26, height: 26)
                         .padding(2)
                         .background(MoodColor.soft(entry.mood, scheme: scheme), in: Circle())

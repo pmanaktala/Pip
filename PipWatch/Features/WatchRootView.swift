@@ -26,7 +26,7 @@ struct WatchHomeView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            PetStage(scene: state.pet.scene, petScale: 0.72, floor: 0.62, showsFoliage: false, mood: state.hasFreshMood ? state.latestEntry?.mood : nil)
+            PetStage(scene: state.pet.scene, petScale: 0.46, floor: 0.52, showsFoliage: false, mood: state.hasFreshMood ? state.latestEntry?.mood : nil)
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -85,7 +85,7 @@ struct WatchHomeView: View {
     }
 
     private var statusLine: String {
-        state.pet.statusLine.replacingOccurrences(of: "\(state.identity.name) ", with: "").capitalizedFirst
+        state.pet.statusPhrase
     }
 }
 
@@ -107,7 +107,7 @@ struct WatchMoodPicker: View {
                         dismiss()
                     } label: {
                         VStack(spacing: 3) {
-                            PetView(species: state.identity.species, mood: mood, framing: .face)
+                            PetView(species: state.identity.species, mood: mood)
                                 .frame(width: 44, height: 44)
                                 .padding(3)
                                 .background(MoodColor.soft(mood, scheme: scheme), in: Circle())

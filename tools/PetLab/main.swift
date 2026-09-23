@@ -11,6 +11,7 @@ struct PetLab {
         let view: AnyView
         switch command {
         case "check": LabCheck.choices(); return
+        case "tokens": view = AnyView(LabTokens.sheet())
         case "reactions": view = AnyView(LabFilm.strips(species: species(args), rows: LabFilm.reactions(species(args))))
         case "vignettes": view = AnyView(LabFilm.strips(species: species(args), rows: LabFilm.vignettes(species(args)), size: 90))
         case "stances":
@@ -49,7 +50,7 @@ struct LabPet: View {
             var c = ctx
             c.scaleBy(x: s, y: s)
             if detail == .badge {
-                c.translateBy(x: 100, y: 100); c.scaleBy(x: 2.05, y: 2.05); c.translateBy(x: -100, y: -PetFigure.of(species).headCenter.y - 4)
+                PetPoseView.frame(&c, species: species, framing: .badge)
             }
             PetRenderer.draw(c, PetPaint(species: species, pose: pose, prop: prop, detail: detail, time: 0.4))
         }

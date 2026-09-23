@@ -26,9 +26,19 @@ enum PetEffects {
                 c.fill(PetDraw.ellipse(CGPoint(x: x, y: y + 2 + fall), 2.4, 3.2), PetRGB(0.62, 0.84, 1.0, 0.95 * pose.tears))
             }
         }
-        guard !badge else {
-            // Badges keep only the one sign that carries the most.
+        if badge {
+            // Badges keep only the one sign that carries the most, drawn big and close.
             if pose.zzz > 0.3 { letter("z", head, at: CGPoint(x: fig.headRX * 0.9, y: -fig.headRY * 0.95), size: 16, color: ink.alpha(0.8)) }
+            if pose.steam > 0.3 {
+                PetDraw.mirrored(head) { c, _ in
+                    c.fill(PetDraw.ellipse(CGPoint(x: fig.headRX + 3, y: -fig.headRY * 0.55), 5, 4), PetRGB(0.97, 0.97, 0.99, 0.95))
+                    c.fill(PetDraw.ellipse(CGPoint(x: fig.headRX + 8, y: -fig.headRY * 0.72), 3.5, 3), PetRGB(0.97, 0.97, 0.99, 0.8))
+                }
+            }
+            if pose.sparkles > 0.3 {
+                sparkle(head, at: CGPoint(x: fig.headRX * 0.95, y: -fig.headRY * 0.85), size: 5, color: PetRGB(1.0, 0.78, 0.25))
+                sparkle(head, at: CGPoint(x: -fig.headRX * 0.9, y: -fig.headRY * 0.6), size: 3.5, color: PetRGB(1.0, 0.78, 0.25))
+            }
             return
         }
         // Everything else floats above the head, in the body's space (it doesn't tilt with the head).

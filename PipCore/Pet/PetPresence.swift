@@ -37,11 +37,7 @@ public final class PetPresence {
 
     /// The same without the name ("Reading"), for places where the name is right above it.
     public var statusPhrase: String {
-        let line = statusLine
-        let prefix = identity.name + " is "
-        guard line.hasPrefix(prefix) else { return line }
-        let rest = line.dropFirst(prefix.count)
-        return rest.prefix(1).uppercased() + rest.dropFirst()
+        (scene.preview.map { PetStance.mood($0, .moderate) } ?? scene.stance).phrase(identity.name)
     }
 
     // MARK: State

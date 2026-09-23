@@ -64,10 +64,6 @@ public struct PetCompanyBanner: View {
             .animation(.smooth(duration: 0.9), value: state)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(identity.name.uppercased())
-                    .font(.system(.caption2, design: .rounded, weight: .bold))
-                    .tracking(1.2)
-                    .foregroundStyle(.secondary)
                 Text(PetCompanyLook.line(state, name: identity.name, stale: stale))
                     .font(.system(.headline, design: .rounded, weight: .bold))
                     .lineLimit(2)

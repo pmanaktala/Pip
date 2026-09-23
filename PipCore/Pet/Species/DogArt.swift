@@ -30,7 +30,7 @@ enum DogArt {
         QuadrupedArt.face(ctx, p, fig, fx: fx, fy: fy, skin: pal.coat, brows: nil)
 
         // Brow spots: two small marks above the eyes that rise, tilt and knit with the mood.
-        if !badge {
+        do {
             PetDraw.mirrored(ctx) { c, side in
                 let near = CGFloat(pose.headTurn) * side
                 let x = fig.eyeX + fx * (near > 0 ? 0.85 : 1.1) * side + 1

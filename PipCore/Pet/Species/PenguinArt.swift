@@ -87,9 +87,7 @@ enum PenguinArt {
             PetDraw.eye(c, at: CGPoint(x: x, y: fig.eyeY + fy), style: s,
                         lid: side > 0 ? pose.lidR : pose.lidL, slant: pose.lidSlant, smile: pose.smileEyes, squeeze: pose.squeeze,
                         gazeX: pose.gazeX * Double(side), gazeY: pose.gazeY, wide: pose.eyeWide, blink: pose.blink)
-            if !badge {
-                PetDraw.brow(c, over: CGPoint(x: x + 0.5, y: fig.eyeY + fy - fig.eyeH * 1.02), width: 8, show: pose.browShow, slant: pose.browSlant, raise: pose.browRaise, color: p.palette.ink.alpha(0.85), thickness: 2.2)
-            }
+            PetDraw.brow(c, over: CGPoint(x: x + 0.5, y: fig.eyeY + fy - fig.eyeH * 1.02), width: badge ? 9 : 8, show: pose.browShow, slant: pose.browSlant, raise: pose.browRaise, color: p.palette.ink.alpha(0.85), thickness: badge ? 3 : 2.2)
         }
     }
 
