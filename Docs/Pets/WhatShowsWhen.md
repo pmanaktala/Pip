@@ -20,10 +20,10 @@ widgets and complications (`PetSnapshot.stance(at:)`).
 
 | Time | Activity | Shows |
 |---|---|---|
-| 22:30 – 6:30 | Sleeping | Tucked under its blanket in a nightcap, eyes closed, `zzz` |
-| 6:30 – 8:00 | Waking up | Heavy lids, slightly slumped |
+| 22:30 – 6:00 | Sleeping | Tucked under its blanket in a nightcap, eyes closed, `zzz` |
+| 6:00 – 9:00 | Waking up | Heavy lids, slightly slumped |
 | Weekdays 9:00 – 12:00 and 13:30 – 17:30 | Working | Peeks over a little laptop (a paw print on the lid), types, looks up at you |
-| Other daytime (8:00 – 18:30) | Daydreaming / Playing / Reading | 90-minute blocks, picked per day, never the same twice in a row. Daydreaming looks up and smiles; Playing has a ball on the floor; Reading holds a book |
+| Other daytime (9:00 – 18:30) | Daydreaming / Playing / Reading | 90-minute blocks, picked per day, never the same twice in a row. Daydreaming looks up and smiles; Playing has a ball on the floor; Reading holds a book |
 | 14:00 – 15:00 | Napping (about half the days) | Sitting nap, `zzz` |
 | 18:30 – 21:30 | Reading | Book in both paws |
 | 21:30 – 22:30 | Winding down | Mug of cocoa, heavy lids |
@@ -63,7 +63,7 @@ At most one thing on its head, on top of at most one thing in its paws (`PetWear
 
 | Wears | When |
 |---|---|
-| Nightcap | From 21:30 until 6:30, over whatever else it is doing (a sad pet at midnight has its blanket *and* its nightcap), and always when asleep |
+| Nightcap | From 21:30 until 6:00, over whatever else it is doing (a sad pet at midnight has its blanket *and* its nightcap), and always when asleep |
 | Headphones | While another app is playing audio (music, a podcast) and the Pet tab is open. A good mood nods to the beat with a note or two; a hard one sways slowly with half-closed eyes. Asleep it never wears them |
 
 **Held props:** mug (calm, winding down), blanket (tired, sad, asleep), book (reading), ball

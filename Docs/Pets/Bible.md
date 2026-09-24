@@ -76,7 +76,7 @@ can get on with its day in that mood (working at a laptop in work hours, getting
 **Context** comes only from on-device signals with no permission: the clock, and whether other
 audio is playing (headphones). No location, no accounts. Full table: [WhatShowsWhen.md](WhatShowsWhen.md).
 
-**The pet's day** (no fresh mood): asleep 22:30–6:30 (curled, `zzz`), waking until 8 (stretch,
+**The pet's day** (no fresh mood): asleep 22:30–6:00 (curled, `zzz`), waking until 9 (stretch,
 yawn, rub eyes), then daydreaming, playing, reading or napping by the hour, reading in the
 evening, winding down from 21:30 (yawns, blanket). The same function drives every surface.
 

@@ -11,8 +11,8 @@ public enum PetDay {
         #endif
         let day = Double(calendar.ordinality(of: .day, in: .era, for: date) ?? 0)
         switch h {
-        case 22.5..., ..<6.5: return .sleeping
-        case ..<8: return .waking
+        case 22.5..., ..<6: return .sleeping
+        case ..<9: return .waking
         case 21.5...: return .windingDown
         case 18.5...: return .reading
         case 14..<15 where PetMath.hash01(day * 3.1) < 0.55: return .napping
@@ -34,17 +34,17 @@ public enum PetDay {
         return weekday != 1 && weekday != 7
     }
 
-    /// Bedtime: 21:30 until 6:30. The pet wears its nightcap whatever else it is doing.
+    /// Bedtime: 21:30 until 6:00. The pet wears its nightcap whatever else it is doing.
     public static func isBedtime(_ date: Date, calendar: Calendar = .current) -> Bool {
         let c = calendar.dateComponents([.hour, .minute], from: date)
         var h = Double(c.hour ?? 12) + Double(c.minute ?? 0) / 60
         #if DEBUG
         if let forced = ProcessInfo.processInfo.environment["PIP_HOUR"], let fh = Double(forced) { h = fh }
         #endif
-        return h >= 21.5 || h < 6.5
+        return h >= 21.5 || h < 6
     }
 
-    /// Deep night, when a pet left alone falls asleep: 22:30 until 6:30.
+    /// Deep night, when a pet left alone falls asleep: 22:30 until 6:00.
     public static func isNight(_ date: Date, calendar: Calendar = .current) -> Bool {
         activity(at: date, calendar: calendar) == .sleeping
     }
