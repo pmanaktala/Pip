@@ -113,6 +113,7 @@ public enum PetDirector {
 
         // 2. Idle.
         p = idle(p, stance: stance, species: s, t: t)
+        if let activity = stance.activity { p = doing(p, activity, t: t) }
         if scene.wear == .headphones { p = listening(p, stance: stance, t: t) }
 
         // 3. Event clips (and how much they push vignettes aside).
@@ -228,6 +229,42 @@ public enum PetDirector {
             p.tail += sin(t * (species == .dog ? 14 : 5) * idle.tailWag) * 0.7 * idle.tailWag
         } else {
             p.tail += PetMath.noise(t * 0.4, seed: 6) * 0.6
+        }
+        return p
+    }
+
+    /// What the pet is doing, all the time rather than now and then, so the status line is
+    /// always visibly true: eyes that read lines, paws that type, a ball that rolls.
+    static func doing(_ base: PetPose, _ activity: PetActivity, t: Double) -> PetPose {
+        var p = base
+        switch activity {
+        case .reading:
+            // A line takes 2.6 s: the eyes travel left to right, then flick back to the next line.
+            let u = (t / 2.6).truncatingRemainder(dividingBy: 1)
+            let x = u < 0.86 ? -0.65 + 1.3 * (u / 0.86) : 0.65 - 1.3 * PetMath.easeOut((u - 0.86) / 0.14)
+            p.gazeX = x
+            p.headTurn += x * 0.1
+            p.gazeY = max(p.gazeY, 0.75)
+        case .working:
+            // Typing in bursts with small pauses to read the screen.
+            let burst = PetMath.noise(t * 0.5, seed: 11) > -0.3
+            if burst {
+                p.armL += sin(t * 19) * 6
+                p.armR += sin(t * 19 + 1.7) * 6
+                p.headBob += abs(sin(t * 9.5)) * 0.6
+            }
+            p.gazeX = PetMath.noise(t * 0.35, seed: 12) * 0.5
+            p.gazeY = 0.45
+        case .playing:
+            // It watches the ball roll back and forth.
+            p.gazeX = 0.75 + sin(t * 1.1) * 0.2
+            p.gazeY = 0.55
+            p.headTurn += sin(t * 1.1) * 0.06
+        case .daydreaming:
+            p.gazeX = 0.5 + PetMath.noise(t * 0.2, seed: 13) * 0.1
+            p.gazeY = -0.65
+        default:
+            break
         }
         return p
     }

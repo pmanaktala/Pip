@@ -33,8 +33,11 @@ public struct PetPoseView: View, Animatable {
     public var framing: PetFraming
     public var time: Double?
     public var showsShadow: Bool
+    /// Draw for a tinted surface (see `PetPalette.monochrome`).
+    public var monochrome: Bool
 
-    public init(species: PetSpecies, pose: PetPose, prop: PetProp? = nil, wear: PetWear? = nil, framing: PetFraming = .full, time: Double? = nil, showsShadow: Bool = true) {
+    public init(species: PetSpecies, pose: PetPose, prop: PetProp? = nil, wear: PetWear? = nil, framing: PetFraming = .full, time: Double? = nil, showsShadow: Bool = true, monochrome: Bool = false) {
+        self.monochrome = monochrome
         self.species = species
         self.pose = pose
         self.prop = prop
@@ -57,7 +60,7 @@ public struct PetPoseView: View, Animatable {
             ctx.scaleBy(x: side / 200, y: side / 200)
             Self.frame(&ctx, species: species, framing: framing)
             // Held props belong to the full pet; what it wears shows at every size.
-            PetRenderer.draw(ctx, PetPaint(species: species, pose: pose, prop: framing == .full ? prop : nil, wear: wear, detail: framing.detail, time: time),
+            PetRenderer.draw(ctx, PetPaint(species: species, pose: pose, prop: framing == .full ? prop : nil, wear: wear, detail: framing.detail, time: time, monochrome: monochrome),
                              showsShadow: showsShadow)
         }
         .aspectRatio(1, contentMode: .fit)

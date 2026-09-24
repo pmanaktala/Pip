@@ -57,6 +57,13 @@ Life activities have their own vignettes: sleeping and napping (snore, ear twitc
 playing (bat the ball, wiggle, bounce), reading (turn a page, chuckle, look at you),
 winding down (sip, yawn, look at you).
 
+### Doing it, visibly
+
+The activity is in its constant motion, not only in the occasional clip, so the status line is
+always visibly true: **reading** eyes travel along a line and flick back to the next;
+**working** paws type in bursts with pauses to read the screen; **playing** the ball rolls back
+and forth and its eyes follow; **daydreaming** a little thought cloud with a heart floats up.
+
 ### What it wears
 
 At most one thing on its head, on top of at most one thing in its paws (`PetWear.choose`):
@@ -114,10 +121,10 @@ happening.
 | Sit With Pet | Meditating in the calm room; "Breathe together" drives the chest, a ring and the words (4 s in, 6 s out) | Live |
 | History, Settings, tab-bar accessory | Mood token faces | Still |
 | Home Screen widgets | Small: the pet in its room. Medium: pet, status, four faces to log. Large: pet over all eight faces | A new entry every 30 min, at each change in the pet's day and when a mood fades; each entry shows the next still pose, and the system animates the change |
-| Lock Screen (circular, rectangular, inline) | Badge face (nightcap at night), name, what it's doing | Same timeline as widgets |
+| Lock Screen (circular, rectangular, inline) | Badge face (nightcap at night), name, what it's doing | Same timeline as widgets, stepping through the stance's *complication moments* (below) |
 | Live Activity (Lock Screen, Dynamic Island, watch Smart Stack) | Starts when you log (if "Keep me company" is on). The pet in its company stance in a slice of the room, one line in its voice, "Here since 9:41", a Pet button. No timers | Pet button: leans in with a heart for 3.2 s, then settles on another still pose. Two-thirds of the way through it dozes off ("Pebble dozed off beside you"). It stays 60 min after sad, stressed, tired or frustrated, 20 min otherwise; a new log replaces it |
 | Watch app | Same live pet, stance and clock as the phone; tap to boop, long-press to pet | Live, 30 fps |
-| Watch complications | Badge face; corner, circular, rectangular (with what it's doing), inline | Same timeline as widgets |
+| Watch complications | Badge face; corner, circular, rectangular (with what it's doing), inline | A new *complication moment* every 5 minutes: bold, mood-true faces designed for 30 pt (happy: a beam, a wink, a grin with sparkles, a tilt with a heart; sad: a tear, a brave little smile, a sigh; asleep: `zzz`, rolled over, one eye peeking). On tinted faces it switches to a monochrome palette so the silhouette and the expression survive the tint |
 | App icon | Pebble, head and shoulders, content | — |
 
 ## 7. What stays in sync between phone and watch

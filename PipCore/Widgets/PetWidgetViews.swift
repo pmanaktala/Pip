@@ -46,23 +46,9 @@ public struct PetWidgetMoment: Sendable {
         }
         let sorted = dates.sorted()
         // Walk the still poses in a shuffled order that never shows the same one twice in a row.
-        var previous = -1
-        return sorted.enumerated().map { i, date in
-            let slot = Int(date.timeIntervalSince1970 / Double(minutes * 60))
-            let count = snapshot.stance(at: date, calendar: calendar).holds(snapshot.identity.species).count
-            var hold = i == 0 ? 0 : Self.pose(for: slot, of: count)
-            if hold == previous, count > 1 { hold = (hold + 1) % count }
-            previous = hold
-            return PetWidgetMoment(snapshot: snapshot, date: date, hold: hold)
-        }
-    }
-
-    /// A still pose for a clock slot: never the same as the slot before.
-    static func pose(for slot: Int, of count: Int) -> Int {
-        guard count > 1 else { return 0 }
-        let a = Int(PetMath.hash01(Double(slot) * 1.618) * Double(count)) % count
-        let b = Int(PetMath.hash01(Double(slot - 1) * 1.618) * Double(count)) % count
-        return a == b ? (a + 1) % count : a
+        // Each entry steps to the next still pose (the view wraps it to however many the stance
+        // has), so two neighbouring entries never show the same one.
+        return sorted.enumerated().map { i, date in PetWidgetMoment(snapshot: snapshot, date: date, hold: i) }
     }
 }
 
@@ -224,6 +210,7 @@ public struct MoodFaceButton: View {
 public struct PetAccessoryView: View {
     public var moment: PetWidgetMoment
     public var family: WidgetFamily
+    @Environment(\.widgetRenderingMode) private var renderingMode
 
     public init(moment: PetWidgetMoment, family: WidgetFamily) {
         self.moment = moment
@@ -231,8 +218,9 @@ public struct PetAccessoryView: View {
     }
 
     private var face: some View {
-        PetPoseView(species: moment.identity.species, pose: PetDirector.hold(moment.scene, index: moment.hold),
-                    wear: moment.scene.wear, framing: .badge, showsShadow: false)
+        let moments = moment.stance.badgeMoments(moment.identity.species)
+        return PetPoseView(species: moment.identity.species, pose: moments[moment.hold % moments.count],
+                           wear: moment.scene.wear, framing: .badge, showsShadow: false, monochrome: renderingMode != .fullColor)
     }
 
     public var body: some View {

@@ -201,6 +201,7 @@ public enum PetStance: Codable, Hashable, Sendable {
             p.lidL = 0.45; p.lidR = 0.45; p.slump = 0.15; p.smile = 0.1; p.earL = -0.1; p.earR = -0.1
         case .daydreaming:
             p.gazeX = 0.45; p.gazeY = -0.6; p.headNod = -0.15; p.headTilt = 9; p.smile = 0.3; p.lidL = 0.15; p.lidR = 0.15
+            p.thought = 0.9; p.blush = 0.3
         case .playing:
             p.gazeX = 0.8; p.gazeY = 0.55; p.smile = 0.5; p.smileEyes = 0.2; p.earL = 0.5; p.earR = 0.5; p.tailUp = 0.6
             p.headTurn = 0.25; p.headTilt = 6; p.armR = 12
@@ -214,6 +215,45 @@ public enum PetStance: Codable, Hashable, Sendable {
             p.earL = 0.2; p.earR = 0.2
         }
         return p
+    }
+
+    /// Faces for complications and Lock Screen accessories: bold enough to see at 30 pt, and
+    /// always true to the stance. They step one per timeline entry (every 5 minutes on the
+    /// watch), so each glance at your wrist catches a different little moment.
+    public func badgeMoments(_ s: PetSpecies) -> [PetPose] {
+        var base = rest(s)
+        base.armL = 0; base.armR = 0
+        func m(_ f: (inout PetPose) -> Void) -> PetPose { var p = base; f(&p); return p.clamped() }
+        let lookLeft = m { $0.headTurn = -0.8; $0.gazeX = -1; $0.headTilt = -6 }
+        let lookRight = m { $0.headTurn = 0.8; $0.gazeX = 1; $0.headTilt = 6 }
+        let wink = m { $0.lidR = 1; $0.lidL = 0; $0.smile = 0.8; $0.headTilt = 8; $0.blush = 0.6 }
+        let beam = m { $0.smileEyes = 1; $0.smile = 1; $0.blush = 0.8 }
+        let curious = m { $0.headTilt = 16; $0.question = 1; $0.browRaise = 0.8; $0.eyeWide = 0.15 }
+        switch self {
+        case .mood(let mood, _):
+            switch mood {
+            case .happy: return [beam, wink, m { $0.mouthOpen = 0.8; $0.smile = 1; $0.smileEyes = 0.6; $0.sparkles = 1 }, m { $0.headTilt = 14; $0.hearts = 1; $0.smileEyes = 0.7 }]
+            case .excited: return [m { $0.mouthOpen = 1; $0.smileEyes = 1; $0.sparkles = 1 }, wink, m { $0.eyeWide = 0.3; $0.mouthOpen = 0.8; $0.exclaim = 1 }, beam]
+            case .calm: return [m { $0.lidL = 1; $0.lidR = 1; $0.smile = 0.6; $0.blush = 0.4 }, m { $0.headTilt = 12; $0.smileEyes = 0.6; $0.hearts = 1 }, lookRight, beam]
+            case .neutral: return [base, lookLeft, curious, lookRight, m { $0.smileEyes = 0.9; $0.smile = 0.5 }]
+            case .tired: return [m { $0.lidL = 1; $0.lidR = 1; $0.mouthOpen = 0.9; $0.mouthRound = 0.8 }, m { $0.lidL = 0.7; $0.lidR = 0.7; $0.headTilt = -12 }, m { $0.lidL = 1; $0.lidR = 1; $0.zzz = 1; $0.headTilt = 10 }]
+            case .stressed: return [m { $0.sweat = 1; $0.eyeWide = 0.25 }, m { $0.lidL = 1; $0.lidR = 1; $0.mouthOpen = 0.3; $0.mouthRound = 1; $0.sweat = 0 }, m { $0.smile = 0.2; $0.lidSlant = -0.3; $0.headTilt = 8 }]
+            case .sad: return [m { $0.tears = 1 }, m { $0.headNod = -0.3; $0.smile = 0.2; $0.lidSlant = -0.4; $0.headTilt = 8 }, m { $0.lidL = 1; $0.lidR = 1; $0.headTilt = -8 }]
+            case .frustrated: return [m { $0.steam = 1; $0.cheekPuff = 1 }, m { $0.mouthOpen = 0.4; $0.mouthRound = 1; $0.steam = 1 }, m { $0.headTurn = -0.8; $0.gazeX = 1; $0.lidL = 0.4; $0.lidR = 0.4 }]
+            }
+        case .life(let a), .busy(let a, _, _):
+            switch a {
+            case .sleeping, .napping: return [base, m { $0.headTilt = 14 }, m { $0.lidR = 0.3; $0.headTilt = -8; $0.zzz = 0 }]
+            case .waking: return [m { $0.lidL = 1; $0.lidR = 1; $0.mouthOpen = 0.9; $0.mouthRound = 0.8 }, m { $0.lidL = 0.5; $0.lidR = 0.5; $0.headTilt = 10 }, beam]
+            case .reading: return [base, m { $0.gazeY = -0.1; $0.smile = 0.5; $0.smileEyes = 0.5 }, m { $0.smileEyes = 1; $0.smile = 0.8 }]
+            case .working: return [base, m { $0.gazeY = -0.1; $0.gazeX = 0; $0.smile = 0.4 }, curious]
+            case .daydreaming: return [base, m { $0.smileEyes = 0.9; $0.blush = 0.6; $0.hearts = 1 }, lookRight]
+            case .playing: return [beam, lookRight, wink, m { $0.mouthOpen = 0.8; $0.smile = 1; $0.sparkles = 1 }]
+            case .windingDown: return [m { $0.lidL = 1; $0.lidR = 1; $0.mouthOpen = 0.9; $0.mouthRound = 0.8 }, m { $0.lidL = 0.6; $0.lidR = 0.6; $0.smile = 0.4 }, beam]
+            }
+        case .meditating:
+            return [base]
+        }
     }
 
     /// The mood's face turned up for small tokens (pickers, history, widgets), where the resting
@@ -266,11 +306,11 @@ public enum PetStance: Codable, Hashable, Sendable {
             switch a {
             case .sleeping, .napping: Idle(breathRate: 0.12, breathDepth: 0.9, sway: 0.5, tiltNoise: 1, gazeRange: 0, blinks: false, tailWag: 0, bob: 0)
             case .waking: Idle(breathRate: 0.18, breathDepth: 0.6, sway: 1.5, tiltNoise: 3, gazeRange: 0.3, blinks: true, tailWag: 0.1, bob: 0)
-            case .daydreaming: Idle(breathRate: 0.2, breathDepth: 0.6, sway: 1.5, tiltNoise: 3, gazeRange: 0.2, blinks: true, tailWag: 0.2, bob: 0)
-            case .playing: Idle(breathRate: 0.3, breathDepth: 0.5, sway: 2, tiltNoise: 3, gazeRange: 0.2, blinks: true, tailWag: 0.8, bob: 0)
-            case .reading: Idle(breathRate: 0.2, breathDepth: 0.5, sway: 0.6, tiltNoise: 1.5, gazeRange: 0.15, blinks: true, tailWag: 0.1, bob: 0)
+            case .daydreaming: Idle(breathRate: 0.2, breathDepth: 0.6, sway: 1.5, tiltNoise: 3, gazeRange: 0, blinks: true, tailWag: 0.2, bob: 0)
+            case .playing: Idle(breathRate: 0.3, breathDepth: 0.5, sway: 2, tiltNoise: 3, gazeRange: 0, blinks: true, tailWag: 0.8, bob: 0)
+            case .reading: Idle(breathRate: 0.2, breathDepth: 0.5, sway: 0.6, tiltNoise: 1.5, gazeRange: 0, blinks: true, tailWag: 0.1, bob: 0)
             case .windingDown: Idle(breathRate: 0.16, breathDepth: 0.7, sway: 1, tiltNoise: 2, gazeRange: 0.2, blinks: true, tailWag: 0, bob: 0)
-            case .working: Idle(breathRate: 0.22, breathDepth: 0.5, sway: 0.6, tiltNoise: 1.5, gazeRange: 0.35, blinks: true, tailWag: 0.15, bob: 0)
+            case .working: Idle(breathRate: 0.22, breathDepth: 0.5, sway: 0.6, tiltNoise: 1.5, gazeRange: 0, blinks: true, tailWag: 0.15, bob: 0)
             }
         case .busy(let a, let m, let i): Self.busyIdle(a, m, i)
         case .meditating:

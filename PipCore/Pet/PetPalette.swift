@@ -41,6 +41,16 @@ public struct PetPalette: Sendable {
     /// Held things (mug band, blanket, nightcap), a quiet colour per pet.
     public var prop: PetRGB
 
+    /// For tinted watch faces and the vibrant Lock Screen, where the system turns brightness into
+    /// opacity: a light coat with a clear outline, a white face, and dark eyes that read as
+    /// cut-outs, so the silhouette and the expression survive any tint.
+    public static func monochrome(for species: PetSpecies) -> PetPalette {
+        let face = PetRGB(1, 1, 1)
+        return PetPalette(coat: species == .dog ? PetRGB(0.9, 0.9, 0.9) : PetRGB(0.72, 0.72, 0.72), cream: face, marking: PetRGB(0.58, 0.58, 0.58),
+                          pink: PetRGB(0.8, 0.8, 0.8), accent: species == .penguin ? PetRGB(0.92, 0.92, 0.92) : PetRGB(0.25, 0.25, 0.25),
+                          ink: PetRGB(0.02, 0.02, 0.02), blush: PetRGB(0, 0, 0, 0), prop: PetRGB(0.85, 0.85, 0.85))
+    }
+
     public static func palette(for species: PetSpecies) -> PetPalette {
         switch species {
         case .penguin:

@@ -21,14 +21,14 @@ public struct PetPaint {
     public var time: Double?
     public var palette: PetPalette
 
-    public init(species: PetSpecies, pose: PetPose, prop: PetProp? = nil, wear: PetWear? = nil, detail: PetDetail = .full, time: Double? = nil) {
+    public init(species: PetSpecies, pose: PetPose, prop: PetProp? = nil, wear: PetWear? = nil, detail: PetDetail = .full, time: Double? = nil, monochrome: Bool = false) {
         self.species = species
         self.pose = pose.clamped()
         self.prop = prop
         self.wear = wear
         self.detail = detail
         self.time = time
-        self.palette = .palette(for: species)
+        self.palette = monochrome ? .monochrome(for: species) : .palette(for: species)
     }
 
     /// Rim width in design units: heavier as the pet gets smaller so it still reads.
@@ -60,10 +60,10 @@ struct PetFigure {
             PetFigure(headCenter: CGPoint(x: 100, y: 70), headRX: 37.5, headRY: 35.5, neck: CGPoint(x: 100, y: 100), shoulder: CGPoint(x: 36, y: 104),
                       eyeX: 14.5, eyeY: 1, eyeW: 7.2, eyeH: 9.6, mouthY: 13, blushX: 18.5, blushY: 11.5)
         case .cat:
-            PetFigure(headCenter: CGPoint(x: 100, y: 78), headRX: 47, headRY: 37, neck: CGPoint(x: 100, y: 108), shoulder: CGPoint(x: 19, y: 118),
+            PetFigure(headCenter: CGPoint(x: 100, y: 76), headRX: 46, headRY: 36, neck: CGPoint(x: 100, y: 104), shoulder: CGPoint(x: 29, y: 112),
                       eyeX: 19, eyeY: 0, eyeW: 8, eyeH: 10.5, mouthY: 16, blushX: 25, blushY: 10)
         case .dog:
-            PetFigure(headCenter: CGPoint(x: 100, y: 78), headRX: 42, headRY: 38, neck: CGPoint(x: 100, y: 108), shoulder: CGPoint(x: 20, y: 118),
+            PetFigure(headCenter: CGPoint(x: 100, y: 75), headRX: 42, headRY: 37, neck: CGPoint(x: 100, y: 104), shoulder: CGPoint(x: 30, y: 112),
                       eyeX: 15.5, eyeY: 0, eyeW: 9, eyeH: 10.6, mouthY: 20, blushX: 23, blushY: 10)
         }
     }
@@ -75,13 +75,14 @@ struct PetFigure {
         let keys: [(Double, CGPoint)]
         switch species {
         case .penguin:
-            keys = [(-130, CGPoint(x: 8, y: 80)), (-110, CGPoint(x: 13, y: 86)), (-80, CGPoint(x: 10, y: 106)), (-55, CGPoint(x: 15, y: 123)),
+            keys = [(-130, CGPoint(x: 13, y: 72)), (-110, CGPoint(x: 15, y: 80)), (-80, CGPoint(x: 10, y: 106)), (-55, CGPoint(x: 15, y: 123)),
                     (-40, CGPoint(x: 20, y: 132)), (-20, CGPoint(x: 30, y: 140)), (0, CGPoint(x: 46, y: 139)), (45, CGPoint(x: 66, y: 128)), (90, CGPoint(x: 73, y: 104)),
                     (135, CGPoint(x: 63, y: 78)), (175, CGPoint(x: 44, y: 66))]
         case .cat, .dog:
-            keys = [(-130, CGPoint(x: 12, y: 76)), (-110, CGPoint(x: 17, y: 84)), (-85, CGPoint(x: 11, y: 108)), (-55, CGPoint(x: 13, y: 128)),
-                    (-40, CGPoint(x: 17, y: 138)), (-20, CGPoint(x: 13, y: 152)), (0, CGPoint(x: 15, y: 164)), (45, CGPoint(x: 42, y: 146)),
-                    (90, CGPoint(x: 64, y: 114)), (135, CGPoint(x: 66, y: 80)), (175, CGPoint(x: 50, y: 52))]
+            // Mitten arms: hanging at the side, onto the belly, to the chest, to the face; out and up.
+            keys = [(-130, CGPoint(x: 15, y: 70)), (-110, CGPoint(x: 19, y: 80)), (-85, CGPoint(x: 11, y: 108)), (-55, CGPoint(x: 13, y: 124)),
+                    (-40, CGPoint(x: 17, y: 130)), (-20, CGPoint(x: 26, y: 138)), (0, CGPoint(x: 36, y: 140)), (45, CGPoint(x: 54, y: 128)),
+                    (90, CGPoint(x: 66, y: 106)), (135, CGPoint(x: 64, y: 82)), (175, CGPoint(x: 54, y: 62))]
         }
         let a = angle.clamped(keys.first!.0, keys.last!.0)
         for i in 0..<(keys.count - 1) where a <= keys[i + 1].0 {

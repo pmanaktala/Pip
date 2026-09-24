@@ -202,3 +202,47 @@ enum LabDog {
         }.padding(8).background(Color.white)
     }
 }
+
+enum LabActions {
+    @MainActor static func sheet(_ s: PetSpecies) -> some View {
+        func pose(_ f: (inout PetPose) -> Void) -> PetPose { var p = PetStance.mood(.neutral, .moderate).rest(s); f(&p); return p }
+        let rows: [(String, PetPose, PetProp?)] = [
+            ("wave", pose { $0.armR = 130; $0.smileEyes = 0.6; $0.smile = 0.6 }, nil),
+            ("cheer", pose { $0.armR = 150; $0.armL = 150; $0.smileEyes = 1; $0.mouthOpen = 0.6 }, nil),
+            ("hug", pose { $0.armR = -55; $0.armL = -55; $0.smile = 0.3 }, nil),
+            ("rub eye", pose { $0.armR = -118; $0.lidR = 1 }, nil),
+            ("cover eyes", pose { $0.armR = -122; $0.armL = -122; $0.blush = 1 }, nil),
+            ("mug", PetStance.mood(.calm, .moderate).rest(s), .mug),
+            ("typing", PetStance.life(.working).rest(s), .laptop),
+        ]
+        return HStack(spacing: 6) {
+            ForEach(rows.indices, id: \.self) { i in
+                VStack(spacing: 2) {
+                    LabPet(species: s, pose: rows[i].1.clamped(), prop: rows[i].2).frame(width: 230, height: 230).background(Color(red: 0.93, green: 0.95, blue: 0.97))
+                    Text(rows[i].0).font(.system(size: 11)).foregroundStyle(.black)
+                }
+            }
+        }.padding(8).background(Color.white)
+    }
+}
+
+enum LabComplications {
+    @MainActor static func sheet(mono: Bool = false) -> some View {
+        let stances: [PetStance] = [.mood(.happy, .moderate), .mood(.neutral, .moderate), .mood(.sad, .moderate), .mood(.frustrated, .moderate), .life(.sleeping)]
+        return VStack(alignment: .leading, spacing: 10) {
+            ForEach(PetSpecies.allCases, id: \.self) { s in
+                HStack(spacing: 14) {
+                    ForEach(stances.indices, id: \.self) { i in
+                        HStack(spacing: 4) {
+                            ForEach(stances[i].badgeMoments(s).indices, id: \.self) { k in
+                                LabPet(species: s, pose: stances[i].badgeMoments(s)[k], wear: stances[i].isAsleep ? .nightcap : nil, detail: .badge, mono: mono)
+                                    .frame(width: 44, height: 44).padding(3)
+                                    .background(Circle().fill(Color(white: 0.16)))
+                            }
+                        }
+                    }
+                }
+            }
+        }.padding(14).background(Color.black)
+    }
+}

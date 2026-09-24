@@ -164,10 +164,17 @@ enum PetPropArt {
     }
 
     static func ball(_ ctx: GraphicsContext, _ p: PetPaint) {
-        let c = CGPoint(x: 158, y: PetFigure.floor - 11)
+        // It rolls a little back and forth (the pet's eyes follow it); the stripe turns with it.
+        let t = p.time ?? 0
+        let roll = CGFloat(sin(t * 1.1)) * 5
+        let c = CGPoint(x: 158 + roll, y: PetFigure.floor - 11)
+        var spun = ctx
+        spun.translateBy(x: c.x, y: c.y)
+        spun.rotate(by: .radians(Double(roll / 11)))
+        spun.translateBy(x: -c.x, y: -c.y)
         let ball = PetDraw.ellipse(c, 11, 11)
         PetDraw.solid(ctx, ball, p.palette.prop, rim: p.rim, depth: 4)
-        var stripe = ctx
+        var stripe = spun
         stripe.clip(to: ball)
         var s = Path()
         s.move(to: CGPoint(x: c.x - 12, y: c.y + 3))

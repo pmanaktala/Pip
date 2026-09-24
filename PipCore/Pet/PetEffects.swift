@@ -39,6 +39,9 @@ enum PetEffects {
                 sparkle(head, at: CGPoint(x: fig.headRX * 0.95, y: -fig.headRY * 0.85), size: 5, color: PetRGB(1.0, 0.78, 0.25))
                 sparkle(head, at: CGPoint(x: -fig.headRX * 0.9, y: -fig.headRY * 0.6), size: 3.5, color: PetRGB(1.0, 0.78, 0.25))
             }
+            if pose.hearts > 0.3 { heart(head, at: CGPoint(x: fig.headRX * 0.92, y: -fig.headRY * 0.82), size: 8, color: PetRGB(0.98, 0.42, 0.50)) }
+            if pose.question > 0.3 { letter("?", head, at: CGPoint(x: fig.headRX * 0.95, y: -fig.headRY * 0.9), size: 18, color: ink.alpha(0.85)) }
+            if pose.exclaim > 0.3 { letter("!", head, at: CGPoint(x: fig.headRX * 0.95, y: -fig.headRY * 0.9), size: 19, color: ink.alpha(0.85)) }
             return
         }
         // Everything else floats above the head, in the body's space (it doesn't tilt with the head).
@@ -87,6 +90,24 @@ enum PetEffects {
                     c.fill(PetDraw.ellipse(pt, 4 + CGFloat(ph) * 4, 3.5 + CGFloat(ph) * 3), PetRGB(0.96, 0.96, 0.98, a))
                 }
             }
+        }
+        if pose.thought > 0.02 {
+            // A daydream: two little puffs rising to a cloud with a small heart in it.
+            let a = pose.thought
+            let bob = CGFloat(sin(t * 1.3)) * 1.5
+            let base = CGPoint(x: top.x + fig.headRX * 0.7, y: top.y + 4)
+            let cloudC = CGPoint(x: base.x + 22, y: base.y - 26 + bob)
+            let white = PetRGB(1, 1, 1, 0.95 * a)
+            let edge = PetRGB(0.55, 0.52, 0.62, 0.55 * a)
+            for (i, r) in [CGFloat(2.4), 3.6].enumerated() {
+                let pt = CGPoint(x: base.x + CGFloat(i) * 7, y: base.y - CGFloat(i) * 8 + bob * 0.5)
+                body.fill(PetDraw.ellipse(pt, r, r), white)
+                body.stroke(PetDraw.ellipse(pt, r, r), edge, width: 1)
+            }
+            let cloud = PetDraw.fluffy(cloudC, 15, 10, bumps: 7, depth: 1.8)
+            body.fill(cloud, white)
+            body.stroke(cloud, edge, width: 1.1)
+            heart(body, at: CGPoint(x: cloudC.x, y: cloudC.y + 0.5), size: 4.2, color: PetRGB(0.98, 0.52, 0.58, a))
         }
         if pose.question > 0.02 {
             letter("?", body, at: CGPoint(x: top.x + fig.headRX * 0.85, y: top.y - 4 - CGFloat(pose.question) * 4), size: 20, color: ink.alpha(0.75 * pose.question))

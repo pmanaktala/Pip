@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// The sitting body shared by Mochi and Biscuit: haunches, a chest bib, forelegs that are also
-/// arms, back paws peeking out, and a tail. The heads are drawn by `CatArt` and `DogArt`.
+/// The body shared by Mochi and Biscuit, built like Pebble's: a soft bean of a body sitting
+/// on its haunches, two round front feet on the floor, and short mitten arms at the sides that
+/// wave, hug and hold things the way a chibi character's do. The heads are `CatArt` and `DogArt`.
 enum QuadrupedArt {
     static func body(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure) {
         let pal = p.palette, pose = p.pose
@@ -11,94 +12,66 @@ enum QuadrupedArt {
 
         tail(ctx, p)
 
-        // Back paws, just visible in front of the haunches.
+        // Haunches: a rounded thigh at each side, so it reads as sitting.
         PetDraw.mirrored(ctx, axis: 100) { c, side in
-            let foot = PetDraw.ellipse(CGPoint(x: 100 + 36 + CGFloat(pose.turn) * 3 * side, y: floor - 4), 12, 6)
-            PetDraw.solid(c, foot, dog ? pal.coat : pal.coat, rim: p.rim, depth: 2.5)
+            let thigh = PetDraw.ellipse(CGPoint(x: 100 + 30 + CGFloat(pose.turn) * 2 * side, y: floor - 16), 17, 15)
+            PetDraw.solid(c, thigh, pal.coat, rim: p.rim, depth: 4)
         }
 
-        // Torso: narrow at the shoulders, broad over the haunches.
-        let shoulder: CGFloat = (dog ? 31 : 28) + breathe, hip: CGFloat = dog ? 47 : 44
-        let top: CGFloat = 100 - breathe * 0.5
-        var torso = Path()
-        torso.move(to: CGPoint(x: 100, y: top))
-        torso.addCurve(to: CGPoint(x: 100 + hip, y: 146), control1: CGPoint(x: 100 + shoulder, y: top), control2: CGPoint(x: 100 + hip * 0.9, y: 118))
-        torso.addCurve(to: CGPoint(x: 100, y: floor - 3), control1: CGPoint(x: 100 + hip * 1.05, y: 166), control2: CGPoint(x: 100 + hip * 0.6, y: floor - 3))
-        torso.addCurve(to: CGPoint(x: 100 - hip, y: 146), control1: CGPoint(x: 100 - hip * 0.6, y: floor - 3), control2: CGPoint(x: 100 - hip * 1.05, y: 166))
-        torso.addCurve(to: CGPoint(x: 100, y: top), control1: CGPoint(x: 100 - hip * 0.9, y: 118), control2: CGPoint(x: 100 - shoulder, y: top))
-        torso.closeSubpath()
-        PetDraw.solid(ctx, torso, pal.coat, rim: p.rim, depth: 7)
+        // The bean: narrow under the head, full at the belly.
+        let w: CGFloat = (dog ? 40 : 38) + breathe, top: CGFloat = 96 - breathe * 0.5, bottom = floor - 5
+        var bean = Path()
+        bean.move(to: CGPoint(x: 100, y: top))
+        bean.addCurve(to: CGPoint(x: 100 + w, y: 138), control1: CGPoint(x: 100 + w * 0.62, y: top), control2: CGPoint(x: 100 + w, y: 110))
+        bean.addCurve(to: CGPoint(x: 100, y: bottom), control1: CGPoint(x: 100 + w, y: 160), control2: CGPoint(x: 100 + w * 0.6, y: bottom))
+        bean.addCurve(to: CGPoint(x: 100 - w, y: 138), control1: CGPoint(x: 100 - w * 0.6, y: bottom), control2: CGPoint(x: 100 - w, y: 160))
+        bean.addCurve(to: CGPoint(x: 100, y: top), control1: CGPoint(x: 100 - w, y: 110), control2: CGPoint(x: 100 - w * 0.62, y: top))
+        bean.closeSubpath()
+        PetDraw.solid(ctx, bean, pal.coat, rim: p.rim, depth: 6)
 
-        // Haunch lines: a soft crease so the pet reads as sitting.
-        if p.detail == .full {
-            PetDraw.mirrored(ctx, axis: 100) { c, _ in
-                var crease = Path()
-                crease.move(to: CGPoint(x: 100 + 25, y: 166))
-                crease.addQuadCurve(to: CGPoint(x: 100 + 30, y: 136), control: CGPoint(x: 100 + 19, y: 150))
-                c.stroke(crease, pal.coat.shade.mix(pal.coat.rim, 0.3), width: 1.6)
-            }
-        }
-
-        // Chest bib.
-        var bib = ctx
-        bib.clip(to: torso)
+        // Chest and belly.
+        var inside = ctx
+        inside.clip(to: bean)
         let bx = 100 + CGFloat(pose.turn) * 5
-        var chest = Path()
-        chest.move(to: CGPoint(x: bx, y: 104))
-        chest.addQuadCurve(to: CGPoint(x: bx + 21 + breathe, y: 134), control: CGPoint(x: bx + 22, y: 108))
-        chest.addQuadCurve(to: CGPoint(x: bx, y: 162), control: CGPoint(x: bx + 18, y: 158))
-        chest.addQuadCurve(to: CGPoint(x: bx - 21 - breathe, y: 134), control: CGPoint(x: bx - 18, y: 158))
-        chest.addQuadCurve(to: CGPoint(x: bx, y: 104), control: CGPoint(x: bx - 22, y: 108))
         if dog {
-            // A fluffy chest instead of a smooth bib.
-            PetDraw.solid(bib, PetDraw.fluffy(CGPoint(x: bx, y: 128), 20 + breathe, 22, bumps: 11, depth: 1.5), pal.cream, rim: 0, depth: 3)
+            PetDraw.solid(inside, PetDraw.fluffy(CGPoint(x: bx, y: 132), 22 + breathe, 25, bumps: 12, depth: 1.4), pal.cream, rim: 0, depth: 3)
         } else {
-            PetDraw.solid(bib, chest, pal.cream, rim: 0, depth: 3)
+            PetDraw.solid(inside, PetDraw.ellipse(CGPoint(x: bx, y: 136), 22 + breathe * 0.8, 26), pal.cream, rim: 0, depth: 3)
+        }
+
+        // Front feet on the floor, toes forward.
+        PetDraw.mirrored(ctx, axis: 100) { c, side in
+            let step = CGFloat(side > 0 ? pose.stepR : pose.stepL)
+            let center = CGPoint(x: 100 + 15 + CGFloat(pose.turn) * 3 * side, y: floor - 5 - step)
+            let foot = PetDraw.ellipse(center, 11, 7)
+            PetDraw.solid(c, foot, dog ? pal.coat : pal.cream, rim: p.rim, depth: 2.5)
+            if p.detail == .full {
+                for dx in [-3.2, 3.2] as [CGFloat] {
+                    var toe = Path()
+                    toe.move(to: CGPoint(x: center.x + dx, y: center.y + 2))
+                    toe.addLine(to: CGPoint(x: center.x + dx, y: center.y + 5.5))
+                    c.stroke(toe, pal.coat.shade, width: 1.2)
+                }
+            }
         }
     }
 
+    /// A short mitten arm: one rounded shape from the side of the body to a soft paw, the same
+    /// construction as Pebble's flippers, following the same designed arc of paw positions.
     static func foreleg(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure, angle: Double) {
         let pal = p.palette
-        let shoulder = CGPoint(x: 100 + fig.shoulder.x, y: fig.shoulder.y)
+        let root = CGPoint(x: 100 + fig.shoulder.x, y: fig.shoulder.y)
         let off = fig.paw(p.species, angle: angle)
-        var tip = CGPoint(x: 100 + off.x, y: off.y)
-        let resting = angle > -12 && angle < 25
-        // A standing paw lifts with a step.
-        if resting { tip.y -= CGFloat(p.pose.stepR) * 0.6 }
-        // A resting leg is mostly hidden by the chest: only its lower half shows, so it reads as
-        // a paw on the floor rather than a column. A raised or folded leg shows all of it.
-        // Folded arms start at the outside of the shoulder so they wrap round the chest (a hug),
-        // not out from under the chin.
-        let folded = angle < -12
-        let root = resting ? CGPoint(x: shoulder.x + (tip.x - shoulder.x) * 0.45, y: shoulder.y + (tip.y - shoulder.y) * 0.45)
-            : folded ? CGPoint(x: shoulder.x + 8, y: shoulder.y + 5) : shoulder
-        let reach = hypot(tip.x - shoulder.x, tip.y - shoulder.y)
-        let bend = resting ? -1 : folded ? -6 : -max(0, 46 - reach) * 0.45 - 1.5
-        let width: CGFloat = resting ? 14 : 15
-        let pawSize = CGSize(width: resting ? 9.5 : 8.6, height: resting ? 7.2 : 7.6)
-        let pawCenter = CGPoint(x: tip.x, y: tip.y + (resting ? 1 : 0))
-        // Leg and paw are one shape with one outline: no seam at the wrist.
-        let paw = PetDraw.ellipse(pawCenter, pawSize.width, pawSize.height)
-        let shape = PetDraw.limb(from: root, to: tip, bend: bend, rootWidth: width, tipWidth: width - 2).union(paw)
-        if resting {
-            PetDraw.solid(ctx, shape, pal.coat, rim: p.rim * 0.7, depth: 3)
-        } else {
-            PetDraw.solid(ctx, shape, pal.coat, rim: p.rim, depth: 3)
-        }
-        // The paw itself: a sock of cream on the cat, the same white on the dog; toe lines when
-        // it rests on the floor.
+        let tip = CGPoint(x: 100 + off.x, y: off.y)
+        let bend: CGFloat = angle < -12 ? -3 : -4
+        let arm = PetDraw.limb(from: root, to: tip, bend: bend, rootWidth: 16, tipWidth: 13)
+            .union(PetDraw.ellipse(tip, 7.6, 7.2))
+        PetDraw.solid(ctx, arm, pal.coat, rim: p.rim, depth: 3)
         if p.species == .cat {
-            var sock = ctx
-            sock.clip(to: shape)
-            sock.fill(PetDraw.ellipse(CGPoint(x: pawCenter.x, y: pawCenter.y + 1.5), pawSize.width * 1.05, pawSize.height), pal.cream)
-        }
-        if p.detail == .full && resting {
-            for dx in [-2.8, 2.8] as [CGFloat] {
-                var toe = Path()
-                toe.move(to: CGPoint(x: tip.x + dx, y: tip.y + 3.5))
-                toe.addLine(to: CGPoint(x: tip.x + dx, y: tip.y + 6.5))
-                ctx.stroke(toe, pal.coat.shade, width: 1.2)
-            }
+            // A cream mitten on the cat.
+            var mitten = ctx
+            mitten.clip(to: arm)
+            mitten.fill(PetDraw.ellipse(tip, 8.4, 8), pal.cream)
         }
     }
 

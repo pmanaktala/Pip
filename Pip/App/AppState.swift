@@ -133,6 +133,10 @@ final class AppState {
     /// iOS cancels a change requested while another is running or before the app is fully
     /// active, so there is only ever one request in flight, made a moment after activation.
     func updateAppIcon() {
+        #if DEBUG
+        // Screenshot overrides of the species aren't a real choice of pet.
+        if ProcessInfo.processInfo.environment["PIP_SPECIES"] != nil { return }
+        #endif
         guard !iconChangeInFlight else { return }
         iconChangeInFlight = true
         Task { @MainActor in
