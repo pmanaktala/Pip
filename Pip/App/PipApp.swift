@@ -52,6 +52,7 @@ struct PipApp: App {
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
+            appState.surroundings.didBecomeActive()
             appState.refresh()
             appState.tidyLiveActivities()
             appState.updateAppIcon()

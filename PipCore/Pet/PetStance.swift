@@ -145,8 +145,9 @@ public enum PetStance: Codable, Hashable, Sendable {
             }
             if m == .calm { p.lidL = max(p.lidL, 0.3); p.lidR = max(p.lidR, 0.3) }
         case .meditating:
-            p.lidL = 1; p.lidR = 1; p.smile = 0.3; p.armL = -38; p.armR = -38; p.headTilt = 0; p.slump = 0.05
-            p.earL = 0.1; p.earR = 0.1
+            // Cross-legged, paws resting on the knees, eyes closed, a small smile.
+            p.lidL = 1; p.lidR = 1; p.smile = 0.3; p.armL = 8; p.armR = 8; p.headTilt = 0
+            p.earL = 0.1; p.earR = 0.1; p.crossLegs = 1
         }
         return p
     }

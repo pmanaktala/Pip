@@ -7,6 +7,8 @@ public struct PetEvent: Codable, Hashable, Sendable {
     public enum Kind: Codable, Hashable, Sendable {
         /// You opened the app or raised your wrist.
         case arrive
+        /// You opened the app after a few days away: an extra-happy hello.
+        case missedYou
         /// You logged a mood.
         case logged(Mood, MoodIntensity)
         case boop
@@ -15,6 +17,16 @@ public struct PetEvent: Codable, Hashable, Sendable {
         /// A petting session just ended.
         case petted
         case wave
+        /// It caught a treat.
+        case munch
+        /// You're writing a note; it leans in and listens.
+        case listening
+        /// You shook the phone.
+        case dizzy
+        /// One little hop (chasing the ball).
+        case hop
+        /// Brought the ball back.
+        case proud
     }
 
     public var kind: Kind
@@ -43,12 +55,23 @@ public struct PetScene: Equatable, Sendable {
     public var breathGuide: Double?
     /// The mood picker is showing this mood; the pet tries it on.
     public var preview: Mood?
-    /// What it has on its head (see `PetWear.choose`).
-    public var wear: PetWear?
+    /// The phone's tilt, −1 (left) … 1 (right): the pet leans against it to keep its balance.
+    public var tilt: Double = 0
+    /// Something in its paws that isn't the stance's own prop (the ball it fetched), and whether
+    /// to hide the stance's prop (no laptop at play time).
+    public var heldProp: PetProp?
+    public var hidesStanceProp = false
+    /// What it has on and around it (see `PetDressing.choose`).
+    public var dressing: PetDressing
+    public var wear: PetWear? {
+        get { dressing.head }
+        set { dressing.head = newValue }
+    }
 
     public init(species: PetSpecies, stance: PetStance, previous: PetStance? = nil, stanceSince: Date = .distantPast, events: [PetEvent] = [],
-                pettingSince: Date? = nil, look: CGPoint? = nil, breathGuide: Double? = nil, preview: Mood? = nil, wear: PetWear? = nil) {
-        self.wear = wear
+                pettingSince: Date? = nil, look: CGPoint? = nil, breathGuide: Double? = nil, preview: Mood? = nil, wear: PetWear? = nil,
+                dressing: PetDressing? = nil) {
+        self.dressing = dressing ?? PetDressing(head: wear)
         self.species = species
         self.stance = stance
         self.previous = previous
@@ -62,6 +85,8 @@ public struct PetScene: Equatable, Sendable {
 
     /// What the pet is holding. Previewing a mood shows that mood's prop.
     public var prop: PetProp? {
+        if let heldProp { return heldProp }
+        if hidesStanceProp { return nil }
         if let preview { return PetStance.mood(preview, .moderate).prop }
         return stance.prop
     }
@@ -114,6 +139,10 @@ public enum PetDirector {
         // 2. Idle.
         p = idle(p, stance: stance, species: s, t: t)
         if let activity = stance.activity { p = doing(p, activity, t: t) }
+        if stance == .meditating {
+            // Sitting so still it seems to float a little.
+            p.lift += 3 + sin(t * 0.55) * 1.6
+        }
         if scene.wear == .headphones { p = listening(p, stance: stance, t: t) }
 
         // 3. Event clips (and how much they push vignettes aside).
@@ -143,7 +172,21 @@ public enum PetDirector {
             p.headTilt += Double(look.x).clamped(-1, 1) * 4
         }
 
-        // 6. Sit With Pet: the chest follows the guide.
+        // Carrying the ball back: both paws hold it at the chest.
+        if scene.heldProp == .heldBall { p.armL = -55; p.armR = -55 }
+
+        // 6. The phone tilts: lean against it, head level, arms out for balance.
+        if scene.tilt != 0, !stance.isAsleep {
+            let tilt = scene.tilt.clamped(-1, 1)
+            p.lean -= tilt * 16
+            p.headTilt += tilt * 10
+            p.armL += abs(tilt) * 55
+            p.armR += abs(tilt) * 55
+            p.eyeWide += abs(tilt) * 0.2
+            p.gazeX -= tilt * 0.6
+        }
+
+        // 7. Sit With Pet: the chest follows the guide.
         if let guide = scene.breathGuide {
             p.breath = guide * 1.2
             p.headNod = p.headNod - guide * 0.08
@@ -159,12 +202,18 @@ public enum PetDirector {
     static func clip(for kind: PetEvent.Kind, stance: PetStance, species s: PetSpecies) -> PetClip? {
         switch kind {
         case .arrive: PetClips.arrive(stance, s)
+        case .missedYou: stance.isAsleep ? PetClips.arrive(stance, s) : PetClips.missedYou(s)
         case .logged(let mood, _): PetClips.reaction(to: mood, s)
         case .boop: PetClips.boop(s)
         case .tickle: PetClips.tickle(s)
         case .flustered: PetClips.flustered(s)
         case .petted: PetClips.afterPetting(s)
         case .wave: PetClips.wave(s)
+        case .munch: PetClips.munch(s)
+        case .listening: PetClips.listening(s)
+        case .dizzy: PetClips.dizzy(s)
+        case .hop: PetClips.hop(s)
+        case .proud: PetClips.vignette(.wiggle, s)
         }
     }
 

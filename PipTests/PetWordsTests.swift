@@ -16,6 +16,11 @@ struct PetWordsTests {
         #expect(PetWords.sanitize("This looks like depression.") == nil)
         #expect(PetWords.sanitize("Ok.") == nil, "too short to be a sentence")
         #expect(PetWords.sanitize(String(repeating: "word ", count: 40)) == nil, "too long")
+        // Poetry and invention are rejected; plain, grounded sentences pass.
+        #expect(PetWords.sanitize("The sky held soft light as joy slipped in like a quiet wave.", moods: ["happy"]) == nil)
+        #expect(PetWords.sanitize("I saw the sun shine bright on the ice, and your laughter warmed the quiet hours.", moods: ["happy"]) == nil)
+        #expect(PetWords.sanitize("A good day overall.", moods: ["tired"]) == nil, "must name a logged mood")
+        #expect(PetWords.sanitize("A tired morning, then happier by the evening after time with friends.", moods: ["tired", "happy"]) != nil)
     }
 
     @Test func promptShowsOnlyWhatTheModelNeeds() {
@@ -29,7 +34,7 @@ struct PetWordsTests {
 
     @Test func instructionsCarryTheGuardrails() {
         let text = PetWords.instructions(petName: "Pebble", species: "penguin", kind: .week)
-        for rule in ["Never advise", "streaks", "diagnose", "one sentence", "crisis"] {
+        for rule in ["never advise", "streaks", "clinical", "one sentence", "crisis", "never add events", "no imagery"] {
             #expect(text.localizedCaseInsensitiveContains(rule), "missing rule: \(rule)")
         }
     }

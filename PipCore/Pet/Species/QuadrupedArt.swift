@@ -12,9 +12,11 @@ enum QuadrupedArt {
 
         tail(ctx, p)
 
-        // Haunches: a rounded thigh at each side, so it reads as sitting.
+        // Haunches: a rounded thigh at each side, so it reads as sitting; cross-legged, the
+        // knees spread wide and low.
+        let cross = CGFloat(pose.crossLegs)
         PetDraw.mirrored(ctx, axis: 100) { c, side in
-            let thigh = PetDraw.ellipse(CGPoint(x: 100 + 30 + CGFloat(pose.turn) * 2 * side, y: floor - 16), 17, 15)
+            let thigh = PetDraw.ellipse(CGPoint(x: 100 + 30 + cross * 8 + CGFloat(pose.turn) * 2 * side, y: floor - 16 + cross * 5), 17 + cross * 3, 15 - cross * 4)
             PetDraw.solid(c, thigh, pal.coat, rim: p.rim, depth: 4)
         }
 
@@ -39,18 +41,22 @@ enum QuadrupedArt {
             PetDraw.solid(inside, PetDraw.ellipse(CGPoint(x: bx, y: 136), 22 + breathe * 0.8, 26), pal.cream, rim: 0, depth: 3)
         }
 
-        // Front feet on the floor, toes forward.
+        // Front feet on the floor, toes forward; cross-legged, they tuck in and overlap.
         PetDraw.mirrored(ctx, axis: 100) { c, side in
             let step = CGFloat(side > 0 ? pose.stepR : pose.stepL)
-            let center = CGPoint(x: 100 + 15 + CGFloat(pose.turn) * 3 * side, y: floor - 5 - step)
+            let center = CGPoint(x: 100 + 15 - cross * 10 + CGFloat(pose.turn) * 3 * side, y: floor - 5 - step - cross * 2)
+            var f = c
+            f.translateBy(x: center.x, y: center.y)
+            f.rotate(by: .degrees(Double(-cross * 25)))
+            f.translateBy(x: -center.x, y: -center.y)
             let foot = PetDraw.ellipse(center, 11, 7)
-            PetDraw.solid(c, foot, dog ? pal.coat : pal.cream, rim: p.rim, depth: 2.5)
+            PetDraw.solid(f, foot, dog ? pal.coat : pal.cream, rim: p.rim, depth: 2.5)
             if p.detail == .full {
                 for dx in [-3.2, 3.2] as [CGFloat] {
                     var toe = Path()
                     toe.move(to: CGPoint(x: center.x + dx, y: center.y + 2))
                     toe.addLine(to: CGPoint(x: center.x + dx, y: center.y + 5.5))
-                    c.stroke(toe, pal.coat.shade, width: 1.2)
+                    f.stroke(toe, pal.coat.shade, width: 1.2)
                 }
             }
         }

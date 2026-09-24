@@ -423,7 +423,7 @@ public enum PetClips {
     /// Noticing you: eyes up, ears up, a wave or a hop depending on how it feels.
     public static func arrive(_ stance: PetStance, _ s: PetSpecies) -> PetClip {
         if stance.isAsleep {
-            return vignette(.earTwitch, s)
+            return sleepyHello(s)
         }
         let low = stance.energy < 0.3
         let wave: [PetClip.Track] = low ? [
@@ -441,6 +441,86 @@ public enum PetClips {
             bump(\.lift, low ? 0 : 5, from: 0.1, peak: 0.28, end: 0.5),
             add(\.squash, K(0, 0), K(0.1, low ? 0 : 0.12), K(0.28, low ? 0 : -0.1), K(0.5, low ? 0 : 0.08), K(0.7, 0)),
             osc(\.tail, from: 0.2, to: 2.0, amp: low ? 0.3 : 1, cycles: s == .dog ? 6 : 2),
+        ])
+    }
+
+    /// You came back after a few days: it hops twice with both arms up, then hugs itself happy.
+    public static func missedYou(_ s: PetSpecies) -> PetClip {
+        PetClip("missedYou", 3.4, fadeIn: 0.05, fadeOut: 0.6, [
+            set(\.gazeX, K(0, 0), K(3.4, 0)), set(\.gazeY, K(0, -0.15), K(3.4, -0.15)),
+            bump(\.eyeWide, 0.3, from: 0, peak: 0.12, hold: 0.35, end: 0.6),
+            bump(\.exclaim, 1, from: 0, peak: 0.12, hold: 0.5, end: 0.8),
+            add(\.squash, K(0, 0), K(0.45, 0.25), K(0.62, -0.25, .out), K(0.8, 0.22, .in), K(0.95, -0.2, .out), K(1.12, 0.2, .in), K(1.4, 0)),
+            add(\.lift, K(0, 0), K(0.45, 0), K(0.66, 14, .out), K(0.8, 0, .in), K(0.98, 12, .out), K(1.12, 0, .in)),
+            add(\.armL, K(0, 0), K(0.5, 150, .out), K(1.3, 150), K(1.7, -55), K(3.0, -55), K(3.4, 0)),
+            add(\.armR, K(0, 0), K(0.5, 150, .out), K(1.3, 150), K(1.7, -55), K(3.0, -55), K(3.4, 0)),
+            set(\.smileEyes, K(0, 0), K(0.5, 1), K(3.0, 1), K(3.4, 0.4)),
+            bump(\.mouthOpen, 0.8, from: 0.4, peak: 0.6, hold: 1.3, end: 1.7),
+            bump(\.blush, 1, from: 0.5, peak: 0.9, hold: 3.0, end: 3.4),
+            bump(\.hearts, 1, from: 1.4, peak: 1.8, hold: 3.0, end: 3.4),
+            osc(\.tail, from: 0.3, to: 3.2, amp: 1, cycles: s == .dog ? 10 : 3),
+        ])
+    }
+
+    /// You opened the app while it was asleep: it half wakes, gives a drowsy little wave and a
+    /// yawn, and settles back down.
+    public static func sleepyHello(_ s: PetSpecies) -> PetClip {
+        PetClip("sleepyHello", 4.4, fadeIn: 0.4, fadeOut: 0.8, [
+            set(\.lidL, K(0, 1), K(0.8, 0.55), K(2.3, 0.55), K(2.6, 1), K(4.4, 1)),
+            set(\.lidR, K(0, 1), K(0.9, 0.6), K(2.3, 0.6), K(2.6, 1), K(4.4, 1)),
+            add(\.headNod, K(0, 0), K(0.8, -0.3), K(2.3, -0.25), K(3.4, 0)),
+            add(\.armR, K(0, 0), K(1.0, 70, .out), K(1.3, 55), K(1.6, 70), K(2.1, 0)),
+            set(\.mouthOpen, K(0, 0), K(2.4, 0), K(2.8, 0.8), K(3.4, 0.8), K(3.8, 0)),
+            set(\.mouthRound, K(0, 0), K(2.4, 0), K(2.8, 0.8), K(3.4, 0.8), K(3.8, 0)),
+            bump(\.smile, 0.35, from: 0.8, peak: 1.2, hold: 2.2, end: 2.6),
+            set(\.zzz, K(0, 0.8), K(0.6, 0), K(3.6, 0), K(4.4, 0.8)),
+        ])
+    }
+
+    /// A treat caught: snap, chew chew chew, a happy wiggle.
+    public static func munch(_ s: PetSpecies) -> PetClip {
+        PetClip("munch", 2.2, fadeIn: 0.03, fadeOut: 0.5, [
+            set(\.mouthOpen, K(0, 0), K(0.08, 1, .out), K(0.2, 0), K(2.2, 0)),
+            osc(\.cheekPuff, from: 0.25, to: 1.5, center: 0.5, amp: 0.4, cycles: 5),
+            osc(\.headBob, from: 0.25, to: 1.5, amp: 1.2, cycles: 5),
+            set(\.smileEyes, K(0, 0), K(0.2, 1), K(1.9, 1), K(2.2, 0.3)),
+            bump(\.blush, 1, from: 0.2, peak: 0.5, hold: 1.8, end: 2.2),
+            bump(\.hearts, 1, from: 1.3, peak: 1.6, hold: 1.9, end: 2.2),
+            osc(\.x, from: 1.4, to: 2.1, amp: 2, cycles: 3),
+            osc(\.tail, from: 0.2, to: 2.1, amp: 1, cycles: s == .dog ? 8 : 3),
+        ])
+    }
+
+    /// You're writing: it leans in, ears up, and nods now and then.
+    public static func listening(_ s: PetSpecies) -> PetClip {
+        PetClip("listening", 1.8, fadeIn: 0.2, fadeOut: 0.5, [
+            add(\.headNod, K(0, 0), K(0.3, 0.15), K(0.55, 0.05), K(0.8, 0.18), K(1.2, 0.08), K(1.8, 0)),
+            bump(\.headTilt, 8, from: 0, peak: 0.3, hold: 1.3, end: 1.8),
+            bump(\.earL, 0.5, from: 0, peak: 0.2, hold: 1.3, end: 1.8), bump(\.earR, 0.5, from: 0, peak: 0.2, hold: 1.3, end: 1.8),
+            set(\.gazeX, K(0, 0), K(1.8, 0)), set(\.gazeY, K(0, 0.2), K(1.8, 0.2)),
+            bump(\.smile, 0.25, from: 0.1, peak: 0.4, hold: 1.3, end: 1.8),
+        ])
+    }
+
+    /// A shake: eyes squeeze, head wobbles, little stars, then a sheepish grin.
+    public static func dizzy(_ s: PetSpecies) -> PetClip {
+        PetClip("dizzy", 2.4, fadeIn: 0.03, fadeOut: 0.5, [
+            set(\.squeeze, K(0, 0), K(0.05, 1), K(0.5, 1), K(0.6, 0)),
+            osc(\.headTilt, from: 0.1, to: 1.8, amp: 14, cycles: 3),
+            osc(\.lean, from: 0.1, to: 1.8, amp: 6, cycles: 3, phase: 1),
+            bump(\.sparkles, 1, from: 0.1, peak: 0.3, hold: 1.6, end: 2.0),
+            bump(\.eyeWide, 0.25, from: 0.6, peak: 0.7, hold: 1.4, end: 1.8),
+            bump(\.smile, 0.6, from: 1.5, peak: 1.8, hold: 2.1, end: 2.4),
+            bump(\.blush, 0.8, from: 1.5, peak: 1.8, hold: 2.1, end: 2.4),
+        ])
+    }
+
+    /// One little hop.
+    public static func hop(_ s: PetSpecies) -> PetClip {
+        PetClip("hop", 0.42, fadeIn: 0.02, fadeOut: 0.05, [
+            add(\.lift, K(0, 0), K(0.08, 0), K(0.2, 8, .out), K(0.34, 0, .in), K(0.42, 0)),
+            add(\.squash, K(0, 0), K(0.08, 0.15), K(0.2, -0.12), K(0.34, 0.15), K(0.42, 0)),
+            add(\.armL, K(0, 0), K(0.2, s == .penguin ? 60 : 30), K(0.42, 0)), add(\.armR, K(0, 0), K(0.2, s == .penguin ? 60 : 30), K(0.42, 0)),
         ])
     }
 

@@ -42,7 +42,7 @@ public enum PetWords {
 
     // MARK: Cache
 
-    private static let cacheKey = "petWords.cache.v1"
+    private static let cacheKey = "petWords.cache.v2"
     private static let cacheLimit = 120
 
     /// A cached sentence for `key`, if one has been written.
@@ -73,11 +73,11 @@ public enum PetWords {
         if #available(iOS 26, *) {
             let session = LanguageModelSession(instructions: instructions(petName: petName, species: species, kind: kind))
             var options = GenerationOptions()
-            options.maximumResponseTokens = 60
-            options.temperature = 0.6
+            options.maximumResponseTokens = 48
+            options.temperature = 0.3
             do {
                 let response = try await session.respond(to: prompt(kind: kind, entries: entries), options: options)
-                if let text = sanitize(response.content) {
+                if let text = sanitize(response.content, moods: Set(entries.map { $0.mood.lowercased() })) {
                     store(text, for: key)
                     return text
                 }
@@ -109,15 +109,28 @@ public enum PetWords {
     }
 
     static func instructions(petName: String, species: String, kind: Kind) -> String {
-        """
-        You are \(petName), a small \(species) who keeps someone company in a mood journal. \
-        Write exactly one sentence, at most 22 words, describing their \(kind == .week ? "week" : "day") \
-        from the entries provided. Speak as \(petName), warm and specific, in plain English. \
-        Describe; never advise. Never use the words should, try, need, must, better, worse, improve, or fix. \
-        Never mention numbers, counts, streaks, averages, scores, progress, or goals. \
-        Never diagnose or use medical or clinical language. \
-        If an entry mentions harm or crisis, respond only with gentle acknowledgment that you are here. \
-        No emoji, no quotation marks, no lists, no preamble. Output the sentence only.
+        let period = kind == .week ? "week" : "day"
+        return """
+        You summarise someone's mood journal for their \(period) in one short, plain sentence.
+
+        Rules:
+        - One sentence, at most 16 words, addressed to them as "you".
+        - Use only what is in the entries: the moods, the time of day, what it was about, and what they wrote. \
+        Never add events, people, feelings, places or details that are not in the entries.
+        - Plain, everyday words. No imagery, metaphors, poetry, weather, nature, light, colours or sounds.
+        - Describe; never advise. Never use should, try, need, must, better, worse, improve or fix.
+        - No numbers, counts, streaks, averages, scores or goals. No medical or clinical words.
+        - If an entry mentions harm or crisis, write only: I'm here with you.
+        - No emoji, quotation marks, lists or preamble.
+
+        Good:
+        - A tired morning, then happier by the evening after time with friends.
+        - Mostly calm this week, with a stressful Tuesday about work.
+        - Frustrated about money today, and a little calmer tonight.
+
+        Bad (never write like this):
+        - The sky held soft light as joy slipped in like a quiet wave.
+        - Your laughter warmed the quiet hours.
         """
     }
 
@@ -134,16 +147,27 @@ public enum PetWords {
         return "Entries this \(kind == .week ? "week" : "day"):\n" + lines.joined(separator: "\n")
     }
 
-    /// The model's sentence, or nil if it broke a rule the instructions cannot fully enforce.
-    static func sanitize(_ raw: String) -> String? {
+    /// The model's sentence, or nil if it broke a rule the instructions cannot fully enforce:
+    /// advice or numbers, poetry and imagery, or nothing grounded in the moods actually logged.
+    static func sanitize(_ raw: String, moods: Set<String> = []) -> String? {
         var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         text = text.replacingOccurrences(of: "\"", with: "").replacingOccurrences(of: "“", with: "").replacingOccurrences(of: "”", with: "")
         if let firstLine = text.split(separator: "\n").first { text = String(firstLine) }
         let words = text.split(separator: " ")
-        guard words.count >= 3, words.count <= 26 else { return nil }
+        guard words.count >= 3, words.count <= 20 else { return nil }
         let lowered = text.lowercased()
         let banned = ["should", "you need", "try to", "must", "improve", "diagnos", "disorder", "depress", "anxiety disorder", "streak", "average", "score", "%", "therapy"]
         if banned.contains(where: { lowered.contains($0) }) { return nil }
+        // Poetry and imagery: the journal is about moods, not skies.
+        let imagery = ["sky", "sun", "moon", "star", "light", "glow", "shine", "shining", "wave", "tide", "ocean", "sea", "breeze", "wind",
+                       "whisper", "echo", "bloom", "blossom", "petal", "ice", "snow", "rain", "storm", "cloud", "dawn", "dusk", "golden", "velvet",
+                       "melody", "song", "dance", "danced", "heartbeat", "soul", "warmed", "painted", "slipped", "drifted", "hours", "stars", "waves", "skies"]
+        // Whole words (so "Sunday" isn't "sun"); a few stems catch their forms.
+        let tokens = lowered.split(whereSeparator: { !$0.isLetter && $0 != "'" }).map(String.init)
+        let stems = ["sparkl", "shimmer", "glimmer"]
+        if tokens.contains(where: { t in imagery.contains(t) || stems.contains(where: { t.hasPrefix($0) }) }) { return nil }
+        // Grounded: it names at least one of the moods actually logged (or says it is here).
+        if !moods.isEmpty, !moods.contains(where: { lowered.contains($0) }), !lowered.contains("i'm here") { return nil }
         if text.rangeOfCharacter(from: .decimalDigits) != nil { return nil }
         if !text.hasSuffix(".") && !text.hasSuffix("!") { text += "." }
         return text

@@ -26,8 +26,12 @@ public struct PetSnapshot: Codable, Equatable, Sendable {
     public var loggedAt: Date?
     public var today: [MoodStamp]
     public var updatedAt: Date
+    /// When you met your pet: its birthday comes round once a year.
+    public var adoptedAt: Date?
 
-    public init(identity: PetIdentity, mood: Mood? = nil, intensity: MoodIntensity? = nil, loggedAt: Date? = nil, today: [MoodStamp] = [], updatedAt: Date = .now) {
+    public init(identity: PetIdentity, mood: Mood? = nil, intensity: MoodIntensity? = nil, loggedAt: Date? = nil, today: [MoodStamp] = [], updatedAt: Date = .now,
+                adoptedAt: Date? = nil) {
+        self.adoptedAt = adoptedAt
         self.identity = identity
         self.mood = mood
         self.intensity = intensity

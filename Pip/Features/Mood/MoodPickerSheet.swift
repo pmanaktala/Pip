@@ -155,6 +155,7 @@ struct MoodPickerSheet: View {
                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: PipRadius.chip, style: .continuous))
                 .focused($noteFocused)
                 .onSubmit { commitNote(entry) }
+                .onChange(of: note) { _, _ in appState.pet.listen() }
                 .onChange(of: noteFocused) { _, focused in if !focused { commitNote(entry) } }
         }
     }

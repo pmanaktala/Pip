@@ -71,6 +71,7 @@ public enum PipQueries {
         let identity = profile?.identity ?? .placeholder
         let latest = latestEntry(in: context)
         let today = entries(on: now, in: context).map { MoodStamp(id: $0.id, mood: $0.mood, intensity: $0.intensity, time: $0.timestamp) }
-        return PetSnapshot(identity: identity, mood: latest?.mood, intensity: latest?.intensity, loggedAt: latest?.timestamp, today: today, updatedAt: now)
+        return PetSnapshot(identity: identity, mood: latest?.mood, intensity: latest?.intensity, loggedAt: latest?.timestamp, today: today, updatedAt: now,
+                           adoptedAt: profile?.createdAt)
     }
 }

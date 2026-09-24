@@ -91,6 +91,28 @@ enum PetEffects {
                 }
             }
         }
+        if let sign = p.sign {
+            // A small battery over its head: filling with a bolt when charging, nearly empty when low.
+            let c = CGPoint(x: top.x - fig.headRX * 0.85, y: top.y - 2)
+            let shell = Path(roundedRect: CGRect(x: c.x - 9, y: c.y - 5, width: 16, height: 10), cornerSize: CGSize(width: 2.5, height: 2.5))
+            body.fill(shell, PetRGB(1, 1, 1, 0.92))
+            body.stroke(shell, ink.alpha(0.55), width: 1.2)
+            body.fill(Path(roundedRect: CGRect(x: c.x + 7.5, y: c.y - 2, width: 2, height: 4), cornerSize: CGSize(width: 1, height: 1)), ink.alpha(0.55))
+            let level: CGFloat = sign == .charging ? 0.35 + 0.6 * CGFloat((t * 0.25).truncatingRemainder(dividingBy: 1)) : 0.18
+            let fillColor = sign == .charging ? PetRGB(0.35, 0.78, 0.45) : PetRGB(0.95, 0.42, 0.36)
+            body.fill(Path(roundedRect: CGRect(x: c.x - 7.5, y: c.y - 3.5, width: 13 * level, height: 7), cornerSize: CGSize(width: 1.5, height: 1.5)), fillColor)
+            if sign == .charging {
+                var bolt = Path()
+                bolt.move(to: CGPoint(x: c.x, y: c.y - 4.5))
+                bolt.addLine(to: CGPoint(x: c.x - 2.8, y: c.y + 0.6))
+                bolt.addLine(to: CGPoint(x: c.x - 0.2, y: c.y + 0.6))
+                bolt.addLine(to: CGPoint(x: c.x - 1.2, y: c.y + 4.5))
+                bolt.addLine(to: CGPoint(x: c.x + 2.8, y: c.y - 0.8))
+                bolt.addLine(to: CGPoint(x: c.x + 0.2, y: c.y - 0.8))
+                bolt.closeSubpath()
+                body.fill(bolt, ink.alpha(0.85))
+            }
+        }
         if pose.thought > 0.02 {
             // A daydream: two little puffs rising to a cloud with a small heart in it.
             let a = pose.thought

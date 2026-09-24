@@ -9,11 +9,18 @@ enum PenguinArt {
         let breathe = CGFloat(pose.breath) * 1.6
 
         // Feet first; the body sits on them.
-        PetDraw.mirrored(ctx, axis: 100) { c, side in
-            let step = CGFloat(side > 0 ? pose.stepR : pose.stepL)
-            let foot = PetDraw.ellipse(CGPoint(x: 100 + 17 + CGFloat(pose.turn) * 3 * side, y: floor - 2 - step), 12.5, 5.5)
-            PetDraw.solid(c, foot, pal.accent, rim: p.rim, depth: 2.5)
+        let cross = CGFloat(pose.crossLegs)
+        func feet() {
+            PetDraw.mirrored(ctx, axis: 100) { c, side in
+                let step = CGFloat(side > 0 ? pose.stepR : pose.stepL)
+                // Cross-legged, the feet turn in and overlap in front of the belly.
+                var f = c
+                f.translateBy(x: 100 + 17 - cross * 11 + CGFloat(pose.turn) * 3 * side, y: floor - 2 - step - cross * 5)
+                f.rotate(by: .degrees(Double(-cross * 30)))
+                PetDraw.solid(f, PetDraw.ellipse(.zero, 12.5, 5.5), pal.accent, rim: p.rim, depth: 2.5)
+            }
         }
+        if cross < 0.3 { feet() }
 
         // The egg: widest low down, narrowing into the head.
         let w: CGFloat = 44 + breathe, top: CGFloat = 78 - breathe * 0.6, bottom = floor - 4
@@ -32,6 +39,7 @@ enum PenguinArt {
         let bx = 100 + CGFloat(pose.turn) * 6
         let bellyPath = PetDraw.ellipse(CGPoint(x: bx, y: 134), 31 + breathe * 0.8, 32 + breathe * 0.5)
         PetDraw.solid(belly, bellyPath, pal.cream, rim: 0, depth: 4)
+        if cross >= 0.3 { feet() }
     }
 
     static func flipper(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure, angle: Double) {

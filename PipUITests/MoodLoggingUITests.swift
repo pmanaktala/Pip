@@ -74,9 +74,12 @@ final class MoodLoggingUITests: XCTestCase {
     }
     func testBreathingCanStartAndStop() {
         // Wait for the room like every other test does: a cold runner can still be launching.
-        let sit = app.buttons["Sit with Pebble"]
-        XCTAssertTrue(sit.waitForExistence(timeout: 8))
-        sit.tap()
+        let play = app.buttons["Play with Pebble"]
+        XCTAssertTrue(play.waitForExistence(timeout: 8))
+        play.tap()
+        let meditate = app.buttons["Meditate together"]
+        XCTAssertTrue(meditate.waitForExistence(timeout: 5))
+        meditate.tap()
         let breathe = app.buttons["Breathe together"]
         XCTAssertTrue(breathe.waitForExistence(timeout: 5))
         breathe.tap()

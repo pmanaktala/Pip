@@ -64,14 +64,34 @@ always visibly true: **reading** eyes travel along a line and flick back to the 
 **working** paws type in bursts with pauses to read the screen; **playing** the ball rolls back
 and forth and its eyes follow; **daydreaming** a little thought cloud with a heart floats up.
 
-### What it wears
+### What it has on (`PetDressing.choose`)
 
-At most one thing on its head, on top of at most one thing in its paws (`PetWear.choose`):
+One thing on its head, one round its neck, one on the floor beside it, one small sign, on top
+of at most one thing in its paws. Nothing celebratory after a hard mood.
 
-| Wears | When |
-|---|---|
-| Nightcap | From 21:30 until 6:00, over whatever else it is doing (a sad pet at midnight has its blanket *and* its nightcap), and always when asleep |
-| Headphones | While another app is playing audio (music, a podcast) and the Pet tab is open. A good mood nods to the beat with a note or two; a hard one sways slowly with half-closed eyes. Asleep it never wears them |
+| Where | What | When |
+|---|---|---|
+| Head | Nightcap | Always when asleep; otherwise from 21:30 until 6:00 |
+| Head | Headphones | Another app is playing audio, or headphones/AirPods are connected (beats the nightcap while awake). A good mood nods to the beat; a hard one sways slowly |
+| Head | Party hat | New Year's Eve evening and New Year's Day, and the anniversary of the day you met (not after a hard mood) |
+| Neck | Travel pillow | No network at all (flight mode) |
+| Neck | Scarf | Winter (by date and your region's hemisphere) |
+| Floor | Suitcase | Your time zone changed in the last day |
+| Floor | Cake with a candle | The anniversary of the day you met (not after a hard mood) |
+| Sign | Battery filling, with a bolt | Charging |
+| Sign | Battery nearly empty | Low Power Mode, or under 15% |
+
+**Seasons** drift through the room: snow in winter, leaves in autumn, blossom in spring,
+fireflies on summer evenings; **confetti** on New Year and its birthday.
+
+**Missed you:** opening Pip after three or more days away gets a double hop, arms up, a hug
+and hearts. **At night**, opening the app while it sleeps gets a sleepy hello: it half wakes,
+waves drowsily, yawns and settles back down.
+
+Every signal is a yes/no the phone gives any app without asking: nothing is stored beyond your
+last visit and last time zone (both on the device), and nothing leaves it. Only while the app is
+open; widgets show the date-based things (seasons, New Year, birthday) but not the rest. Weather
+would need your location, so there is none.
 
 **Held props:** mug (calm, winding down), blanket (tired, sad, asleep), book (reading), ball
 (playing), laptop (working). Each is explained by the stance and sits in its paws.
@@ -110,6 +130,7 @@ happening.
 | Play music or a podcast in another app | Headphones go on within a few seconds while the Pet tab is open (a yes/no from iOS; no permission, nothing about *what* is playing) |
 | Move a finger anywhere on the screen | Its eyes, and a little of its head, follow |
 | Log a mood | The reaction (§2) plays, then it settles into the new stance |
+| Write a note while logging | It leans in, ears up, and nods now and then — listening |
 | Open the mood picker | The camera tilts: the pet rises above the sheet so you see its reaction |
 
 ## 6. Where it appears
@@ -118,7 +139,8 @@ happening.
 |---|---|---|
 | Pet tab | The room (sky by time of day, tinted by a fresh mood), the live pet, its name and a status line that always matches the stance, today's faces once there's more than one | Live, 60 fps (30 when the system asks) |
 | Mood picker | Eight tokens, each the pet's turned-up face for that mood | Still |
-| Sit With Pet | Meditating in the calm room; "Breathe together" drives the chest, a ring and the words (4 s in, 6 s out) | Live |
+| Play (the tennis-ball button on the Pet tab) | The pet in its room with a tray: toss the **treat** (it hops and catches it, munches, wiggles) or the **ball** (it hops over, carries it back in its paws, drops it, and it rolls back to the tray). Tilt the phone and it leans and flails to keep its balance; shake it and it goes dizzy | Live |
+| Meditate (the button next to close, in Play) | Sitting cross-legged, paws on its knees, floating a little; "Breathe together" drives the chest, a ring and the words (4 s in, 6 s out) | Live |
 | History, Settings, tab-bar accessory | Mood token faces | Still |
 | Home Screen widgets | Small: the pet in its room. Medium: pet, status, four faces to log. Large: pet over all eight faces | A new entry every 30 min, at each change in the pet's day and when a mood fades; each entry shows the next still pose, and the system animates the change |
 | Lock Screen (circular, rectangular, inline) | Badge face (nightcap at night), name, what it's doing | Same timeline as widgets, stepping through the stance's *complication moments* (below) |

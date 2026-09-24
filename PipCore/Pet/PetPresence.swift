@@ -19,14 +19,15 @@ public final class PetPresence {
     @ObservationIgnored private var lastTapAt = Date.distantPast
     @ObservationIgnored private var clock: Task<Void, Never>?
     @ObservationIgnored private var snapshot: PetSnapshot
-    /// Another app is playing audio (checked by the app while it is in front).
-    @ObservationIgnored private var music = false
+    /// What the phone quietly tells us while the app is in front (see `PetContext`).
+    public private(set) var context = PetContext()
 
     public init(snapshot: PetSnapshot, now: Date = .now) {
         self.snapshot = snapshot
         self.identity = snapshot.identity
         let stance = snapshot.stance(at: now)
-        self.scene = PetScene(species: snapshot.identity.species, stance: stance, wear: PetWear.choose(for: stance, at: now, music: false))
+        self.scene = PetScene(species: snapshot.identity.species, stance: stance,
+                              dressing: PetDressing.choose(for: stance, at: now, adoptedAt: snapshot.adoptedAt))
         self.lastLoggedAt = snapshot.loggedAt
     }
 
@@ -78,8 +79,8 @@ public final class PetPresence {
     }
 
     private func setStance(_ stance: PetStance, now: Date) {
-        let wear = PetWear.choose(for: stance, at: now, music: music)
-        if wear != scene.wear { scene.wear = wear }
+        let dressing = PetDressing.choose(for: stance, at: now, context: context, adoptedAt: snapshot.adoptedAt)
+        if dressing != scene.dressing { scene.dressing = dressing }
         guard stance != scene.stance else { return }
         scene.previous = scene.stance
         scene.stance = stance
@@ -88,8 +89,15 @@ public final class PetPresence {
 
     /// You're listening to something: the pet puts its headphones on (and takes them off).
     public func setMusic(_ playing: Bool, now: Date = .now) {
-        guard playing != music else { return }
-        music = playing
+        var c = context
+        c.audioPlaying = playing
+        setContext(c, now: now)
+    }
+
+    /// New context from the phone: the pet re-dresses (headphones, pillow, suitcase, battery).
+    public func setContext(_ new: PetContext, now: Date = .now) {
+        guard new != context else { return }
+        context = new
         setStance(scene.stance, now: now)
     }
 
@@ -98,8 +106,8 @@ public final class PetPresence {
     /// You arrived (the app came forward, the wrist came up).
     public func arrive(now: Date = .now) {
         // Don't greet twice in a row.
-        if let last = scene.events.last(where: { $0.kind == .arrive }), now.timeIntervalSince(last.at) < 20 { return }
-        add(PetEvent(.arrive, at: now), share: false)
+        if let last = scene.events.last(where: { $0.kind == .arrive || $0.kind == .missedYou }), now.timeIntervalSince(last.at) < 20 { return }
+        add(PetEvent(context.missedYou ? .missedYou : .arrive, at: now), share: false)
     }
 
     /// A mood was logged on this device. The stance changes at once; the reaction plays over it.
@@ -124,6 +132,12 @@ public final class PetPresence {
     }
 
     public func wave(now: Date = .now) { add(PetEvent(.wave, at: now)) }
+
+    /// You're typing a note: it leans in now and then (at most every couple of seconds).
+    public func listen(now: Date = .now) {
+        if let last = scene.events.last(where: { $0.kind == .listening }), now.timeIntervalSince(last.at) < 2.2 { return }
+        add(PetEvent(.listening, at: now), share: false)
+    }
 
     public var isPetting: Bool { scene.pettingSince != nil }
 

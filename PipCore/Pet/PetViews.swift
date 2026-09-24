@@ -35,9 +35,12 @@ public struct PetPoseView: View, Animatable {
     public var showsShadow: Bool
     /// Draw for a tinted surface (see `PetPalette.monochrome`).
     public var monochrome: Bool
+    /// The rest of the outfit: neck, floor extra, sign. (The head is `wear`.)
+    public var dressing: PetDressing?
 
-    public init(species: PetSpecies, pose: PetPose, prop: PetProp? = nil, wear: PetWear? = nil, framing: PetFraming = .full, time: Double? = nil, showsShadow: Bool = true, monochrome: Bool = false) {
+    public init(species: PetSpecies, pose: PetPose, prop: PetProp? = nil, wear: PetWear? = nil, framing: PetFraming = .full, time: Double? = nil, showsShadow: Bool = true, monochrome: Bool = false, dressing: PetDressing? = nil) {
         self.monochrome = monochrome
+        self.dressing = dressing
         self.species = species
         self.pose = pose
         self.prop = prop
@@ -60,7 +63,8 @@ public struct PetPoseView: View, Animatable {
             ctx.scaleBy(x: side / 200, y: side / 200)
             Self.frame(&ctx, species: species, framing: framing)
             // Held props belong to the full pet; what it wears shows at every size.
-            PetRenderer.draw(ctx, PetPaint(species: species, pose: pose, prop: framing == .full ? prop : nil, wear: wear, detail: framing.detail, time: time, monochrome: monochrome),
+            PetRenderer.draw(ctx, PetPaint(species: species, pose: pose, prop: framing == .full ? prop : nil, wear: wear, detail: framing.detail, time: time, monochrome: monochrome,
+                                           neck: dressing?.neck, extra: framing == .full ? dressing?.extra : nil, sign: framing == .full ? dressing?.sign : nil),
                              showsShadow: showsShadow)
         }
         .aspectRatio(1, contentMode: .fit)
@@ -111,7 +115,7 @@ public struct PetView: View {
         if let token {
             PetPoseView(species: species, pose: PetStance.tokenFace(token, species), framing: framing, showsShadow: false)
         } else {
-            PetPoseView(species: species, pose: PetDirector.hold(scene, index: hold), prop: scene.prop, wear: scene.wear, framing: framing, showsShadow: showsShadow)
+            PetPoseView(species: species, pose: PetDirector.hold(scene, index: hold), prop: scene.prop, wear: scene.wear, framing: framing, showsShadow: showsShadow, dressing: scene.dressing)
         }
     }
 
@@ -150,12 +154,12 @@ public struct LivePetView: View {
 
     public var body: some View {
         if reduceMotion || paused {
-            PetPoseView(species: scene.species, pose: PetDirector.hold(scene), prop: scene.prop, wear: scene.wear, framing: framing, showsShadow: showsShadow)
+            PetPoseView(species: scene.species, pose: PetDirector.hold(scene), prop: scene.prop, wear: scene.wear, framing: framing, showsShadow: showsShadow, dressing: scene.dressing)
                 .animation(.smooth(duration: 0.6), value: scene.stance)
         } else {
             TimelineView(.animation(minimumInterval: frameInterval)) { context in
                 PetPoseView(species: scene.species, pose: PetDirector.pose(scene, at: context.date), prop: scene.prop, wear: scene.wear, framing: framing,
-                            time: context.date.timeIntervalSince1970, showsShadow: showsShadow)
+                            time: context.date.timeIntervalSince1970, showsShadow: showsShadow, dressing: scene.dressing)
             }
         }
     }
@@ -175,9 +179,14 @@ public struct PetStage: View {
     public var showsFoliage: Bool
     public var mood: Mood?
     public var date: Date
+    public var showsSeason: Bool
+    /// Moves the pet sideways within the room (fetching).
+    public var petOffset: CGFloat
 
     public init(scene: PetScene, live: Bool = true, hold: Int = 0, petScale: CGFloat = 0.62, floor: CGFloat = 0.62, showsRoom: Bool = true,
-                showsFoliage: Bool = true, mood: Mood? = nil, date: Date = .now) {
+                showsFoliage: Bool = true, mood: Mood? = nil, date: Date = .now, showsSeason: Bool = true, petOffset: CGFloat = 0) {
+        self.showsSeason = showsSeason
+        self.petOffset = petOffset
         self.scene = scene
         self.live = live
         self.hold = hold
@@ -198,15 +207,18 @@ public struct PetStage: View {
                 if showsRoom {
                     PetRoom(mood: mood, date: date, horizon: floor, showsFoliage: showsFoliage)
                 }
+                if showsSeason {
+                    PetSeasonLayer(season: scene.dressing.season, confetti: scene.dressing.confetti, live: live, date: date)
+                }
                 Group {
                     if live {
                         LivePetView(scene: scene)
                     } else {
-                        PetPoseView(species: scene.species, pose: PetDirector.hold(scene, index: hold), prop: scene.prop, wear: scene.wear)
+                        PetPoseView(species: scene.species, pose: PetDirector.hold(scene, index: hold), prop: scene.prop, wear: scene.wear, dressing: scene.dressing)
                     }
                 }
                 .frame(width: side, height: side)
-                .offset(x: (geo.size.width - side) / 2, y: top)
+                .offset(x: (geo.size.width - side) / 2 + petOffset, y: top)
             }
         }
     }

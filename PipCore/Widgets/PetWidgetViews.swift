@@ -16,7 +16,9 @@ public struct PetWidgetMoment: Sendable {
 
     public var identity: PetIdentity { snapshot.identity }
     public var stance: PetStance { snapshot.stance(at: date) }
-    public var scene: PetScene { PetScene(species: identity.species, stance: stance, wear: PetWear.choose(for: stance, at: date, music: false)) }
+    public var scene: PetScene {
+        PetScene(species: identity.species, stance: stance, dressing: PetDressing.choose(for: stance, at: date, adoptedAt: snapshot.adoptedAt))
+    }
     public var status: String { stance.describe(identity.name) }
     public var freshMood: Mood? { snapshot.freshMood(at: date) }
 

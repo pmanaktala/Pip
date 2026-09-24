@@ -18,6 +18,8 @@ final class AppState {
     private(set) var latestEntry: MoodEntry?
     private(set) var todayEntries: [MoodEntry] = []
     @ObservationIgnored private var iconChangeInFlight = false
+    /// Headphones, battery, time zone, network: see `PetContextMonitor`.
+    @ObservationIgnored let surroundings = PetContextMonitor()
     /// The live pet: its stance, what just happened to it, a finger on it (Docs/Pets/Bible.md).
     let pet: PetPresence
     /// The mood sheet is up (presented from the tab bar accessory; the Pet tab tilts its camera).
@@ -39,6 +41,8 @@ final class AppState {
         observeRemoteChanges()
         // Reactions played here are played on the watch too, if it is showing the pet.
         pet.broadcast = { event in DeviceSync.shared.send(event) }
+        surroundings.onChange = { [pet] c in pet.setContext(c) }
+        surroundings.didBecomeActive()
     }
 
     // MARK: Derived state
@@ -186,9 +190,7 @@ final class AppState {
     /// Is something else playing (music, a podcast)? Then the pet wears headphones. A plain
     /// yes/no from the system: no permission, nothing about what is playing, never stored.
     func checkListening() {
-        #if os(iOS)
-        pet.setMusic(AVAudioSession.sharedInstance().isOtherAudioPlaying)
-        #endif
+        surroundings.refresh()
     }
 
     // MARK: Moments & deep links

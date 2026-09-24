@@ -246,3 +246,40 @@ enum LabComplications {
         }.padding(14).background(Color.black)
     }
 }
+
+enum LabDressing {
+    @MainActor static func sheet() -> some View {
+        let looks: [(String, PetStance, PetWear?, PetNeck?, PetExtra?, PetSign?)] = [
+            ("party + cake", .mood(.happy, .moderate), .partyHat, nil, .cake, nil),
+            ("winter scarf", .mood(.neutral, .moderate), nil, .scarf, nil, nil),
+            ("offline pillow", .mood(.calm, .moderate), nil, .travelPillow, nil, nil),
+            ("travelling", .mood(.neutral, .moderate), .headphones, nil, .suitcase, nil),
+            ("charging", .life(.reading), nil, nil, nil, .charging),
+            ("low battery", .mood(.tired, .moderate), nil, .scarf, nil, .lowBattery),
+        ]
+        return VStack(spacing: 6) {
+            ForEach(PetSpecies.allCases, id: \.self) { s in
+                HStack(spacing: 6) {
+                    ForEach(looks.indices, id: \.self) { i in
+                        let l = looks[i]
+                        VStack(spacing: 1) {
+                            LabPet(species: s, pose: l.1.rest(s), prop: l.1.prop, wear: l.2, neck: l.3, extra: l.4, sign: l.5)
+                                .frame(width: 190, height: 190).background(Color(red: 0.93, green: 0.95, blue: 0.97))
+                            Text(l.0).font(.system(size: 10)).foregroundStyle(.black)
+                        }
+                    }
+                }
+            }
+        }.padding(8).background(Color.white)
+    }
+}
+
+enum LabMeditate {
+    @MainActor static func sheet() -> some View {
+        HStack(spacing: 6) {
+            ForEach(PetSpecies.allCases, id: \.self) { s in
+                LabPet(species: s, pose: PetStance.meditating.rest(s)).frame(width: 230, height: 230).background(Color(red: 0.93, green: 0.95, blue: 0.97))
+            }
+        }.padding(8).background(Color.white)
+    }
+}

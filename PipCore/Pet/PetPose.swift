@@ -78,6 +78,8 @@ public struct PetPose: Equatable, Sendable {
     /// 160 overhead); negative folds across the body (−60 paw at the chest, −110 paw at the face).
     public var armL = 0.0
     public var armR = 0.0
+    /// Sitting cross-legged (meditation): feet tuck in and overlap, haunches spread. 0…1.
+    public var crossLegs = 0.0
     /// Feet off the floor, for steps and stomps.
     public var stepL = 0.0
     public var stepR = 0.0
@@ -109,8 +111,8 @@ public struct PetPose: Equatable, Sendable {
         \.lidL, \.lidR, \.blink, \.lidSlant, \.smileEyes, \.squeeze, \.gazeX, \.gazeY, \.eyeWide,
         \.browShow, \.browSlant, \.browRaise,
         \.smile, \.mouthOpen, \.mouthRound, \.cheekPuff, \.blush,
-        \.earL, \.earR, \.armL, \.armR, \.stepL, \.stepR, \.tail, \.tailUp,
-        \.propLift, \.tears, \.sweat, \.zzz, \.notes, \.hearts, \.sparkles, \.steam, \.question, \.exclaim, \.thought,
+        \.earL, \.earR, \.armL, \.armR, \.crossLegs, \.stepL, \.stepR, \.tail, \.tailUp,
+        \.crossLegs, \.propLift, \.tears, \.sweat, \.zzz, \.notes, \.hearts, \.sparkles, \.steam, \.question, \.exclaim, \.thought,
     ]
 
     /// A pose with every channel at zero — the identity for additive layers.

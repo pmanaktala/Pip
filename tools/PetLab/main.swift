@@ -19,6 +19,8 @@ struct PetLab {
         case "floor": view = AnyView(LabFloorProps.sheet())
         case "dog": view = AnyView(LabDog.sheet())
         case "actions": view = AnyView(LabActions.sheet(species(args)))
+        case "dressing": view = AnyView(LabDressing.sheet())
+        case "meditate": view = AnyView(LabMeditate.sheet())
         case "complications": view = AnyView(LabComplications.sheet())
         case "complications-mono": view = AnyView(LabComplications.sheet(mono: true))
         case "reactions": view = AnyView(LabFilm.strips(species: species(args), rows: LabFilm.reactions(species(args))))
@@ -60,6 +62,9 @@ struct LabPet: View {
     var wear: PetWear? = nil
     var detail: PetDetail = .full
     var mono = false
+    var neck: PetNeck? = nil
+    var extra: PetExtra? = nil
+    var sign: PetSign? = nil
     var body: some View {
         Canvas { ctx, size in
             let s = min(size.width, size.height) / 200
@@ -69,7 +74,7 @@ struct LabPet: View {
                 PetPoseView.frame(&c, species: species, framing: .badge)
             }
             if detail == .face { PetPoseView.frame(&c, species: species, framing: .face) }
-            PetRenderer.draw(c, PetPaint(species: species, pose: pose, prop: prop, wear: wear, detail: detail, time: 0.4, monochrome: mono))
+            PetRenderer.draw(c, PetPaint(species: species, pose: pose, prop: prop, wear: wear, detail: detail, time: 0.4, monochrome: mono, neck: neck, extra: extra, sign: sign))
         }
     }
 }

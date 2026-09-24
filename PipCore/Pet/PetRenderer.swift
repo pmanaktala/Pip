@@ -16,12 +16,19 @@ public struct PetPaint {
     public var pose: PetPose
     public var prop: PetProp?
     public var wear: PetWear?
+    public var neck: PetNeck?
+    public var extra: PetExtra?
+    public var sign: PetSign?
     public var detail: PetDetail
     /// Seconds, for things that drift (steam, notes, zzz). `nil` draws them at rest.
     public var time: Double?
     public var palette: PetPalette
 
-    public init(species: PetSpecies, pose: PetPose, prop: PetProp? = nil, wear: PetWear? = nil, detail: PetDetail = .full, time: Double? = nil, monochrome: Bool = false) {
+    public init(species: PetSpecies, pose: PetPose, prop: PetProp? = nil, wear: PetWear? = nil, detail: PetDetail = .full, time: Double? = nil, monochrome: Bool = false,
+                neck: PetNeck? = nil, extra: PetExtra? = nil, sign: PetSign? = nil) {
+        self.neck = neck
+        self.extra = extra
+        self.sign = sign
         self.species = species
         self.pose = pose.clamped()
         self.prop = prop
@@ -138,9 +145,11 @@ public enum PetRenderer {
             }
             // Floor props stay on the floor: they are drawn in the room, not with the body, so a
             // hop or a lean never lifts them. Held props go through the body transform with the paws.
+            if let extra = p.extra, p.detail == .full { PetPropArt.extra(ctx, p, extra) }
             if let prop = p.prop, prop.onFloor, prop.drawnBehindArms { PetPropArt.held(ctx, p, fig, prop) }
             if let prop = p.prop, !prop.onFloor, prop.drawnBehindArms { PetPropArt.held(body, p, fig, prop) }
             drawArms(body, p, fig, front: false)
+            if let neck = p.neck, p.prop != .blanket || neck == .travelPillow { PetPropArt.neck(body, p, fig, neck) }
             drawHead(head, p, fig)
             if let prop = p.prop, !prop.drawnBehindArms, !prop.drawnInFront { PetPropArt.held(body, p, fig, prop) }
             drawArms(body, p, fig, front: true)

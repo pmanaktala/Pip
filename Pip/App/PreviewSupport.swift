@@ -70,6 +70,6 @@ struct PreviewHost<Content: View>: View {
 }
 
 #Preview("Sit With Pet") {
-    PreviewHost(species: .dog) { SitWithPetView() }
+    PreviewHost(species: .dog) { PlayView() }
 }
 #endif

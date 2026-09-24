@@ -7,7 +7,8 @@ import SwiftUI
 struct PetHomeView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var scheme
-    @State private var showSitWithPet = false
+    @State private var showPlay = false
+    @State private var playMode: PlayView.Mode = .play
     @State private var showPets = false
     @State private var showWidgets = false
     @State private var touch = TouchState()
@@ -48,9 +49,10 @@ struct PetHomeView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         Haptics.light()
-                        showSitWithPet = true
+                        playMode = .play
+                        showPlay = true
                     } label: {
-                        Label("Sit with \(appState.identity.name)", systemImage: "figure.mind.and.body")
+                        Label("Play with \(appState.identity.name)", systemImage: "tennisball.fill")
                     }
                 }
                 ToolbarSpacer(.fixed, placement: .topBarTrailing)
@@ -66,17 +68,19 @@ struct PetHomeView: View {
             #if DEBUG
             .navigationDestination(isPresented: $showWidgets) { WidgetGalleryView() }
             #endif
-            .fullScreenCover(isPresented: $showSitWithPet) {
-                SitWithPetView()
+            .fullScreenCover(isPresented: $showPlay) {
+                PlayView(mode: playMode)
             }
             .onChange(of: appState.presentSit, initial: true) { _, present in
-                if present { showSitWithPet = true; appState.presentSit = false }
+                // "Sit together" links (Live Activity, notifications) open straight into Meditate.
+                if present { playMode = .meditate; showPlay = true; appState.presentSit = false }
             }
             #if DEBUG
             .onAppear {
                 switch ProcessInfo.processInfo.environment["PIP_DEBUG"] {
                 case "pets": showPets = true
-                case "sit": showSitWithPet = true
+                case "sit", "meditate": playMode = .meditate; showPlay = true
+                case "play", "fetch": playMode = .play; showPlay = true
                 case "widgets": showWidgets = true
                 case "poke":
                     Task { try? await Task.sleep(for: .seconds(1.5)); appState.pet.tap(onHead: true) }
