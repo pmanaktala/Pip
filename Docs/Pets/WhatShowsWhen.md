@@ -22,7 +22,7 @@ widgets and complications (`PetSnapshot.stance(at:)`).
 |---|---|---|
 | 22:30 – 6:00 (weekends until 7:30) | Sleeping | Tucked under its blanket in a nightcap, eyes closed, `zzz` |
 | 6:00 – 9:00 (weekends 7:30 – 10:30) | Waking up | Heavy lids, slightly slumped |
-| Weekdays 9:00 – 12:00 and 13:30 – 17:30 | Working | Peeks over a little laptop (a paw print on the lid), types, looks up at you |
+| Weekdays 9:30 – 11:30 and 14:30 – 16:30 | Working | Peeks over a little laptop (a paw print on the lid), types, looks up at you |
 | Other daytime (9:00 – 18:30) | Daydreaming / Playing / Reading | 90-minute blocks, picked per day, never the same twice in a row. Daydreaming looks up and smiles; Playing has a ball on the floor; Reading holds a book |
 | 14:00 – 15:00 | Napping (about half the days) | Sitting nap, `zzz` |
 | 18:30 – 21:30 | Reading | Book in both paws |
@@ -88,8 +88,10 @@ of at most one thing in its paws. Nothing celebratory after a hard mood.
 Festivals come from the date and the phone's region setting, never location; the suitcase and
 the cake come first, and none show after a hard mood.
 
-**Seasons** drift through the room: snow in winter, leaves in autumn, blossom in spring,
-fireflies on summer evenings; **confetti** on New Year and its birthday.
+**Seasons** drift through the room on about three days in seven (the same days on every
+device), so a season stays a small treat rather than months of the same leaves: snow in winter,
+leaves in autumn, blossom in spring, fireflies on summer evenings. They fade out before reaching
+the name and status; **confetti** on New Year and its birthday.
 
 **Gentle hello:** if yesterday was rough (it ended on a hard feeling, or half of it was hard)
 and nothing is logged yet today, arriving gets a soft lean toward you, a kind face and one small
@@ -158,7 +160,7 @@ and the ball only when its paws are free.
 |---|---|---|
 | Pet tab | The room (sky by time of day, tinted by a fresh mood), the live pet, its name and a status line that always matches the stance, today's faces once there's more than one | Live, 60 fps (30 when the system asks) |
 | Mood picker | Eight tokens, each the pet's turned-up face for that mood | Still |
-| Play (the tennis-ball button on the Pet tab) | The pet in its room with a tray: toss the **treat** (it hops and catches it, munches, wiggles), throw the **ball** (it hops over, carries it back in its paws, drops it, and it rolls back to the tray) or blow **bubbles** (five wobble up toward it; it watches the nearest and swats any within reach, and you can tap one to pop it). With music playing in another app it **dances** on the beat (after a hard mood it only sways). Tilt the phone and it leans and flails to keep its balance; shake it and it goes dizzy | Live |
+| Play (the tennis-ball button on the Pet tab) | The pet in its room with a tray: toss its **snack** (a little fish for Pebble, a fish biscuit for Mochi, a bone biscuit for Biscuit): it hops, catches it, holds it up in both paws and eats it in three bites with crumbs, then licks its lips, wiggles and a heart pops up, throw the **ball** (it hops over, carries it back in its paws, drops it, and it rolls back to the tray) or blow **bubbles** (five wobble up toward it; it watches the nearest and swats any within reach, and you can tap one to pop it). With music playing in another app it **dances** on the beat (after a hard mood it only sways). Tilt the phone and it leans and flails to keep its balance; shake it and it goes dizzy | Live |
 | Meditate (the button next to close, in Play) | Sitting cross-legged, paws on its knees, floating a little; "Breathe together" drives the chest, a ring and the words (4 s in, 6 s out) | Live |
 | History, Settings, tab-bar accessory | Mood token faces | Still |
 | Home Screen widgets | Small: the pet in its room. Medium: pet, status, four faces to log. Large: pet over all eight faces | A new entry every 30 min, at each change in the pet's day and when a mood fades; each entry shows the next still pose, and the system animates the change |

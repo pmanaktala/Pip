@@ -43,8 +43,8 @@ struct WidgetGalleryView: View {
                         Text(company.line).font(.system(.callout, design: .rounded, weight: .bold)).multilineTextAlignment(.center).lineLimit(2)
                     }
                     .frame(maxWidth: .infinity)
-                    Circle().fill(MoodColor.bold(company.mood)).frame(width: 44, height: 44)
-                        .overlay(Image(systemName: "hand.raised.fill").foregroundStyle(MoodColor.onBold))
+                    Circle().fill(MoodColor.bold(company.mood).opacity(0.25)).frame(width: 44, height: 44)
+                        .overlay(Image(systemName: "pawprint.fill").foregroundStyle(MoodColor.bold(company.mood)))
                 }
                 .foregroundStyle(.white)
                 .padding(16)

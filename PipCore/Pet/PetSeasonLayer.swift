@@ -18,7 +18,39 @@ public struct PetSeasonLayer: View {
         self.date = date
     }
 
+    /// A season is a treat, not wallpaper: it drifts through the room on about three days in
+    /// seven (the same days on every device), so autumn isn't leaves on every visit for three
+    /// months. Celebrations always show.
+    public static func isShowing(on date: Date, calendar: Calendar = .current) -> Bool {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["PIP_SEASON"] != nil { return true }
+        #endif
+        let day = Double(calendar.ordinality(of: .day, in: .era, for: date) ?? 0)
+        return PetMath.hash01(day * 2.71 + 5) < 0.43
+    }
+
     public var body: some View {
+        if confetti || Self.isShowing(on: date) {
+            // Everything drifts behind the glass buttons and bars (the glass bends it, which is
+            // lovely); only the corner behind the name and status is kept clear so text stays calm.
+            layer.mask {
+                GeometryReader { geo in
+                    ZStack(alignment: .topLeading) {
+                        Color.black
+                        Ellipse()
+                            .frame(width: geo.size.width * 1.1, height: geo.size.height * 0.34)
+                            .offset(x: -geo.size.width * 0.35, y: -geo.size.height * 0.1)
+                            .blur(radius: 28)
+                            .blendMode(.destinationOut)
+                    }
+                    .compositingGroup()
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var layer: some View {
         if live && !reduceMotion {
             TimelineView(.animation(minimumInterval: 1.0 / 30)) { context in
                 canvas(t: context.date.timeIntervalSince1970)
@@ -32,6 +64,7 @@ public struct PetSeasonLayer: View {
         let hour = Calendar.current.component(.hour, from: date)
         return Canvas { ctx, size in
             if confetti { Self.confetti(ctx, size, t) }
+            guard Self.isShowing(on: date) else { return }
             switch season {
             case .winter: Self.snow(ctx, size, t)
             case .autumn: Self.leaves(ctx, size, t)
@@ -53,7 +86,7 @@ public struct PetSeasonLayer: View {
     }
 
     static func snow(_ ctx: GraphicsContext, _ size: CGSize, _ t: Double) {
-        for i in 0..<34 {
+        for i in 0..<24 {
             let (p, _) = fall(i, size, t, period: 14 + PetMath.hash01(Double(i)) * 8, sway: 14)
             let r = 1.4 + PetMath.hash01(Double(i) * 3.3) * 2.2
             ctx.fill(Path(ellipseIn: CGRect(x: p.x - r, y: p.y - r, width: r * 2, height: r * 2)), with: .color(.white.opacity(0.85)))
@@ -62,7 +95,7 @@ public struct PetSeasonLayer: View {
 
     static func leaves(_ ctx: GraphicsContext, _ size: CGSize, _ t: Double) {
         let colors = [Color(red: 0.93, green: 0.55, blue: 0.25), Color(red: 0.85, green: 0.36, blue: 0.24), Color(red: 0.80, green: 0.62, blue: 0.30)]
-        for i in 0..<10 {
+        for i in 0..<7 {
             let (p, phase) = fall(i, size, t, period: 16 + PetMath.hash01(Double(i)) * 8, sway: 30)
             var leaf = ctx
             leaf.translateBy(x: p.x, y: p.y)
@@ -76,7 +109,7 @@ public struct PetSeasonLayer: View {
     }
 
     static func petals(_ ctx: GraphicsContext, _ size: CGSize, _ t: Double) {
-        for i in 0..<14 {
+        for i in 0..<10 {
             let (p, phase) = fall(i, size, t, period: 15 + PetMath.hash01(Double(i)) * 8, sway: 26)
             var petal = ctx
             petal.translateBy(x: p.x, y: p.y)

@@ -36,7 +36,11 @@ public struct PetPaint {
         self.detail = detail
         self.time = time
         self.palette = monochrome ? .monochrome(for: species) : .palette(for: species)
+        self.monochrome = monochrome
     }
+
+    /// Tinted watch faces: everything, hats included, is drawn in greys so the tint reads.
+    public var monochrome = false
 
     /// Rim width in design units: heavier as the pet gets smaller so it still reads.
     var rim: CGFloat { detail == .badge ? 2.2 : 1.5 }
@@ -153,6 +157,10 @@ public enum PetRenderer {
             drawHead(head, p, fig)
             if let prop = p.prop, !prop.drawnBehindArms, !prop.drawnInFront { PetPropArt.held(body, p, fig, prop) }
             drawArms(body, p, fig, front: true)
+            if p.prop == .snack {
+                // At the mouth, riding the head, held up in front of the paws so you see it go.
+                PetSnackArt.draw(head, species: p.species, at: CGPoint(x: 0, y: fig.mouthY + 9), size: 30, bite: p.pose.bite, time: p.time ?? 0, rim: p.rim)
+            }
             if let prop = p.prop, prop.drawnInFront { PetPropArt.held(prop.onFloor ? ctx : body, p, fig, prop) }
         }
         PetEffects.draw(ctx, body: body, head: head, p, fig)
@@ -164,7 +172,11 @@ public enum PetRenderer {
         case .cat: CatArt.head(head, p, fig)
         case .dog: DogArt.head(head, p, fig)
         }
-        if let wear = p.wear { PetPropArt.worn(head, p, fig, wear) }
+        if let wear = p.wear {
+            var worn = head
+            if p.monochrome { worn.addFilter(.saturation(0)) }
+            PetPropArt.worn(worn, p, fig, wear)
+        }
     }
 
     /// Arms at the side (angle ≥ 0) sit under the head; folded arms (angle < 0) cross in front of it.

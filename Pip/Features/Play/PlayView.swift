@@ -45,13 +45,18 @@ struct PlayView: View {
                 PetRoom(mood: mode == .meditate ? .calm : nil, horizon: floor)
                     .ignoresSafeArea()
                     .onAppear { stageSize = geo.size }
-                switch mode {
-                case .play: play(in: geo.size).coordinateSpace(.named("stage"))
-                case .meditate: meditate(in: geo.size)
+                // The stage runs to the very top, so bubbles and notes float off the screen,
+                // passing under the glass buttons (which bend them) on the way.
+                Group {
+                    switch mode {
+                    case .play: play(in: geo.size).coordinateSpace(.named("stage"))
+                    case .meditate: meditate(in: geo.size)
+                    }
                 }
-                chrome
             }
         }
+        .ignoresSafeArea(.container, edges: .top)
+        .overlay(alignment: .topTrailing) { chrome }
         .ignoresSafeArea(.keyboard)
         .onAppear(perform: setUp)
         .onDisappear {
@@ -78,30 +83,37 @@ struct PlayView: View {
 
     // MARK: Chrome
 
-    /// Two round glass buttons, top right: switch between playing and meditating, and close.
+    /// Two floating glass buttons, the same size and weight as the Pet tab's toolbar buttons:
+    /// switch between playing and meditating, and close. Regular Liquid Glass (Apple keeps the
+    /// clear variant for photo and video backgrounds), living over the room rather than in a
+    /// toolbar, so whatever drifts beneath them is bent by the glass instead of cut off by a bar edge.
     private var chrome: some View {
-        VStack {
-            HStack(spacing: 10) {
-                Spacer()
+        GlassEffectContainer(spacing: 12) {
+            HStack(spacing: 12) {
                 Button {
                     withAnimation(.smooth(duration: 0.45)) { mode = mode == .play ? .meditate : .play }
                 } label: {
                     Image(systemName: mode == .play ? "figure.mind.and.body" : "tennisball.fill")
-                        .font(.headline.weight(.semibold))
-                        .frame(width: 44, height: 44)
                         .contentTransition(.symbolEffect(.replace))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Circle())
                 }
-                .buttonStyle(.glass)
+                .glassEffect(.regular.interactive(), in: .circle)
                 .accessibilityLabel(mode == .play ? "Meditate together" : "Play")
                 Button { dismiss() } label: {
-                    Image(systemName: "xmark").font(.headline.weight(.semibold)).frame(width: 44, height: 44)
+                    Image(systemName: "xmark")
+                        .frame(width: 44, height: 44)
+                        .contentShape(Circle())
                 }
-                .buttonStyle(.glass)
+                .glassEffect(.regular.interactive(), in: .circle)
                 .accessibilityLabel("Close")
             }
-            .padding(.horizontal, PipSpacing.m)
-            Spacer()
+            .font(.system(size: 19, weight: .medium))
+            .foregroundStyle(.tint)
+            .buttonStyle(.plain)
         }
+        .padding(.horizontal, 16)
+        .padding(.top, 4)
     }
 
     // MARK: Play
@@ -123,6 +135,13 @@ struct PlayView: View {
         motion.start()
         #if DEBUG
         if ProcessInfo.processInfo.environment["PIP_DEBUG"] == "meditate" { mode = .meditate }
+        if ProcessInfo.processInfo.environment["PIP_DEBUG"] == "treat" {
+            Task {
+                try? await Task.sleep(for: .seconds(1.2))
+                let head = PetStage.headRect(in: stageSize, species: scene.species, petScale: petScale, floor: floor)
+                tossTreat(from: CGPoint(x: stageSize.width / 2 - 80, y: stageSize.height - 70), in: stageSize, head: head)
+            }
+        }
         if ProcessInfo.processInfo.environment["PIP_DEBUG"] == "bubbles" {
             Task {
                 try? await Task.sleep(for: .seconds(1.2))
@@ -157,6 +176,18 @@ struct PlayView: View {
         ZStack(alignment: .topLeading) {
             PetStage(scene: scene, petScale: petScale, floor: floor, showsRoom: false, showsSeason: true, petOffset: petOffset)
                 .allowsHitTesting(false)
+
+            // Dancing: notes float up off it and drift away behind the glass.
+            if scene.dancing && !reduceMotion {
+                TimelineView(.animation) { clock in
+                    Canvas { ctx, _ in
+                        RisingNotes.draw(ctx, from: CGPoint(x: head.midX, y: head.minY), height: size.height, t: clock.date.timeIntervalSince1970)
+                    }
+                }
+                .allowsHitTesting(false)
+                .transition(.opacity)
+                .accessibilityHidden(true)
+            }
 
             // Bubbles, and a tap pops the one under your finger.
             if !bubbles.isEmpty {
@@ -196,7 +227,7 @@ struct PlayView: View {
     @ViewBuilder
     private func toyView(_ toy: Toy) -> some View {
         switch toy {
-        case .treat: TreatToken()
+        case .treat: SnackToken(species: scene.species)
         case .ball: BallToken(color: PetPalette.palette(for: scene.species).prop.color)
         case .bubbles: WandToken()
         }
@@ -204,6 +235,7 @@ struct PlayView: View {
 
     /// The tray: a treat, the ball and the bubble wand. Drag one out and let go to toss it; a tap
     /// tosses it too.
+    /// The tray: one capsule of glass holding the treat, the ball and the bubble wand.
     private func tray(size: CGSize, head: CGRect) -> some View {
         HStack(spacing: 28) {
             ForEach(Toy.allCases, id: \.self) { toy in
@@ -211,7 +243,9 @@ struct PlayView: View {
                     .frame(width: 40, height: 40)
                     .padding(6)
                     .contentShape(Rectangle())
+                    .scaleEffect(away.contains(toy) ? 0.3 : 1)
                     .opacity(away.contains(toy) ? 0 : 1)
+                    .animation(.spring(duration: 0.45, bounce: 0.35), value: away.contains(toy))
                     .offset(dragging == toy ? drag : .zero)
                     .onTapGesture {
                         // A tap tosses it from its slot in the tray.
@@ -240,7 +274,7 @@ struct PlayView: View {
         }
         .padding(.horizontal, 22)
         .padding(.vertical, 8)
-        .glassEffect(.regular, in: .capsule)
+        .glassEffect(.regular.interactive(), in: .capsule)
     }
 
     /// Where a toy sits in the tray, from the middle: three 52 pt slots 28 pt apart.
@@ -352,11 +386,19 @@ struct PlayView: View {
             add(.hop)
             withAnimation(.easeIn(duration: 0.3)) { flying = (.treat, mouth) }
             try? await Task.sleep(for: .seconds(0.3))
+            // Caught: it holds the snack up in both paws and eats it in three bites.
             flying = nil
             scene.look = nil
+            scene.heldProp = .snack
             Haptics.success()
             add(.munch)
-            try? await Task.sleep(for: .seconds(1.6))
+            for _ in 0..<3 {
+                try? await Task.sleep(for: .seconds(0.7))
+                Haptics.soft()
+            }
+            try? await Task.sleep(for: .seconds(0.12))
+            scene.heldProp = nil
+            try? await Task.sleep(for: .seconds(1.0))
             withAnimation(.smooth(duration: 0.4)) { _ = away.remove(.treat) }
             busy = false
         }
@@ -429,6 +471,13 @@ struct PlayView: View {
                         .position(x: size.width / 2, y: size.height * floor - size.width * petScale * 0.5)
                         .accessibilityHidden(true)
                 }
+                if !reduceMotion {
+                    Canvas { ctx, canvasSize in
+                        CalmMotes.draw(ctx, size: canvasSize, t: clock.date.timeIntervalSince1970, breath: guided ? breath : nil)
+                    }
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+                }
                 PetStage(scene: PetScene(species: appState.identity.species, stance: .meditating, breathGuide: guided ? breath : nil),
                          live: !reduceMotion, petScale: petScale, floor: floor, showsRoom: false, showsSeason: false)
             }
@@ -464,6 +513,53 @@ struct PlayView: View {
             .controlSize(.large)
         }
         .padding(.bottom, PipSpacing.xl)
+    }
+}
+
+/// Music notes rising off the dancing pet: one every second or so, swaying as they climb and
+/// fading out near the top, where they slip behind the glass buttons.
+enum RisingNotes {
+    static func draw(_ ctx: GraphicsContext, from origin: CGPoint, height: CGFloat, t: Double) {
+        let colors = [Color(red: 0.2, green: 0.62, blue: 0.58), Color(red: 0.93, green: 0.45, blue: 0.5), Color(red: 0.45, green: 0.5, blue: 0.85)]
+        for i in 0..<8 {
+            // Each note has its own pace and path, re-rolled every time it starts again.
+            let period = 5.5 + Double(i % 4) * 0.9
+            let phase = t / period + Double(i) * 0.37
+            let u = phase.truncatingRemainder(dividingBy: 1)
+            let seed = floor(phase) * 7.31 + Double(i) * 3.17
+            let rnd = { (k: Double) in (sin(seed * 12.9898 + k * 78.233) * 43758.5453).truncatingRemainder(dividingBy: 1).magnitude }
+            let side: CGFloat = i.isMultiple(of: 2) ? 1 : -1
+            let reach = CGFloat(60 + rnd(1) * 130)
+            let curve = CGFloat(1 - (1 - u) * (1 - u))
+            let x = origin.x + side * (14 + reach * curve) + CGFloat(sin(u * (6 + rnd(2) * 4) + seed)) * 9
+            let y = origin.y + 8 - CGFloat(u) * (origin.y + 70) * CGFloat(0.8 + rnd(3) * 0.3)
+            let alpha = min(1, u * 8) * (u > 0.75 ? (1 - u) / 0.25 : 1)
+            var note = ctx
+            note.opacity = alpha * 0.85
+            note.translateBy(x: x, y: y)
+            note.rotate(by: .radians(sin(u * 5 + seed) * 0.35))
+            note.draw(Text(rnd(4) > 0.6 ? "♫" : "♪").font(.system(size: 18 + CGFloat(u) * 9, weight: .bold, design: .rounded))
+                .foregroundStyle(colors[Int(rnd(5) * 3) % 3]), at: .zero)
+        }
+    }
+}
+
+/// Meditating: a few soft motes rise slowly through the room, brightening on the out-breath,
+/// and drift up behind the glass. Nothing to track, just something gentle to rest the eyes on.
+enum CalmMotes {
+    static func draw(_ ctx: GraphicsContext, size: CGSize, t: Double, breath: Double?) {
+        let glow = breath.map { 0.55 + (1 - $0) * 0.45 } ?? 0.8
+        for i in 0..<12 {
+            let period = 16 + Double(i % 5) * 2.5
+            let u = (t / period + Double(i) * 0.137).truncatingRemainder(dividingBy: 1)
+            let seed = Double(i) * 5.3
+            let x = size.width * CGFloat(0.08 + (sin(seed) * 0.5 + 0.5) * 0.84) + CGFloat(sin(t * 0.3 + seed)) * 16
+            let y = size.height * CGFloat(0.95 - u * 1.05)
+            let alpha = min(1, u * 5) * min(1, (1 - u) * 5) * glow
+            let r = 2.2 + CGFloat(i % 3)
+            ctx.fill(Path(ellipseIn: CGRect(x: x - r * 3, y: y - r * 3, width: r * 6, height: r * 6)), with: .color(Color(red: 1, green: 0.95, blue: 0.8).opacity(0.12 * alpha)))
+            ctx.fill(Path(ellipseIn: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2)), with: .color(Color(red: 1, green: 0.97, blue: 0.88).opacity(0.75 * alpha)))
+        }
     }
 }
 
@@ -521,35 +617,42 @@ private extension CGRect {
     var center: CGPoint { CGPoint(x: midX, y: midY) }
 }
 
-/// The bubble wand: a ring on a little stick, with a film of soap across it.
+/// The bubble wand: a loop with a shimmering soap film on a short handle, and two little
+/// bubbles already floating off it, so it reads as "bubbles" at a glance.
 private struct WandToken: View {
     var body: some View {
         Canvas { ctx, size in
             let s = min(size.width, size.height)
-            var stick = Path()
-            stick.move(to: CGPoint(x: s * 0.42, y: s * 0.55))
-            stick.addLine(to: CGPoint(x: s * 0.18, y: s * 0.95))
-            ctx.stroke(stick, with: .color(Color(red: 0.95, green: 0.55, blue: 0.62)), style: StrokeStyle(lineWidth: 4, lineCap: .round))
-            let ring = Path(ellipseIn: CGRect(x: s * 0.36, y: s * 0.06, width: s * 0.54, height: s * 0.54))
-            ctx.fill(ring, with: .color(Color(red: 0.75, green: 0.9, blue: 1).opacity(0.35)))
-            ctx.stroke(ring, with: .color(Color(red: 0.95, green: 0.55, blue: 0.62)), lineWidth: 4)
-            ctx.fill(Path(ellipseIn: CGRect(x: s * 0.46, y: s * 0.15, width: s * 0.12, height: s * 0.08)), with: .color(.white.opacity(0.9)))
+            let pink = Color(red: 0.95, green: 0.5, blue: 0.62)
+            let ring = CGRect(x: s * 0.14, y: s * 0.22, width: s * 0.5, height: s * 0.5)
+            // Handle, down and to the left.
+            var handle = Path()
+            handle.move(to: CGPoint(x: ring.midX - s * 0.1, y: ring.maxY - s * 0.02))
+            handle.addLine(to: CGPoint(x: s * 0.2, y: s * 0.98))
+            ctx.stroke(handle, with: .color(pink), style: StrokeStyle(lineWidth: s * 0.1, lineCap: .round))
+            // The film: faint and iridescent.
+            let film = Path(ellipseIn: ring.insetBy(dx: s * 0.04, dy: s * 0.04))
+            ctx.fill(film, with: .linearGradient(Gradient(colors: [Color(red: 0.7, green: 0.9, blue: 1).opacity(0.55), Color(red: 1, green: 0.8, blue: 0.95).opacity(0.45)]),
+                                                 startPoint: CGPoint(x: ring.minX, y: ring.minY), endPoint: CGPoint(x: ring.maxX, y: ring.maxY)))
+            ctx.stroke(Path(ellipseIn: ring), with: .color(pink), lineWidth: s * 0.09)
+            ctx.fill(Path(ellipseIn: CGRect(x: ring.minX + s * 0.1, y: ring.minY + s * 0.1, width: s * 0.1, height: s * 0.06)), with: .color(.white.opacity(0.9)))
+            // Two bubbles drifting off to the upper right.
+            for (x, y, r) in [(0.8, 0.26, 0.11), (0.9, 0.05, 0.07)] as [(CGFloat, CGFloat, CGFloat)] {
+                let b = CGRect(x: s * x - s * r, y: s * y, width: s * r * 2, height: s * r * 2)
+                ctx.fill(Path(ellipseIn: b), with: .color(Color(red: 0.75, green: 0.9, blue: 1).opacity(0.35)))
+                ctx.stroke(Path(ellipseIn: b), with: .color(Color(red: 0.45, green: 0.66, blue: 0.92)), lineWidth: 1.4)
+                ctx.fill(Path(ellipseIn: CGRect(x: b.minX + b.width * 0.22, y: b.minY + b.height * 0.2, width: b.width * 0.3, height: b.height * 0.2)), with: .color(.white.opacity(0.9)))
+            }
         }
     }
 }
 
-/// A treat biscuit: golden, with a few crumbs of colour.
-private struct TreatToken: View {
+/// The pet's own snack, as it sits in the tray (the same drawing it eats from its paws).
+private struct SnackToken: View {
+    var species: PetSpecies
     var body: some View {
         Canvas { ctx, size in
-            let r = CGRect(origin: .zero, size: size).insetBy(dx: 4, dy: 8)
-            let biscuit = Path(roundedRect: r, cornerSize: CGSize(width: r.height * 0.45, height: r.height * 0.45))
-            ctx.fill(biscuit, with: .color(Color(red: 0.93, green: 0.72, blue: 0.42)))
-            ctx.stroke(biscuit, with: .color(Color(red: 0.62, green: 0.42, blue: 0.24)), lineWidth: 1.6)
-            for (x, y) in [(0.3, 0.42), (0.55, 0.62), (0.72, 0.4), (0.44, 0.3)] {
-                ctx.fill(Path(ellipseIn: CGRect(x: r.minX + r.width * x - 2, y: r.minY + r.height * y - 2, width: 4, height: 4)),
-                         with: .color(Color(red: 0.62, green: 0.42, blue: 0.24)))
-            }
+            PetSnackArt.draw(ctx, species: species, at: CGPoint(x: size.width / 2, y: size.height / 2), size: size.width * 0.95)
         }
     }
 }

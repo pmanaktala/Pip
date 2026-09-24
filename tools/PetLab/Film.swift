@@ -296,6 +296,13 @@ enum LabFun {
         var rows: [LabFilm.Row] = [PetVignette.mondayStretch, .fridayWiggle, .offerBall, .blowBubble, .hopeful].map {
             LabFilm.sample(PetClips.vignette($0, s), stance: .mood(.neutral, .moderate), species: s)
         }
+        // Eating: the snack is in its paws for the first 2.2 s.
+        let eat = PetClips.munch(s)
+        let rest = PetStance.mood(.happy, .slight).rest(s)
+        rows.append(LabFilm.Row(title: "eat", frames: (0..<9).map { i in
+            let t = eat.duration * Double(i) / 8
+            return (eat.apply(to: rest, at: t).clamped(), t < 2.22 ? PetProp.snack : nil)
+        }))
         rows.append(LabFilm.sample(PetClips.gentleHello(s), stance: .life(.daydreaming), species: s))
         rows.append(LabFilm.sample(PetClips.swat(s), stance: .mood(.happy, .slight), species: s))
         var dance = LabFilm.director(s, stance: .mood(.happy, .moderate), seconds: 2.2, frames: 9, dancing: true)

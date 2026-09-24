@@ -28,8 +28,8 @@ struct PetHomeView: View {
     }
 
     private var mood: Mood? { appState.hasFreshMood ? appState.latestEntry?.mood : nil }
-    private var petScale: CGFloat { appState.isPickingMood ? 0.42 : 0.7 }
-    private var floor: CGFloat { appState.isPickingMood ? 0.43 : 0.64 }
+    private var petScale: CGFloat { appState.isPickingMood ? 0.42 : 0.84 }
+    private var floor: CGFloat { appState.isPickingMood ? 0.43 : 0.7 }
 
     var body: some View {
         NavigationStack {
@@ -80,7 +80,7 @@ struct PetHomeView: View {
                 switch ProcessInfo.processInfo.environment["PIP_DEBUG"] {
                 case "pets": showPets = true
                 case "sit", "meditate": playMode = .meditate; showPlay = true
-                case "play", "fetch", "bubbles": playMode = .play; showPlay = true
+                case "play", "fetch", "bubbles", "treat": playMode = .play; showPlay = true
                 case "widgets": showWidgets = true
                 case "poke":
                     Task { try? await Task.sleep(for: .seconds(1.5)); appState.pet.tap(onHead: true) }
@@ -235,13 +235,14 @@ struct PetHomeView: View {
     @ViewBuilder
     private var todayFaces: some View {
         if appState.todayEntries.count > 1 {
-            HStack(spacing: -6) {
-                ForEach(appState.todayEntries.sorted { $0.timestamp < $1.timestamp }.suffix(8)) { entry in
+            // Spaced, not stacked: each face has to be readable at a glance.
+            HStack(spacing: 6) {
+                ForEach(appState.todayEntries.sorted { $0.timestamp < $1.timestamp }.suffix(6)) { entry in
                     PetView(species: appState.identity.species, mood: entry.mood, intensity: entry.intensity)
-                        .frame(width: 26, height: 26)
-                        .padding(2)
+                        .frame(width: 30, height: 30)
+                        .padding(3)
                         .background(MoodColor.soft(entry.mood, scheme: scheme), in: Circle())
-                        .overlay(Circle().strokeBorder(Color(.systemBackground).opacity(0.9), lineWidth: 1.5))
+                        .clipShape(Circle())
                         .accessibilityLabel("\(entry.intensity.phrase(for: entry.mood).capitalizedFirst), \(entry.timestamp.formatted(date: .omitted, time: .shortened))")
                 }
             }

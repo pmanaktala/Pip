@@ -93,11 +93,12 @@ struct PetButton: View {
 
     var body: some View {
         Button(intent: PetCompanionIntent()) {
-            Image(systemName: petted ? "heart.fill" : "hand.raised.fill")
+            // A soft paw, not a raised hand: a hand on a coloured disc reads as "stop".
+            Image(systemName: petted ? "heart.fill" : "pawprint.fill")
                 .font(.system(size: 17, weight: .bold))
-                .foregroundStyle(MoodColor.onBold)
+                .foregroundStyle(MoodColor.bold(mood))
                 .frame(width: 44, height: 44)
-                .background(MoodColor.bold(mood), in: Circle())
+                .background(MoodColor.bold(mood).opacity(0.2), in: Circle())
                 .contentTransition(.symbolEffect(.replace))
         }
         .buttonStyle(.plain)

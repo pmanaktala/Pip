@@ -40,7 +40,8 @@ public struct PetRoom: View {
                     Circle()
                         .fill(RadialGradient(colors: [.white.opacity(0.95), Color(red: 0.92, green: 0.93, blue: 1).opacity(0.7)], center: .topLeading, startRadius: 0, endRadius: w * 0.05))
                         .frame(width: w * 0.07, height: w * 0.07)
-                        .position(x: w * light.keyX, y: floorY * light.keyY)
+                        // Kept to the right half and below the header, clear of the name and buttons.
+                        .position(x: w * (0.5 + light.keyX * 0.45), y: max(floorY * light.keyY, h * 0.2))
                         .opacity(light.night)
                         .blur(radius: 0.4)
                 }
@@ -57,12 +58,13 @@ public struct PetRoom: View {
 
                 Canvas { context, size in
                     // Dust in the light by day; stars at night, more of them the darker it gets.
-                    let starCount = 10 + Int(light.night * 26)
+                    let starCount = 6 + Int(light.night * 26)
                     for i in 0..<starCount {
-                        let x = (i < 10 ? 0.45 + PetMath.hash01(Double(i) * 7.1) * 0.5 : PetMath.hash01(Double(i) * 5.3)) * size.width
-                        let y = PetMath.hash01(Double(i) * 3.7 + 9) * floorY * (i < 10 ? 0.8 : 0.7)
+                        let x = (i < 6 ? 0.45 + PetMath.hash01(Double(i) * 7.1) * 0.5 : PetMath.hash01(Double(i) * 5.3)) * size.width
+                        let y = PetMath.hash01(Double(i) * 3.7 + 9) * floorY * (i < 6 ? 0.8 : 0.7)
                         let r = 0.8 + PetMath.hash01(Double(i) * 1.3) * 1.2
-                        let alpha = i < 10 ? (scheme == .dark ? 0.35 : 0.7) : 0.85 * light.night * (0.5 + 0.5 * PetMath.hash01(Double(i) * 2.9))
+                        // By day the motes are faint; bright white dots at noon read as snow.
+                        let alpha = i < 6 ? (scheme == .dark ? 0.25 : 0.35) * (1 - light.night) + 0.6 * light.night : 0.85 * light.night * (0.5 + 0.5 * PetMath.hash01(Double(i) * 2.9))
                         context.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r * 2, height: r * 2)), with: .color(.white.opacity(alpha)))
                     }
                     guard showsFoliage, size.width > 200 else { return }
@@ -162,8 +164,8 @@ public struct RoomLight: Sendable, Equatable {
         Frame(hour: 0, skyTop: (0.36, 0.40, 0.60), skyHorizon: (0.62, 0.62, 0.78), floorFar: (0.58, 0.56, 0.70), floorNear: (0.50, 0.48, 0.63), keyLight: (0.90, 0.92, 1.0), keyStrength: 0.30, foliage: (0.36, 0.36, 0.54)),
         Frame(hour: 5, skyTop: (0.44, 0.46, 0.66), skyHorizon: (0.80, 0.72, 0.78), floorFar: (0.66, 0.62, 0.72), floorNear: (0.56, 0.52, 0.64), keyLight: (1.0, 0.86, 0.72), keyStrength: 0.35, foliage: (0.44, 0.40, 0.54)),
         Frame(hour: 7, skyTop: (0.86, 0.82, 0.90), skyHorizon: (1.0, 0.88, 0.76), floorFar: (0.94, 0.84, 0.74), floorNear: (0.88, 0.76, 0.66), keyLight: (1.0, 0.86, 0.60), keyStrength: 0.6, foliage: (0.68, 0.56, 0.46)),
-        Frame(hour: 10, skyTop: (0.70, 0.84, 0.96), skyHorizon: (0.94, 0.96, 0.96), floorFar: (0.92, 0.88, 0.80), floorNear: (0.86, 0.80, 0.72), keyLight: (1.0, 0.98, 0.88), keyStrength: 0.5, foliage: (0.58, 0.66, 0.54)),
-        Frame(hour: 14, skyTop: (0.66, 0.82, 0.96), skyHorizon: (0.93, 0.96, 0.97), floorFar: (0.92, 0.88, 0.80), floorNear: (0.86, 0.80, 0.72), keyLight: (1.0, 0.98, 0.90), keyStrength: 0.45, foliage: (0.56, 0.66, 0.54)),
+        Frame(hour: 10, skyTop: (0.56, 0.76, 0.96), skyHorizon: (0.86, 0.92, 0.97), floorFar: (0.92, 0.88, 0.80), floorNear: (0.86, 0.80, 0.72), keyLight: (1.0, 0.98, 0.88), keyStrength: 0.5, foliage: (0.58, 0.66, 0.54)),
+        Frame(hour: 14, skyTop: (0.54, 0.75, 0.96), skyHorizon: (0.86, 0.92, 0.97), floorFar: (0.92, 0.88, 0.80), floorNear: (0.86, 0.80, 0.72), keyLight: (1.0, 0.98, 0.90), keyStrength: 0.45, foliage: (0.56, 0.66, 0.54)),
         Frame(hour: 17.5, skyTop: (0.78, 0.76, 0.90), skyHorizon: (1.0, 0.86, 0.70), floorFar: (0.94, 0.82, 0.70), floorNear: (0.88, 0.74, 0.62), keyLight: (1.0, 0.78, 0.50), keyStrength: 0.6, foliage: (0.68, 0.52, 0.46)),
         Frame(hour: 19.5, skyTop: (0.52, 0.48, 0.72), skyHorizon: (0.92, 0.70, 0.66), floorFar: (0.78, 0.66, 0.68), floorNear: (0.66, 0.56, 0.62), keyLight: (1.0, 0.70, 0.52), keyStrength: 0.45, foliage: (0.52, 0.42, 0.52)),
         Frame(hour: 21.5, skyTop: (0.36, 0.40, 0.60), skyHorizon: (0.62, 0.62, 0.78), floorFar: (0.58, 0.56, 0.70), floorNear: (0.50, 0.48, 0.63), keyLight: (0.90, 0.92, 1.0), keyStrength: 0.30, foliage: (0.36, 0.36, 0.54)),

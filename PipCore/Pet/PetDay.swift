@@ -18,8 +18,9 @@ public enum PetDay {
         case 21.5...: return .windingDown
         case 18.5...: return .reading
         case 14..<15 where PetMath.hash01(day * 3.1) < 0.55: return .napping
-        case 9..<12 where isWeekday(c.weekday): return .working
-        case 13.5..<17.5 where isWeekday(c.weekday): return .working
+        // Two focused blocks on weekdays, not the whole day: most visits shouldn't open on a laptop.
+        case 9.5..<11.5 where isWeekday(c.weekday): return .working
+        case 14.5..<16.5 where isWeekday(c.weekday): return .working
         default:
             // Ninety-minute blocks through the day, never the same thing twice in a row.
             let options: [PetActivity] = [.daydreaming, .playing, .reading]

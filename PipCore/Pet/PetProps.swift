@@ -15,6 +15,8 @@ public enum PetProp: String, Codable, Sendable, Hashable, CaseIterable {
     case laptop
     /// The ball, carried back in its paws.
     case heldBall
+    /// A snack it caught, held up to its mouth in both paws and eaten in bites (`PetPose.bite`).
+    case snack
 
     /// Drawn after the body and before the arms (the paws go over or beside it).
     var drawnBehindArms: Bool { self == .blanket || self == .ball }
@@ -41,6 +43,77 @@ public enum PetWear: String, Codable, Sendable, Hashable, CaseIterable {
     }
 }
 
+/// The snack each pet loves, drawn the same in the Play tray and in its paws: a little fish for
+/// Pebble, a fish-shaped biscuit for Mochi, a bone biscuit for Biscuit.
+public enum PetSnackArt {
+    /// Draws the snack centred on `c`, about `size` wide, with `bite` (0…1) of it eaten from the
+    /// top right in round bites, and a few crumbs falling while it is being eaten.
+    public static func draw(_ ctx: GraphicsContext, species: PetSpecies, at c: CGPoint, size: CGFloat, bite: Double = 0, time: Double = 0, rim: CGFloat = 1.4) {
+        guard bite < 0.97 else { return }
+        var snack = ctx
+        let k = size / 26
+        // Bites: up to three round nibbles out of the top-right edge.
+        let nibbles = Int((bite * 3).rounded(.down))
+        if nibbles > 0 {
+            var gone = Path()
+            let spots: [(CGFloat, CGFloat)] = [(9, -6), (1, -8), (-8, -5)]
+            for i in 0..<nibbles {
+                gone.addEllipse(in: CGRect(x: c.x + spots[i].0 * k - 7 * k, y: c.y + spots[i].1 * k - 7 * k, width: 14 * k, height: 14 * k))
+            }
+            snack.clip(to: gone, options: .inverse)
+        }
+        switch species {
+        case .penguin:
+            let blue = PetRGB(0.55, 0.70, 0.86)
+            var tail = Path()
+            tail.move(to: CGPoint(x: c.x + 7 * k, y: c.y))
+            tail.addLine(to: CGPoint(x: c.x + 14 * k, y: c.y - 6 * k))
+            tail.addLine(to: CGPoint(x: c.x + 14 * k, y: c.y + 6 * k))
+            tail.closeSubpath()
+            PetDraw.solid(snack, tail, blue.mix(PetRGB(0.4, 0.5, 0.7), 0.3), rim: rim, depth: 1.5)
+            PetDraw.solid(snack, PetDraw.ellipse(CGPoint(x: c.x - 2 * k, y: c.y), 10 * k, 6.5 * k), blue, rim: rim, depth: 2)
+            snack.fill(PetDraw.ellipse(CGPoint(x: c.x - 2 * k, y: c.y + 2.5 * k), 7 * k, 2.4 * k), PetRGB(0.92, 0.95, 0.98))
+            snack.fill(PetDraw.ellipse(CGPoint(x: c.x - 7 * k, y: c.y - 1.5 * k), 1.3 * k, 1.3 * k), PetRGB(0.15, 0.15, 0.2))
+        case .cat:
+            let biscuit = PetRGB(0.86, 0.60, 0.36)
+            var tail = Path()
+            tail.move(to: CGPoint(x: c.x + 6 * k, y: c.y))
+            tail.addLine(to: CGPoint(x: c.x + 13 * k, y: c.y - 6 * k))
+            tail.addQuadCurve(to: CGPoint(x: c.x + 13 * k, y: c.y + 6 * k), control: CGPoint(x: c.x + 10.5 * k, y: c.y))
+            tail.closeSubpath()
+            PetDraw.solid(snack, tail, biscuit, rim: rim, depth: 1.5)
+            PetDraw.solid(snack, PetDraw.ellipse(CGPoint(x: c.x - 2 * k, y: c.y), 10 * k, 7 * k), biscuit, rim: rim, depth: 2)
+            // Scored scales and an eye.
+            for dx in [-3.0, 1.5] as [CGFloat] {
+                var arc = Path()
+                arc.move(to: CGPoint(x: c.x + dx * k, y: c.y - 3.5 * k))
+                arc.addQuadCurve(to: CGPoint(x: c.x + dx * k, y: c.y + 3.5 * k), control: CGPoint(x: c.x + (dx + 2.5) * k, y: c.y))
+                snack.stroke(arc, biscuit.shade, width: 1 * k)
+            }
+            snack.fill(PetDraw.ellipse(CGPoint(x: c.x - 7.5 * k, y: c.y - 1.5 * k), 1.2 * k, 1.2 * k), biscuit.rim)
+        case .dog:
+            let biscuit = PetRGB(0.93, 0.74, 0.44)
+            var bone = Path()
+            bone.addRoundedRect(in: CGRect(x: c.x - 8 * k, y: c.y - 3.2 * k, width: 16 * k, height: 6.4 * k), cornerSize: CGSize(width: 2 * k, height: 2 * k))
+            for (dx, dy) in [(-9.5, -3.2), (-9.5, 3.2), (9.5, -3.2), (9.5, 3.2)] as [(CGFloat, CGFloat)] {
+                bone.addEllipse(in: CGRect(x: c.x + dx * k - 4 * k, y: c.y + dy * k - 4 * k, width: 8 * k, height: 8 * k))
+            }
+            PetDraw.solid(snack, bone, biscuit, rim: rim, depth: 2)
+            for (dx, dy) in [(-3.0, -1.0), (2.0, 1.2), (4.5, -1.4)] as [(CGFloat, CGFloat)] {
+                snack.fill(PetDraw.ellipse(CGPoint(x: c.x + dx * k, y: c.y + dy * k), 0.9 * k, 0.9 * k), biscuit.shade)
+            }
+        }
+        // Crumbs while it is being eaten.
+        if bite > 0.02 {
+            for i in 0..<3 {
+                let u = CGFloat((time * 1.3 + Double(i) / 3).truncatingRemainder(dividingBy: 1))
+                let pt = CGPoint(x: c.x + CGFloat(i - 1) * 5 * k + u * 3 * k, y: c.y + 6 * k + u * 22 * k)
+                ctx.fill(PetDraw.ellipse(pt, 1.3 * k, 1.1 * k), PetRGB(0.86, 0.66, 0.42, Double(1 - u)))
+            }
+        }
+    }
+}
+
 enum PetPropArt {
     static func held(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure, _ prop: PetProp) {
         switch prop {
@@ -49,6 +122,8 @@ enum PetPropArt {
         case .blanket: blanket(ctx, p, fig)
         case .ball: ball(ctx, p)
         case .laptop: laptop(ctx, p)
+        case .snack:
+            break // Drawn with the head (see `PetRenderer`), so it stays at the mouth.
         case .heldBall:
             let c = between(p, fig)
             let ball = PetDraw.ellipse(CGPoint(x: c.x, y: c.y - 4), 10, 10)
@@ -363,25 +438,41 @@ enum PetPropArt {
         ctx.fill(Path(roundedRect: CGRect(x: r.midX + 6, y: r.minY + 7, width: 12, height: 3), cornerSize: CGSize(width: 1.5, height: 1.5)), PetRGB(1, 1, 1, 0.55))
     }
 
+    /// A soft wrap round the shoulders, held closed at the chest (the paws hold the edges), with
+    /// a turned-down fold at the top and a few dots. It should look cosy, never like a cape.
     static func blanket(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure) {
         let floor = PetFigure.floor
-        let top = fig.neck.y - 4 + CGFloat(p.pose.slump) * 4
-        let w: CGFloat = p.species == .penguin ? 50 : 52
-        let color = PetRGB(0.62, 0.66, 0.80).mix(p.palette.prop, 0.25)
+        let top = fig.neck.y - 6 + CGFloat(p.pose.slump) * 4
+        let w: CGFloat = p.species == .penguin ? 48 : 50
+        let color = PetRGB(0.66, 0.72, 0.86).mix(p.palette.prop, 0.2)
+        let fold = color.mix(PetRGB(1, 1, 1), 0.45)
         PetDraw.mirrored(ctx, axis: 100) { c, _ in
-            // One side of the drape: over the shoulder, down the side, open at the front.
+            // Over the shoulder, a soft billow down the side, and an inner edge that comes in to
+            // meet the other side at the chest before falling open a little at the hem.
             var side = Path()
-            side.move(to: CGPoint(x: 100 + 4, y: top))
-            side.addQuadCurve(to: CGPoint(x: 100 + w, y: top + 34), control: CGPoint(x: 100 + w * 0.8, y: top - 2))
-            side.addQuadCurve(to: CGPoint(x: 100 + w + 2, y: floor - 1), control: CGPoint(x: 100 + w + 6, y: top + 60))
-            side.addLine(to: CGPoint(x: 100 + 16, y: floor - 1))
-            side.addQuadCurve(to: CGPoint(x: 100 + 4, y: top), control: CGPoint(x: 100 + 26, y: top + 30))
+            side.move(to: CGPoint(x: 100 + 2, y: top + 4))
+            side.addQuadCurve(to: CGPoint(x: 100 + w * 0.92, y: top + 22), control: CGPoint(x: 100 + w * 0.7, y: top - 6))
+            side.addQuadCurve(to: CGPoint(x: 100 + w + 3, y: floor - 2), control: CGPoint(x: 100 + w + 10, y: top + 56))
+            side.addQuadCurve(to: CGPoint(x: 100 + 12, y: floor - 1), control: CGPoint(x: 100 + w * 0.55, y: floor + 3))
+            side.addQuadCurve(to: CGPoint(x: 100 + 1, y: top + 36), control: CGPoint(x: 100 + 4, y: top + 60))
+            side.addQuadCurve(to: CGPoint(x: 100 + 2, y: top + 4), control: CGPoint(x: 100 - 1, y: top + 20))
             side.closeSubpath()
             PetDraw.solid(c, side, color, rim: p.rim, depth: 6)
-            // A knit stripe near the hem.
-            var hem = c
-            hem.clip(to: side)
-            hem.fill(Path(CGRect(x: 100, y: floor - 14, width: w + 10, height: 4)), PetRGB(0.98, 0.96, 0.92, 0.75))
+            var inside = c
+            inside.clip(to: side)
+            // Dots.
+            for (dx, dy) in [(0.35, 0.34), (0.72, 0.5), (0.4, 0.66), (0.8, 0.82), (0.25, 0.92)] as [(CGFloat, CGFloat)] {
+                let pt = CGPoint(x: 100 + w * dx, y: top + (floor - top) * dy)
+                inside.fill(PetDraw.ellipse(pt, 2.2, 2.2), PetRGB(1, 1, 1, 0.55))
+            }
+            // A turned-down fold along the top edge.
+            var band = Path()
+            band.move(to: CGPoint(x: 100 + 1, y: top + 3))
+            band.addQuadCurve(to: CGPoint(x: 100 + w * 0.94, y: top + 21), control: CGPoint(x: 100 + w * 0.7, y: top - 7))
+            band.addQuadCurve(to: CGPoint(x: 100 + w * 0.84, y: top + 30), control: CGPoint(x: 100 + w * 0.98, y: top + 27))
+            band.addQuadCurve(to: CGPoint(x: 100 + 3, y: top + 13), control: CGPoint(x: 100 + w * 0.6, y: top + 6))
+            band.closeSubpath()
+            inside.fill(band, fold)
         }
     }
 

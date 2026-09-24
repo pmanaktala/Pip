@@ -445,19 +445,25 @@ public enum PetClips {
                 bump(\.mouthRound, 0.8, from: 1.4, peak: 1.7, hold: 2.3, end: 2.6), bump(\.mouthOpen, 0.2, from: 1.4, peak: 1.7, hold: 2.3, end: 2.6),
             ])
         case .neutral:
-            return PetClip("react.neutral", 1.6, [
-                bump(\.earL, 0.6, from: 0, peak: 0.2, hold: 1.0, end: 1.5), bump(\.earR, 0.6, from: 0, peak: 0.2, hold: 1.0, end: 1.5),
-                add(\.headNod, K(0, 0), K(0.3, 0.3), K(0.55, -0.05), K(0.8, 0.2), K(1.1, 0)),
+            // "Okay, noted": looks right at you, a head tilt, two small nods and a little smile.
+            return PetClip("react.neutral", 2.0, [
+                bump(\.earL, 0.6, from: 0, peak: 0.2, hold: 1.3, end: 1.8), bump(\.earR, 0.6, from: 0, peak: 0.2, hold: 1.3, end: 1.8),
+                bump(\.headTilt, 11, from: 0, peak: 0.35, hold: 1.4, end: 1.9),
+                add(\.headNod, K(0, 0), K(0.5, 0), K(0.7, 0.28), K(0.9, 0), K(1.1, 0.22), K(1.35, 0)),
+                bump(\.lift, 2.5, from: 0, peak: 0.15, end: 0.4),
                 bump(\.browRaise, 0.7, from: 0, peak: 0.2, hold: 0.8, end: 1.3),
-                set(\.gazeX, K(0, 0), K(1.6, 0)),
-                bump(\.smile, 0.25, from: 0.3, peak: 0.6, hold: 1.1, end: 1.5),
+                set(\.gazeX, K(0, 0), K(2.0, 0)), set(\.gazeY, K(0, 0), K(0.3, -0.1), K(2.0, -0.1)),
+                bump(\.smileEyes, 0.45, from: 0.6, peak: 0.9, hold: 1.5, end: 1.95),
+                bump(\.smile, 0.35, from: 0.3, peak: 0.6, hold: 1.5, end: 1.95),
             ])
         case .tired:
             return PetClip("react.tired", 2.6, fadeIn: 0.2, fadeOut: 0.6, [
                 bump(\.headNod, -0.4, from: 0.1, peak: 0.6, hold: 1.4, end: 2.0),
                 set(\.mouthOpen, K(0, 0), K(0.6, 1), K(1.4, 1), K(1.9, 0)), set(\.mouthRound, K(0, 0), K(0.6, 0.7), K(1.4, 0.7), K(1.9, 0)),
                 set(\.lidL, K(0, 0.3), K(0.6, 1), K(1.6, 1), K(2.3, 0.6)), set(\.lidR, K(0, 0.3), K(0.6, 1), K(1.6, 1), K(2.3, 0.6)),
-                add(\.armL, K(0, 0), K(0.6, 60), K(1.4, 60), K(2.0, 0)), add(\.armR, K(0, 0), K(0.6, 60), K(1.4, 60), K(2.0, 0)),
+                // Snuggles the blanket closer as it yawns (paws stay on the edges, never dropping).
+                add(\.armL, K(0, 0), K(0.6, -10), K(1.4, -10), K(2.0, 0)), add(\.armR, K(0, 0), K(0.6, -10), K(1.4, -10), K(2.0, 0)),
+                bump(\.headTilt, -8, from: 0.2, peak: 0.8, hold: 1.4, end: 2.1),
                 add(\.slump, K(0, 0), K(0.6, -0.2), K(1.5, -0.2), K(2.2, 0.25), K(2.6, 0)),
                 bump(\.breath, 1, from: 0.1, peak: 0.7, hold: 1.3, end: 2.0),
             ])
@@ -553,18 +559,32 @@ public enum PetClips {
     }
 
     /// A treat caught: snap, chew chew chew, a happy wiggle.
+    /// Eating the snack it caught (Play holds `PetProp.snack` in its paws for the first 2.2 s):
+    /// paws up to its mouth, three bites 0.7 s apart with a chomp and a chew between, then a lick
+    /// of the lips, a happy wiggle and a heart.
     public static func munch(_ s: PetSpecies) -> PetClip {
-        PetClip("munch", 2.2, fadeIn: 0.03, fadeOut: 0.5, [
-            set(\.mouthOpen, K(0, 0), K(0.08, 1, .out), K(0.2, 0), K(2.2, 0)),
-            osc(\.cheekPuff, from: 0.25, to: 1.5, center: 0.5, amp: 0.4, cycles: 5),
-            osc(\.headBob, from: 0.25, to: 1.5, amp: 1.2, cycles: 5),
-            set(\.smileEyes, K(0, 0), K(0.2, 1), K(1.9, 1), K(2.2, 0.3)),
-            bump(\.blush, 1, from: 0.2, peak: 0.5, hold: 1.8, end: 2.2),
-            bump(\.hearts, 1, from: 1.3, peak: 1.6, hold: 1.9, end: 2.2),
-            osc(\.x, from: 1.4, to: 2.1, amp: 2, cycles: 3),
-            osc(\.tail, from: 0.2, to: 2.1, amp: 1, cycles: s == .dog ? 8 : 3),
+        PetClip("munch", 3.6, fadeIn: 0.05, fadeOut: 0.5, [
+            set(\.armL, K(0, 0), K(0.15, -78), K(2.2, -78), K(2.6, 10), K(3.6, 10)),
+            set(\.armR, K(0, 0), K(0.15, -78), K(2.2, -78), K(2.6, 10), K(3.6, 10)),
+            set(\.bite, K(0, 0), K(0.68, 0), K(0.72, 0.34, .linear), K(1.38, 0.34), K(1.42, 0.67, .linear), K(2.08, 0.67), K(2.12, 1, .linear),
+                K(2.3, 1), K(2.4, 0, .linear), K(3.6, 0)),
+            // A chomp on each bite, then chewing with puffed cheeks.
+            bump(\.mouthOpen, 0.8, from: 0.55, peak: 0.66, end: 0.8), bump(\.mouthOpen, 0.8, from: 1.25, peak: 1.36, end: 1.5),
+            bump(\.mouthOpen, 0.8, from: 1.95, peak: 2.06, end: 2.2),
+            osc(\.cheekPuff, from: 0.8, to: 2.3, center: 0.45, amp: 0.35, cycles: 6),
+            add(\.headNod, K(0, 0), K(0.6, 0.12), K(0.75, 0), K(1.3, 0.12), K(1.45, 0), K(2.0, 0.12), K(2.15, 0), K(3.6, 0)),
+            set(\.gazeY, K(0, 0), K(0.2, 0.5), K(2.2, 0.5), K(2.4, -0.1), K(3.6, -0.1)),
+            set(\.smileEyes, K(0, 0), K(0.3, 0.8), K(2.2, 0.8), K(2.5, 1), K(3.4, 1), K(3.6, 0.3)),
+            bump(\.blush, 0.9, from: 0.2, peak: 0.6, hold: 3.1, end: 3.6),
+            // Licks its lips, wiggles, a heart.
+            bump(\.mouthOpen, 0.35, from: 2.4, peak: 2.55, hold: 2.7, end: 2.85),
+            bump(\.smile, 0.5, from: 2.3, peak: 2.6, hold: 3.3, end: 3.6),
+            bump(\.hearts, 1, from: 2.4, peak: 2.7, hold: 3.2, end: 3.6),
+            osc(\.x, from: 2.6, to: 3.4, amp: 2, cycles: 3),
+            osc(\.tail, from: 0.2, to: 3.4, amp: 1, cycles: s == .dog ? 10 : 4),
         ])
     }
+
 
     /// You're writing: it leans in, ears up, and nods now and then.
     public static func listening(_ s: PetSpecies) -> PetClip {

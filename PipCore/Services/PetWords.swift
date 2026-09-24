@@ -42,7 +42,7 @@ public enum PetWords {
 
     // MARK: Cache
 
-    private static let cacheKey = "petWords.cache.v2"
+    private static let cacheKey = "petWords.cache.v3"
     private static let cacheLimit = 120
 
     /// A cached sentence for `key`, if one has been written.
@@ -120,6 +120,8 @@ public enum PetWords {
         - Plain, everyday words. No imagery, metaphors, poetry, weather, nature, light, colours or sounds.
         - Describe; never advise. Never use should, try, need, must, better, worse, improve or fix.
         - No numbers, counts, streaks, averages, scores or goals. No medical or clinical words.
+        - Be fair to the whole \(period): if there were good moments as well as hard ones, name one of each. \
+        Never hide or soften a hard feeling.
         - If an entry mentions harm or crisis, write only: I'm here with you.
         - No emoji, quotation marks, lists or preamble.
 

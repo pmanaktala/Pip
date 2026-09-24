@@ -192,7 +192,7 @@ public enum PetStance: Codable, Hashable, Sendable {
     static func grip(for prop: PetProp?, mood: Mood) -> Double? {
         switch prop {
         case .mug: -57
-        case .blanket: -36
+        case .blanket: -58
         default: nil
         }
     }
@@ -205,7 +205,7 @@ public enum PetStance: Codable, Hashable, Sendable {
             p.headTilt = 6; p.armL = 22; p.armR = 22
         case .excited:
             p.smile = 0.9; p.mouthOpen = 0.5; p.eyeWide = 0.18; p.earL = 0.9; p.earR = 0.9; p.tailUp = 1
-            p.armL = 55; p.armR = 55; p.squash = -0.12; p.blush = 0.45; p.headNod = -0.15; p.smileEyes = 0.25
+            p.armL = 36; p.armR = 36; p.squash = -0.12; p.blush = 0.45; p.headNod = -0.15; p.smileEyes = 0.25
         case .calm:
             p.smile = 0.35; p.lidL = 0.35; p.lidR = 0.35; p.smileEyes = 0.2; p.slump = 0.1; p.headTilt = 3; p.blush = 0.15
         case .neutral:
@@ -230,7 +230,7 @@ public enum PetStance: Codable, Hashable, Sendable {
         var p = PetPose()
         switch a {
         case .sleeping:
-            p.lidL = 1; p.lidR = 1; p.headNod = 0.5; p.headTilt = -12; p.slump = 0.4; p.zzz = 0.8; p.armL = -40; p.armR = -40
+            p.lidL = 1; p.lidR = 1; p.headNod = 0.5; p.headTilt = -12; p.slump = 0.4; p.zzz = 0.8; p.armL = -58; p.armR = -58
             p.smile = 0.1; p.earL = -0.3; p.earR = -0.3; p.tailUp = -0.5
         case .napping:
             p.lidL = 1; p.lidR = 1; p.headNod = 0.4; p.headTilt = 9; p.slump = 0.3; p.zzz = 0.5; p.smile = 0.15

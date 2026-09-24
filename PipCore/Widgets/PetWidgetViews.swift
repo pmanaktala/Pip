@@ -135,16 +135,21 @@ public struct PetHomeWidgetView: View {
 
     private var large: some View {
         VStack(spacing: 0) {
-            ZStack(alignment: .topLeading) {
-                pet
+            // Name and status on the left, the pet on the right standing on the horizon.
+            HStack(alignment: .top, spacing: 0) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(moment.identity.name)
                         .font(.system(.title3, design: .rounded, weight: .bold))
                     Text(moment.status)
                         .font(.system(.caption, design: .rounded, weight: .medium))
                         .foregroundStyle(.secondary)
+                        .lineLimit(3)
                 }
                 .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                PetStage(scene: moment.scene, live: false, hold: moment.hold, petScale: 0.8, floor: 0.93, showsRoom: false, date: moment.date)
+                    .animation(.smooth(duration: 1.2), value: moment.hold)
+                    .frame(width: 170)
             }
             .frame(maxHeight: .infinity)
             VStack(spacing: 10) {
