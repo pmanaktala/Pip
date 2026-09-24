@@ -48,25 +48,9 @@ struct PetHomeView: View {
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        Haptics.light()
-                        playMode = .play
-                        showPlay = true
-                    } label: {
-                        Label("Play with \(appState.identity.name)", systemImage: "tennisball.fill")
-                    }
-                }
-                ToolbarSpacer(.fixed, placement: .topBarTrailing)
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showPets = true
-                    } label: {
-                        Label("Pets", systemImage: "pawprint")
-                    }
-                }
-            }
+            // The two buttons float over the room as glass, with the petting hearts in the same
+            // glass container: a heart that drifts up to a button melts into it.
+            .overlay { chrome }
             .navigationDestination(isPresented: $showPets) { PetSelectorView() }
             #if DEBUG
             .navigationDestination(isPresented: $showWidgets) { WidgetGalleryView() }
@@ -108,17 +92,6 @@ struct PetHomeView: View {
             ZStack {
                 PetRoom(mood: mood, horizon: floor)
                 PetStage(scene: appState.pet.scene, petScale: petScale, floor: floor, showsRoom: false)
-                // Petting: a few hearts float up and away to the upper right, past the glass buttons.
-                if appState.pet.isPetting && !reduceMotion {
-                    let head = PetStage.headRect(in: geo.size, species: appState.identity.species, petScale: petScale, floor: floor)
-                    TimelineView(.animation) { clock in
-                        Canvas { ctx, _ in
-                            RisingHearts.draw(ctx, from: CGPoint(x: head.maxX - head.width * 0.15, y: head.minY), t: clock.date.timeIntervalSince1970)
-                        }
-                    }
-                    .allowsHitTesting(false)
-                    .transition(.opacity)
-                }
             }
             .contentShape(Rectangle())
             .animation(.spring(duration: 0.55, bounce: 0.12), value: appState.isPickingMood)
@@ -236,9 +209,36 @@ struct PetHomeView: View {
         // they reach the pet (everything else in the app keeps scaling).
         .dynamicTypeSize(...DynamicTypeSize.accessibility2)
         .padding(.horizontal, PipSpacing.l)
-        .padding(.top, PipSpacing.xs)
+        // Below the floating glass buttons (they sit where a toolbar would, 44 pt tall).
+        .padding(.top, PipSpacing.xs + 52)
         .accessibilityElement(children: .combine)
         .accessibilitySortPriority(2)
+    }
+
+    // MARK: Chrome
+
+    @ViewBuilder
+    private var chrome: some View {
+        if appState.pet.isPetting && !reduceMotion && !appState.isPickingMood {
+            TimelineView(.animation) { clock in
+                GlassChrome(drops: { screen in
+                    let head = PetStage.headRect(in: screen, species: appState.identity.species, petScale: petScale, floor: floor)
+                    return RisingHearts.drops(from: CGPoint(x: head.maxX - head.width * 0.15, y: head.minY), t: clock.date.timeIntervalSince1970)
+                }) { chromeButtons }
+            }
+        } else {
+            GlassChrome { chromeButtons }
+        }
+    }
+
+    @ViewBuilder
+    private var chromeButtons: some View {
+        GlassChromeButton(systemImage: "tennisball.fill", label: "Play with \(appState.identity.name)") {
+            Haptics.light()
+            playMode = .play
+            showPlay = true
+        }
+        GlassChromeButton(systemImage: "pawprint", label: "Pets") { showPets = true }
     }
 
     // MARK: Controls
@@ -384,27 +384,20 @@ struct GoodnightCard: View {
     }
 }
 
-/// Hearts that rise off the pet while you pet it, drifting up and to the right so they pass under
-/// the glass buttons and off the top of the screen, never across the name.
+/// Hearts that rise off the pet while you pet it, drifting up and to the right toward the glass
+/// buttons (where they melt into them) and off the top of the screen, never across the name.
 enum RisingHearts {
-    static func draw(_ ctx: GraphicsContext, from origin: CGPoint, t: Double) {
-        for i in 0..<5 {
+    static func drops(from origin: CGPoint, t: Double) -> [GlassDrop] {
+        (0..<5).map { i in
             let period = 3.2 + Double(i % 3) * 0.5
             let phase = t / period + Double(i) * 0.23
             let u = phase.truncatingRemainder(dividingBy: 1)
             let seed = floor(phase) * 5.1 + Double(i) * 2.3
-            let drift = CGFloat(40 + (sin(seed * 7.3) * 0.5 + 0.5) * 110)
+            let drift = CGFloat(60 + (sin(seed * 7.3) * 0.5 + 0.5) * 120)
             let x = origin.x + drift * CGFloat(u) + CGFloat(sin(u * 7 + seed)) * 10
             let y = origin.y - CGFloat(u) * (origin.y + 60)
-            let alpha = min(1, u * 6) * (u > 0.8 ? (1 - u) / 0.2 : 1)
-            let r = 7 + CGFloat(u) * 5
-            var heart = Path()
-            heart.move(to: CGPoint(x: x, y: y + r * 0.9))
-            heart.addCurve(to: CGPoint(x: x - r, y: y - r * 0.2), control1: CGPoint(x: x - r * 0.4, y: y + r * 0.55), control2: CGPoint(x: x - r, y: y + r * 0.3))
-            heart.addArc(center: CGPoint(x: x - r * 0.5, y: y - r * 0.25), radius: r * 0.5, startAngle: .degrees(180), endAngle: .degrees(0), clockwise: false)
-            heart.addArc(center: CGPoint(x: x + r * 0.5, y: y - r * 0.25), radius: r * 0.5, startAngle: .degrees(180), endAngle: .degrees(0), clockwise: false)
-            heart.addCurve(to: CGPoint(x: x, y: y + r * 0.9), control1: CGPoint(x: x + r, y: y + r * 0.3), control2: CGPoint(x: x + r * 0.4, y: y + r * 0.55))
-            ctx.fill(heart, with: .color(Color(red: 0.98, green: 0.45, blue: 0.55).opacity(0.85 * alpha)))
+            let alpha = min(1, u * 6) * (u > 0.85 ? (1 - u) / 0.15 : 1)
+            return GlassDrop(id: i, center: CGPoint(x: x, y: y), size: 16 + CGFloat(u) * 12, shape: .heart, opacity: alpha)
         }
     }
 }

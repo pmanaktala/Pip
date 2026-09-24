@@ -56,7 +56,7 @@ struct PlayView: View {
             }
         }
         .ignoresSafeArea(.container, edges: .top)
-        .overlay(alignment: .topTrailing) { chrome }
+        .overlay { chrome }
         .ignoresSafeArea(.keyboard)
         .onAppear(perform: setUp)
         .onDisappear {
@@ -83,37 +83,40 @@ struct PlayView: View {
 
     // MARK: Chrome
 
-    /// Two floating glass buttons, the same size and weight as the Pet tab's toolbar buttons:
-    /// switch between playing and meditating, and close. Regular Liquid Glass (Apple keeps the
-    /// clear variant for photo and video backgrounds), living over the room rather than in a
-    /// toolbar, so whatever drifts beneath them is bent by the glass instead of cut off by a bar edge.
+    /// The two floating glass buttons (switch between playing and meditating, and close), sized like
+    /// the Pet tab's. The bubbles are glass too and share their container: one that floats up to a
+    /// button melts into it like a drop of liquid, then drifts on.
+    @ViewBuilder
     private var chrome: some View {
-        GlassEffectContainer(spacing: 12) {
-            HStack(spacing: 12) {
-                Button {
-                    withAnimation(.smooth(duration: 0.45)) { mode = mode == .play ? .meditate : .play }
-                } label: {
-                    Image(systemName: mode == .play ? "figure.mind.and.body" : "tennisball.fill")
-                        .contentTransition(.symbolEffect(.replace))
-                        .frame(width: 44, height: 44)
-                        .contentShape(Circle())
-                }
-                .glassEffect(.regular.interactive(), in: .circle)
-                .accessibilityLabel(mode == .play ? "Meditate together" : "Play")
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark")
-                        .frame(width: 44, height: 44)
-                        .contentShape(Circle())
-                }
-                .glassEffect(.regular.interactive(), in: .circle)
-                .accessibilityLabel("Close")
+        if bubbles.isEmpty || reduceMotion {
+            GlassChrome { chromeButtons }
+        } else {
+            TimelineView(.animation) { clock in
+                GlassChrome(drops: { _ in bubbleDrops(at: clock.date) }) { chromeButtons }
             }
-            .font(.system(size: 19, weight: .medium))
-            .foregroundStyle(.tint)
-            .buttonStyle(.plain)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 4)
+    }
+
+    @ViewBuilder
+    private var chromeButtons: some View {
+        GlassChromeButton(systemImage: mode == .play ? "figure.mind.and.body" : "tennisball.fill", label: mode == .play ? "Meditate together" : "Play") {
+            withAnimation(.smooth(duration: 0.45)) { mode = mode == .play ? .meditate : .play }
+        }
+        GlassChromeButton(systemImage: "xmark", label: "Close") { dismiss() }
+    }
+
+    private func bubbleDrops(at date: Date) -> [GlassDrop] {
+        bubbles.enumerated().compactMap { i, b in
+            guard date >= b.born, mode == .play else { return nil }
+            if let popped = b.poppedAt {
+                // A popped bubble's glass swells a little and vanishes.
+                let u = date.timeIntervalSince(popped) / 0.25
+                guard u < 1 else { return nil }
+                return GlassDrop(id: i, center: b.position(at: popped), size: b.radius * 2 * (1 + u * 0.4), shape: .bubble, opacity: 1 - u)
+            }
+            let t = date.timeIntervalSince(b.born)
+            return GlassDrop(id: i, center: b.position(at: date), size: b.radius * 2 * min(1, 0.4 + t * 2), shape: .bubble)
+        }
     }
 
     // MARK: Play
@@ -146,7 +149,9 @@ struct PlayView: View {
             Task {
                 try? await Task.sleep(for: .seconds(1.2))
                 let head = PetStage.headRect(in: stageSize, species: scene.species, petScale: petScale, floor: floor)
-                blowBubbles(from: CGPoint(x: stageSize.width / 2 + 80, y: stageSize.height - 70), in: stageSize, head: head)
+                // Off to the right, out of the pet's reach, so they float up into the glass buttons.
+                blowBubbles(from: CGPoint(x: stageSize.width - 60, y: stageSize.height - 70), in: stageSize, head: head,
+                            toward: (stageSize.width - 110)...(stageSize.width - 40))
             }
         }
         if ProcessInfo.processInfo.environment["PIP_DEBUG"] == "fetch" {
@@ -317,14 +322,14 @@ struct PlayView: View {
 
     /// A puff of five bubbles from the wand. They wobble up toward the pet, which watches the
     /// nearest one and swats any that come within reach; a tap pops one too.
-    private func blowBubbles(from start: CGPoint, in size: CGSize, head: CGRect) {
+    private func blowBubbles(from start: CGPoint, in size: CGSize, head: CGRect, toward: ClosedRange<CGFloat>? = nil) {
         let now = Date.now
         guard bubbles.filter({ $0.poppedAt == nil }).count < 12 else { return }
         PetToy.played(.bubbles)
         Haptics.soft()
         for i in 0..<5 {
             bubbles.append(Bubble(born: now.addingTimeInterval(Double(i) * 0.18), origin: CGPoint(x: start.x, y: start.y - 20),
-                                  towardX: size.width / 2 + CGFloat.random(in: -110...110), seed: .random(in: 0...1),
+                                  towardX: CGFloat.random(in: toward ?? (size.width * 0.18...size.width * 0.92)), seed: .random(in: 0...1),
                                   radius: .random(in: 11...19)))
         }
         guard bubbleLoop == nil else { return }
@@ -602,7 +607,8 @@ struct Bubble: Identifiable {
         let r = radius * CGFloat(min(1, 0.4 + t * 2)) * (1 + CGFloat(sin(t * 5 + seed * 9)) * 0.04)
         let rect = CGRect(x: p.x - r, y: p.y - r * 0.97, width: r * 2, height: r * 1.94)
         let shell = Path(ellipseIn: rect)
-        ctx.fill(shell, with: .radialGradient(Gradient(colors: [.white.opacity(0.03), Color(red: 0.7, green: 0.88, blue: 1).opacity(0.22)]),
+        // The bubble's body is real glass (see `GlassChrome`); this is only its soapy shimmer.
+        ctx.fill(shell, with: .radialGradient(Gradient(colors: [.white.opacity(0.0), Color(red: 0.7, green: 0.88, blue: 1).opacity(0.12)]),
                                               center: p, startRadius: 0, endRadius: r))
         // A thin rim that shimmers from blue to pink as it turns.
         let hue = (seed + t * 0.15).truncatingRemainder(dividingBy: 1)
