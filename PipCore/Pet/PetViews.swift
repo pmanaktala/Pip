@@ -158,7 +158,8 @@ public struct LivePetView: View {
                 .animation(.smooth(duration: 0.6), value: scene.stance)
         } else {
             TimelineView(.animation(minimumInterval: frameInterval)) { context in
-                PetPoseView(species: scene.species, pose: PetDirector.pose(scene, at: context.date), prop: scene.prop, wear: scene.wear, framing: framing,
+                let pose = PetDirector.pose(scene, at: context.date)
+                PetPoseView(species: scene.species, pose: pose, prop: scene.prop(for: pose), wear: scene.wear, framing: framing,
                             time: context.date.timeIntervalSince1970, showsShadow: showsShadow, dressing: scene.dressing)
             }
         }

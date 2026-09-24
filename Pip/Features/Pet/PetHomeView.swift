@@ -80,7 +80,7 @@ struct PetHomeView: View {
                 switch ProcessInfo.processInfo.environment["PIP_DEBUG"] {
                 case "pets": showPets = true
                 case "sit", "meditate": playMode = .meditate; showPlay = true
-                case "play", "fetch": playMode = .play; showPlay = true
+                case "play", "fetch", "bubbles": playMode = .play; showPlay = true
                 case "widgets": showWidgets = true
                 case "poke":
                     Task { try? await Task.sleep(for: .seconds(1.5)); appState.pet.tap(onHead: true) }

@@ -9,6 +9,16 @@ public enum PetVignette: String, CaseIterable, Codable, Sendable {
     case huff, stomp, pageTurn, chuckle, snore, earTwitch, stir
     case tailWag, groom, flap, waddle, headTilt, daydream, batBall
     case typing, typing2
+    /// Monday morning: the biggest stretch of the week, and a yawn to go with it.
+    case mondayStretch
+    /// Friday evening: a happy little dance.
+    case fridayWiggle
+    /// Its favourite toy on the main screen: it brings you the ball, blows a bubble, or looks
+    /// hopefully at you for a treat.
+    case offerBall, blowBubble, hopeful
+
+    /// Too lively for the day after a rough one.
+    static let bouncy: Set<PetVignette> = [.bounce, .fistPump, .dance, .wiggle, .fridayWiggle, .clap]
 }
 
 public enum PetClips {
@@ -320,6 +330,71 @@ public enum PetClips {
                 set(\.gazeY, K(0, 0.45), K(0.5, 0.1), K(1.5, 0.1), K(1.9, 0.5), K(3.2, 0.45)),
                 osc(\.armL, from: 1.8, to: 3.1, amp: 8, cycles: 5), osc(\.armR, from: 1.8, to: 3.1, amp: 8, cycles: 5, phase: 1),
             ])
+        case .mondayStretch:
+            return PetClip("mondayStretch", 4.6, [
+                add(\.armL, K(0, 0), K(0.3, -10), K(0.95, 168, .out), K(2.4, 172), K(2.95, 0)),
+                add(\.armR, K(0, 0), K(0.3, -10), K(0.95, 168, .out), K(2.4, 172), K(2.95, 0)),
+                add(\.squash, K(0, 0), K(0.3, 0.15), K(0.95, -0.36, .out), K(2.4, -0.36), K(2.95, 0.06), K(3.2, 0)),
+                add(\.lift, K(0, 0), K(0.95, 4), K(2.4, 4), K(2.95, 0)),
+                bump(\.lidL, 1, from: 0.5, peak: 0.95, hold: 2.5, end: 3.0), bump(\.lidR, 1, from: 0.5, peak: 0.95, hold: 2.5, end: 3.0),
+                bump(\.mouthOpen, 1, from: 0.8, peak: 1.3, hold: 2.2, end: 2.7), bump(\.mouthRound, 0.8, from: 0.8, peak: 1.3, hold: 2.2, end: 2.7),
+                bump(\.headNod, -0.4, from: 0.5, peak: 1.1, hold: 2.3, end: 2.8),
+                osc(\.x, from: 3.0, to: 4.3, amp: 1.8, cycles: 3), osc(\.headTilt, from: 3.0, to: 4.3, amp: 7, cycles: 3),
+                // Still a bit sleepy afterwards.
+                bump(\.lidL, 0.45, from: 3.1, peak: 3.4, hold: 4.0, end: 4.5), bump(\.lidR, 0.45, from: 3.1, peak: 3.4, hold: 4.0, end: 4.5),
+            ])
+        case .fridayWiggle:
+            return PetClip("fridayWiggle", 3.0, [
+                osc(\.x, from: 0, to: 2.9, amp: 3, cycles: 5),
+                osc(\.lean, from: 0, to: 2.9, amp: 8, cycles: 5, phase: 1),
+                osc(\.stepL, from: 0.1, to: 2.8, center: 3, amp: 3, cycles: 5),
+                osc(\.stepR, from: 0.1, to: 2.8, center: 3, amp: 3, cycles: 5, phase: 1),
+                add(\.armL, K(0, 0), K(0.3, 70), K(2.6, 70), K(2.95, 0)), add(\.armR, K(0, 0), K(0.3, 70), K(2.6, 70), K(2.95, 0)),
+                osc(\.armL, from: 0.3, to: 2.7, amp: 25, cycles: 5), osc(\.armR, from: 0.3, to: 2.7, amp: 25, cycles: 5, phase: 1),
+                bump(\.smileEyes, 0.8, from: 0, peak: 0.3, hold: 2.6, end: 2.95),
+                bump(\.smile, 0.4, from: 0, peak: 0.3, hold: 2.6, end: 2.95),
+                bump(\.sparkles, 1, from: 0.2, peak: 0.6, hold: 2.3, end: 2.9),
+                osc(\.tail, from: 0, to: 2.9, amp: 1, cycles: 7),
+            ])
+        case .offerBall:
+            // Glances off to find it, pops up holding it, holds it out to you, hopeful.
+            return PetClip("offerBall", 4.0, fadeIn: 0.2, fadeOut: 0.35, [
+                set(\.gazeX, K(0, 0), K(0.3, 0.85, .out), K(0.8, 0.85), K(1.0, 0), K(4.0, 0)),
+                add(\.headTurn, K(0, 0), K(0.35, 0.4), K(0.8, 0.4), K(1.0, 0)),
+                set(\.holdToy, K(0, 0), K(0.9, 0), K(0.92, 1, .linear), K(3.5, 1), K(3.52, 0, .linear), K(4.0, 0)),
+                add(\.lift, K(0, 0), K(0.9, 0), K(1.05, 6, .out), K(1.25, 0, .in), K(4.0, 0)),
+                set(\.armL, K(0, 0), K(0.9, 0), K(1.0, -40), K(3.4, -40), K(3.8, 0)),
+                set(\.armR, K(0, 0), K(0.9, 0), K(1.0, -40), K(3.4, -40), K(3.8, 0)),
+                bump(\.headTilt, 12, from: 1.0, peak: 1.4, hold: 3.2, end: 3.7),
+                bump(\.eyeWide, 0.2, from: 1.0, peak: 1.3, hold: 3.2, end: 3.6),
+                bump(\.smile, 0.45, from: 1.0, peak: 1.3, hold: 3.3, end: 3.8),
+                set(\.gazeY, K(0, 0), K(1.0, -0.1), K(3.4, -0.1), K(3.9, 0)),
+                osc(\.tail, from: 1.0, to: 3.6, amp: 1, cycles: s == .dog ? 9 : 3),
+            ])
+        case .blowBubble:
+            // A deep breath, cheeks puffed, a slow blow; then it watches the bubbles rise.
+            return PetClip("blowBubble", 4.2, fadeIn: 0.2, fadeOut: 0.4, [
+                bump(\.breath, 0.8, from: 0, peak: 0.6, hold: 0.8, end: 1.4),
+                bump(\.cheekPuff, 0.9, from: 0.4, peak: 0.8, hold: 1.0, end: 1.5),
+                bump(\.mouthOpen, 0.25, from: 1.0, peak: 1.2, hold: 1.8, end: 2.1), bump(\.mouthRound, 1, from: 1.0, peak: 1.2, hold: 1.8, end: 2.1),
+                bump(\.bubble, 1, from: 1.1, peak: 1.4, hold: 3.6, end: 4.1),
+                set(\.gazeY, K(0, 0), K(1.8, 0), K(2.4, -0.8), K(3.8, -0.8), K(4.2, 0)),
+                bump(\.headNod, -0.25, from: 1.9, peak: 2.4, hold: 3.6, end: 4.0),
+                bump(\.smileEyes, 0.6, from: 2.3, peak: 2.7, hold: 3.6, end: 4.0),
+                bump(\.smile, 0.4, from: 2.2, peak: 2.6, hold: 3.6, end: 4.0),
+            ])
+        case .hopeful:
+            // Treat time? Big eyes, head on one side, a little bounce, licks its lips.
+            return PetClip("hopeful", 3.0, fadeIn: 0.2, fadeOut: 0.4, [
+                set(\.gazeX, K(0, 0), K(0.3, 0), K(3.0, 0)), set(\.gazeY, K(0, 0), K(0.3, -0.15), K(2.6, -0.15), K(3.0, 0)),
+                bump(\.eyeWide, 0.28, from: 0, peak: 0.3, hold: 2.4, end: 2.9),
+                bump(\.headTilt, 14, from: 0, peak: 0.45, hold: 2.3, end: 2.9),
+                bump(\.smile, 0.5, from: 0, peak: 0.4, hold: 2.4, end: 2.9),
+                add(\.lift, K(0, 0), K(0.6, 0), K(0.75, 4, .out), K(0.9, 0, .in), K(1.05, 4, .out), K(1.2, 0, .in), K(3.0, 0)),
+                bump(\.mouthOpen, 0.3, from: 1.5, peak: 1.65, hold: 1.9, end: 2.1),
+                bump(\.hearts, 0.6, from: 0.8, peak: 1.2, hold: 2.3, end: 2.8),
+                osc(\.tail, from: 0.3, to: 2.8, amp: 1, cycles: s == .dog ? 8 : 3),
+            ])
         case .batBall:
             return PetClip("batBall", 2.2, [
                 set(\.gazeX, K(0, 0.8), K(2.2, 0.8)), set(\.gazeY, K(0, 0.6), K(2.2, 0.6)),
@@ -516,6 +591,32 @@ public enum PetClips {
     }
 
     /// One little hop.
+    /// The day after a rough one: no bounce, just a soft lean toward you and a kind face.
+    public static func gentleHello(_ s: PetSpecies) -> PetClip {
+        PetClip("gentleHello", 3.2, fadeIn: 0.5, fadeOut: 0.8, [
+            set(\.gazeX, K(0, 0), K(3.2, 0)), set(\.gazeY, K(0, -0.1), K(3.2, -0.1)),
+            bump(\.lean, 5, from: 0, peak: 1.0, hold: 2.3, end: 3.1),
+            bump(\.headTilt, 9, from: 0.2, peak: 1.1, hold: 2.3, end: 3.1),
+            bump(\.smile, 0.35, from: 0.3, peak: 1.0, hold: 2.4, end: 3.1),
+            bump(\.smileEyes, 0.45, from: 0.5, peak: 1.2, hold: 2.4, end: 3.1),
+            bump(\.blush, 0.3, from: 0.5, peak: 1.2, hold: 2.4, end: 3.1),
+            bump(\.hearts, 0.35, from: 0.9, peak: 1.4, hold: 2.3, end: 3.0),
+            bump(\.earL, -0.2, from: 0.2, peak: 0.9, hold: 2.4, end: 3.1), bump(\.earR, -0.2, from: 0.2, peak: 0.9, hold: 2.4, end: 3.1),
+        ])
+    }
+
+    /// Swatting at a bubble: a quick paw up, a little hop, a pop.
+    public static func swat(_ s: PetSpecies, left: Bool = false) -> PetClip {
+        PetClip("swat", 0.9, fadeIn: 0.03, fadeOut: 0.25, [
+            add(left ? \.armL : \.armR, K(0, 0), K(0.14, 150, .out), K(0.4, 120), K(0.8, 0)),
+            add(\.lift, K(0, 0), K(0.12, 5, .out), K(0.3, 0, .in), K(0.9, 0)),
+            bump(\.eyeWide, 0.25, from: 0, peak: 0.1, hold: 0.3, end: 0.6),
+            bump(\.mouthOpen, 0.5, from: 0.1, peak: 0.2, hold: 0.4, end: 0.7),
+            bump(\.smile, 0.5, from: 0.2, peak: 0.35, hold: 0.6, end: 0.9),
+            set(\.gazeY, K(0, -0.6), K(0.9, -0.3)),
+        ])
+    }
+
     public static func hop(_ s: PetSpecies) -> PetClip {
         PetClip("hop", 0.42, fadeIn: 0.02, fadeOut: 0.05, [
             add(\.lift, K(0, 0), K(0.08, 0), K(0.2, 8, .out), K(0.34, 0, .in), K(0.42, 0)),

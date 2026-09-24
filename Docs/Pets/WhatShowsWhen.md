@@ -20,8 +20,8 @@ widgets and complications (`PetSnapshot.stance(at:)`).
 
 | Time | Activity | Shows |
 |---|---|---|
-| 22:30 – 6:00 | Sleeping | Tucked under its blanket in a nightcap, eyes closed, `zzz` |
-| 6:00 – 9:00 | Waking up | Heavy lids, slightly slumped |
+| 22:30 – 6:00 (weekends until 7:30) | Sleeping | Tucked under its blanket in a nightcap, eyes closed, `zzz` |
+| 6:00 – 9:00 (weekends 7:30 – 10:30) | Waking up | Heavy lids, slightly slumped |
 | Weekdays 9:00 – 12:00 and 13:30 – 17:30 | Working | Peeks over a little laptop (a paw print on the lid), types, looks up at you |
 | Other daytime (9:00 – 18:30) | Daydreaming / Playing / Reading | 90-minute blocks, picked per day, never the same twice in a row. Daydreaming looks up and smiles; Playing has a ball on the floor; Reading holds a book |
 | 14:00 – 15:00 | Napping (about half the days) | Sitting nap, `zzz` |
@@ -78,11 +78,23 @@ of at most one thing in its paws. Nothing celebratory after a hard mood.
 | Neck | Scarf | Winter (by date and your region's hemisphere) |
 | Floor | Suitcase | Your time zone changed in the last day |
 | Floor | Cake with a candle | The anniversary of the day you met (not after a hard mood) |
+| Floor | Jack-o'-lantern | Halloween, 25–31 Oct (US, CA, GB, IE) |
+| Floor | A lit diya | Diwali: two days before the Kartika new moon to the day after (IN, NP, MU, FJ, SG, MY, LK, TT, GY, SR) |
+| Floor | Red paper lantern | The first five days of Lunar New Year (CN, TW, HK, MO, SG, MY, VN, KR) |
+| Floor | Small tree with a star | 18–26 Dec, where Christmas is widely kept |
 | Sign | Battery filling, with a bolt | Charging |
 | Sign | Battery nearly empty | Low Power Mode, or under 15% |
 
+Festivals come from the date and the phone's region setting, never location; the suitcase and
+the cake come first, and none show after a hard mood.
+
 **Seasons** drift through the room: snow in winter, leaves in autumn, blossom in spring,
 fireflies on summer evenings; **confetti** on New Year and its birthday.
+
+**Gentle hello:** if yesterday was rough (it ended on a hard feeling, or half of it was hard)
+and nothing is logged yet today, arriving gets a soft lean toward you, a kind face and one small
+heart instead of the wave and hop, and the bouncy vignettes (bounce, fist pump, dance, wiggle,
+clap) sit out until you log something.
 
 **Missed you:** opening Pip after three or more days away gets a double hop, arms up, a hug
 and hearts. **At night**, opening the app while it sleeps gets a sleepy hello: it half wakes,
@@ -116,6 +128,13 @@ daydreaming, reading, winding down) or **16 s** (tired, sleeping, napping). Abou
 shuffled and never repeats back to back. Nothing plays while a reaction, a boop or petting is
 happening.
 
+**The week:** on Monday mornings (6–12) a big stretch-and-yawn joins the repertoire; on Friday
+evenings (17–23) a happy wiggle with sparkles. **Its favourite toy:** once one toy in Play has
+been used at least five times and two more than any other, it joins too: the ball (it fetches
+it and holds it out to you), bubbles (it blows one and watches it rise) or the treat (big
+hopeful eyes and a little bounce). These only join good or neutral stances, while it is awake,
+and the ball only when its paws are free.
+
 ## 5. What you can do to the pet
 
 | You | The pet |
@@ -139,7 +158,7 @@ happening.
 |---|---|---|
 | Pet tab | The room (sky by time of day, tinted by a fresh mood), the live pet, its name and a status line that always matches the stance, today's faces once there's more than one | Live, 60 fps (30 when the system asks) |
 | Mood picker | Eight tokens, each the pet's turned-up face for that mood | Still |
-| Play (the tennis-ball button on the Pet tab) | The pet in its room with a tray: toss the **treat** (it hops and catches it, munches, wiggles) or the **ball** (it hops over, carries it back in its paws, drops it, and it rolls back to the tray). Tilt the phone and it leans and flails to keep its balance; shake it and it goes dizzy | Live |
+| Play (the tennis-ball button on the Pet tab) | The pet in its room with a tray: toss the **treat** (it hops and catches it, munches, wiggles), throw the **ball** (it hops over, carries it back in its paws, drops it, and it rolls back to the tray) or blow **bubbles** (five wobble up toward it; it watches the nearest and swats any within reach, and you can tap one to pop it). With music playing in another app it **dances** on the beat (after a hard mood it only sways). Tilt the phone and it leans and flails to keep its balance; shake it and it goes dizzy | Live |
 | Meditate (the button next to close, in Play) | Sitting cross-legged, paws on its knees, floating a little; "Breathe together" drives the chest, a ring and the words (4 s in, 6 s out) | Live |
 | History, Settings, tab-bar accessory | Mood token faces | Still |
 | Home Screen widgets | Small: the pet in its room. Medium: pet, status, four faces to log. Large: pet over all eight faces | A new entry every 30 min, at each change in the pet's day and when a mood fades; each entry shows the next still pose, and the system animates the change |

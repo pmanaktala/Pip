@@ -27,6 +27,10 @@ public struct PetEvent: Codable, Hashable, Sendable {
         case hop
         /// Brought the ball back.
         case proud
+        /// You're back after a rough day: a soft hello, no bounce.
+        case gentleHello
+        /// Swatted at a bubble, with the paw on that side (screen left when `left`).
+        case swat(left: Bool)
     }
 
     public var kind: Kind
@@ -63,6 +67,12 @@ public struct PetScene: Equatable, Sendable {
     public var hidesStanceProp = false
     /// What it has on and around it (see `PetDressing.choose`).
     public var dressing: PetDressing
+    /// The toy you play with most; now and then it brings it to you (see `PetToy`).
+    public var favourite: PetToy?
+    /// Yesterday was hard and nothing is logged yet today: greet softly, no bouncing about.
+    public var gentle = false
+    /// Music is playing while you play together: it dances.
+    public var dancing = false
     public var wear: PetWear? {
         get { dressing.head }
         set { dressing.head = newValue }
@@ -89,6 +99,12 @@ public struct PetScene: Equatable, Sendable {
         if hidesStanceProp { return nil }
         if let preview { return PetStance.mood(preview, .moderate).prop }
         return stance.prop
+    }
+
+    /// What it is holding in this pose: its favourite ball while it offers it to you.
+    public func prop(for pose: PetPose) -> PetProp? {
+        if pose.holdToy > 0.5, heldProp == nil, prop == nil || prop == .ball { return .heldBall }
+        return prop
     }
 }
 
@@ -143,13 +159,17 @@ public enum PetDirector {
             // Sitting so still it seems to float a little.
             p.lift += 3 + sin(t * 0.55) * 1.6
         }
-        if scene.wear == .headphones { p = listening(p, stance: stance, t: t) }
+        if scene.dancing, !stance.isAsleep {
+            p = dance(p, stance: stance, t: t)
+        } else if scene.wear == .headphones {
+            p = listening(p, stance: stance, t: t)
+        }
 
         // 3. Event clips (and how much they push vignettes aside).
         var busy = 0.0
         for event in scene.events {
             let local = t - event.at.timeIntervalSince1970
-            guard let clip = clip(for: event.kind, stance: stance, species: s), local >= 0, local <= clip.duration else { continue }
+            guard let clip = clip(for: event.kind, stance: stance, species: s, gentle: scene.gentle), local >= 0, local <= clip.duration else { continue }
             p = clip.apply(to: p, at: local, weight: weight(for: event.kind))
             busy = max(busy, clip.envelope(at: local))
         }
@@ -160,7 +180,8 @@ public enum PetDirector {
         }
 
         // 4. A vignette, unless something else is going on.
-        if busy < 0.99, scene.preview == nil, let (clip, local) = vignette(stance: stance, species: s, t: t) {
+        if busy < 0.99, scene.preview == nil, let (clip, local) = vignette(stance: stance, species: s, t: t, extras: extras(scene, stance: stance, t: t),
+                                                                            gentle: scene.gentle) {
             p = clip.apply(to: p, at: local, weight: 1 - busy)
         }
 
@@ -199,9 +220,11 @@ public enum PetDirector {
         return 1
     }
 
-    static func clip(for kind: PetEvent.Kind, stance: PetStance, species s: PetSpecies) -> PetClip? {
+    static func clip(for kind: PetEvent.Kind, stance: PetStance, species s: PetSpecies, gentle: Bool = false) -> PetClip? {
         switch kind {
-        case .arrive: PetClips.arrive(stance, s)
+        case .arrive: gentle && !stance.isAsleep ? PetClips.gentleHello(s) : PetClips.arrive(stance, s)
+        case .gentleHello: PetClips.gentleHello(s)
+        case .swat(let left): PetClips.swat(s, left: left)
         case .missedYou: stance.isAsleep ? PetClips.arrive(stance, s) : PetClips.missedYou(s)
         case .logged(let mood, _): PetClips.reaction(to: mood, s)
         case .boop: PetClips.boop(s)
@@ -318,12 +341,36 @@ public enum PetDirector {
         return p
     }
 
+    /// Music on while you play: a real dance on the beat (about 112 bpm) — bounce, sway, paws
+    /// up in turn, little steps. After a hard mood it only sways, eyes half closed.
+    static func dance(_ base: PetPose, stance: PetStance, t: Double) -> PetPose {
+        guard !stance.isHard else { return listening(base, stance: stance, t: t) }
+        var p = base
+        let ph = t * 1.87 * .pi
+        let bounce = abs(sin(ph))
+        let side = sin(ph / 2)
+        p.lift += bounce * 4
+        p.squash += (1 - bounce) * 0.07
+        p.lean += side * 8
+        p.x += side * 3
+        p.headTilt += sin(ph / 2 + 0.6) * 9
+        p.headNod += (1 - bounce) * 0.08
+        p.armL += 65 + side * 55
+        p.armR += 65 - side * 55
+        p.stepL += max(0, side) * 5
+        p.stepR += max(0, -side) * 5
+        p.smile = max(p.smile, 0.6)
+        p.smileEyes = max(p.smileEyes, 0.55)
+        p.notes = max(p.notes, 0.8)
+        p.tail += sin(t * 11) * 0.8
+        return p
+    }
+
     /// Headphones on: a good mood nods along to the beat with a note or two; a hard one just
     /// sways slowly with its eyes half closed. Music is company too.
     static func listening(_ base: PetPose, stance: PetStance, t: Double) -> PetPose {
         var p = base
-        let hard: Bool = if case .mood(let m, _) = stance { [.sad, .stressed, .tired, .frustrated].contains(m) } else { false }
-        if hard {
+        if stance.isHard {
             p.headTilt += sin(t * 1.1) * 4
             p.lidL = max(p.lidL, 0.45); p.lidR = max(p.lidR, 0.45)
         } else {
@@ -339,8 +386,10 @@ public enum PetDirector {
     /// Vignettes play one at a time in fixed wall-clock slots. Each run of slots walks a
     /// shuffled order of the repertoire, so nothing repeats back to back and every trick gets
     /// its turn (the Snoopy "decision engine", made deterministic).
-    static func vignette(stance: PetStance, species: PetSpecies, t: Double) -> (PetClip, Double)? {
-        let repertoire = stance.repertoire(species)
+    static func vignette(stance: PetStance, species: PetSpecies, t: Double, extras: [PetVignette] = [], gentle: Bool = false) -> (PetClip, Double)? {
+        var repertoire = stance.repertoire(species)
+        for extra in extras where !repertoire.contains(extra) { repertoire.append(extra) }
+        if gentle { repertoire.removeAll { PetVignette.bouncy.contains($0) } }
         guard !repertoire.isEmpty else { return nil }
         let every = stance.vignetteEvery
         let n = floor(t / every)
@@ -353,6 +402,15 @@ public enum PetDirector {
         let local = t - start
         guard local >= 0, local <= clip.duration else { return nil }
         return (clip, local)
+    }
+
+    /// Vignettes that join the stance's own for now: the shape of the week, and its favourite
+    /// toy. Only while it is awake, in a good or neutral mood, with its paws free.
+    static func extras(_ scene: PetScene, stance: PetStance, t: Double) -> [PetVignette] {
+        guard !stance.isAsleep, !stance.isHard, stance != .meditating else { return [] }
+        var list = PetDay.weekVignettes(at: Date(timeIntervalSince1970: t))
+        if let favourite = scene.favourite, scene.prop == nil || scene.prop == .ball { list.append(favourite.vignette) }
+        return list
     }
 
     static func choice(_ list: [PetVignette], slot: Int) -> PetVignette {

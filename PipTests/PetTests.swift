@@ -235,6 +235,115 @@ import Testing
     }
 }
 
+@Suite struct PetOccasionTests {
+    func day(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 12, zone: String = "UTC") -> (Date, Calendar) {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: zone)!
+        return (cal.date(from: DateComponents(year: y, month: m, day: d, hour: h))!, cal)
+    }
+
+    @Test func festivalsFollowTheRegion() {
+        let (diwali, ist) = day(2026, 11, 8, zone: "Asia/Kolkata")
+        #expect(PetHoliday.at(diwali, calendar: ist, region: "IN") == .diwali)
+        #expect(PetHoliday.at(diwali, calendar: ist, region: "FR") == nil)
+        let (diwali28, _) = day(2028, 10, 17, zone: "Asia/Kolkata")
+        #expect(PetHoliday.at(diwali28, calendar: ist, region: "IN") == .diwali)
+        let (notDiwali, _) = day(2026, 10, 10, zone: "Asia/Kolkata")
+        #expect(PetHoliday.at(notDiwali, calendar: ist, region: "IN") == nil)
+        let (cny, cst) = day(2027, 2, 6, zone: "Asia/Shanghai")
+        #expect(PetHoliday.at(cny, calendar: cst, region: "CN") == .lunarNewYear)
+        let (halloween, utc) = day(2026, 10, 31)
+        #expect(PetHoliday.at(halloween, calendar: utc, region: "US") == .halloween)
+        #expect(PetHoliday.at(halloween, calendar: utc, region: "JP") == nil)
+        let (christmas, _) = day(2026, 12, 25)
+        #expect(PetHoliday.at(christmas, calendar: utc, region: "GB") == .christmas)
+        #expect(PetHoliday.at(day(2026, 7, 1).0, calendar: utc, region: "US") == nil)
+    }
+
+    @Test func festivalsWaitForAGoodMoodAndGiveWayToTheSuitcase() {
+        let (christmas, utc) = day(2026, 12, 25)
+        #expect(PetDressing.choose(for: .mood(.happy, .moderate), at: christmas, calendar: utc, region: "GB").extra == .tree)
+        #expect(PetDressing.choose(for: .mood(.sad, .moderate), at: christmas, calendar: utc, region: "GB").extra == nil)
+        var away = PetContext()
+        away.travelling = true
+        #expect(PetDressing.choose(for: .mood(.happy, .moderate), at: christmas, context: away, calendar: utc, region: "GB").extra == .suitcase)
+    }
+
+    @Test func weekendsStartSlower() {
+        // 3 Oct 2026 is a Saturday, 5 Oct a Monday, 9 Oct a Friday.
+        let (sat7, utc) = day(2026, 10, 3, 7)
+        #expect(PetDay.activity(at: sat7, calendar: utc) == .sleeping)
+        #expect(PetDay.activity(at: day(2026, 10, 3, 10).0, calendar: utc) == .waking)
+        #expect(PetDay.activity(at: day(2026, 10, 5, 7).0, calendar: utc) == .waking)
+        #expect(PetDay.activity(at: day(2026, 10, 5, 10).0, calendar: utc) == .working)
+        #expect(PetDay.weekVignettes(at: day(2026, 10, 5, 8).0, calendar: utc) == [.mondayStretch])
+        #expect(PetDay.weekVignettes(at: day(2026, 10, 9, 19).0, calendar: utc) == [.fridayWiggle])
+        #expect(PetDay.weekVignettes(at: day(2026, 10, 7, 19).0, calendar: utc).isEmpty)
+    }
+
+    @Test func favouriteToyNeedsAClearLead() throws {
+        let suite = "PetToyTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        #expect(PetToy.favourite(defaults: defaults) == nil)
+        for _ in 0..<5 { PetToy.played(.ball, defaults: defaults) }
+        for _ in 0..<4 { PetToy.played(.treat, defaults: defaults) }
+        #expect(PetToy.favourite(defaults: defaults) == nil, "not clearly ahead")
+        PetToy.played(.ball, defaults: defaults)
+        #expect(PetToy.favourite(defaults: defaults) == .ball)
+    }
+
+    @Test func favouriteJoinsOnlyEasyAwakeStances() {
+        var scene = PetScene(species: .dog, stance: .mood(.happy, .moderate))
+        scene.favourite = .ball
+        let t = 1_800_000_000.0
+        #expect(PetDirector.extras(scene, stance: scene.stance, t: t).contains(.offerBall))
+        scene.stance = .mood(.sad, .moderate)
+        #expect(PetDirector.extras(scene, stance: scene.stance, t: t).isEmpty)
+        scene.stance = .life(.sleeping)
+        #expect(PetDirector.extras(scene, stance: scene.stance, t: t).isEmpty)
+        // Its paws hold the ball while it offers it.
+        var pose = PetPose()
+        pose.holdToy = 1
+        #expect(PetScene(species: .dog, stance: .mood(.happy, .moderate)).prop(for: pose) == .heldBall)
+        #expect(PetScene(species: .dog, stance: .mood(.calm, .moderate)).prop(for: pose) == .mug)
+    }
+
+    @MainActor @Test func aRoughYesterdayGetsAGentleHello() {
+        #expect(PetSnapshot.wasRough([.happy, .sad]))
+        #expect(PetSnapshot.wasRough([.stressed, .tired, .happy, .calm]))
+        #expect(!PetSnapshot.wasRough([.sad, .happy, .calm]))
+        #expect(!PetSnapshot.wasRough([]))
+        let snapshot = PetSnapshot(identity: PetIdentity(species: .penguin), roughYesterday: true)
+        let pet = PetPresence(snapshot: snapshot)
+        #expect(pet.scene.gentle)
+        let clip = PetDirector.clip(for: .arrive, stance: .mood(.happy, .moderate), species: .penguin, gentle: true)
+        #expect(clip?.name == "gentleHello")
+        // Gentle days leave out the bouncy tricks.
+        for slot in 0..<40 {
+            if let (c, _) = PetDirector.vignette(stance: .mood(.excited, .moderate), species: .penguin, t: Double(slot) * 9 + 3, gentle: true) {
+                #expect(!["bounce", "fistPump", "dance", "wiggle", "clap"].contains(c.name))
+            }
+        }
+        pet.logged(.happy, intensity: .moderate, snapshot: snapshot)
+        #expect(!pet.scene.gentle)
+    }
+
+    @Test func itDancesToMusicButOnlySwaysWhenItsHard() {
+        let t = Date(timeIntervalSince1970: 1_800_000_000.3)
+        var happy = PetScene(species: .cat, stance: .mood(.happy, .moderate))
+        happy.dancing = true
+        let still = PetDirector.pose(PetScene(species: .cat, stance: .mood(.happy, .moderate)), at: t)
+        let dancing = PetDirector.pose(happy, at: t)
+        #expect(dancing.armL + dancing.armR > still.armL + still.armR + 60)
+        #expect(dancing.notes > 0.5)
+        var sad = PetScene(species: .cat, stance: .mood(.sad, .moderate))
+        sad.dancing = true
+        let swaying = PetDirector.pose(sad, at: t)
+        #expect(swaying.armL < 40 && swaying.notes < 0.1)
+    }
+}
+
 enum PetTestSupport {
     static var allStances: [PetStance] {
         Mood.allCases.flatMap { m in MoodIntensity.allCases.map { PetStance.mood(m, $0) } } + PetActivity.allCases.map { .life($0) } + [.meditating]
@@ -243,7 +352,7 @@ enum PetTestSupport {
     static func allClips(_ s: PetSpecies) -> [PetClip] {
         PetVignette.allCases.map { PetClips.vignette($0, s) } + Mood.allCases.map { PetClips.reaction(to: $0, s) }
             + [PetClips.arrive(.mood(.happy, .moderate), s), PetClips.arrive(.mood(.sad, .moderate), s), PetClips.boop(s), PetClips.tickle(s),
-               PetClips.flustered(s), PetClips.afterPetting(s), PetClips.wave(s)]
+               PetClips.flustered(s), PetClips.afterPetting(s), PetClips.wave(s), PetClips.gentleHello(s), PetClips.swat(s)]
     }
 }
 

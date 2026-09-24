@@ -28,10 +28,14 @@ public struct PetSnapshot: Codable, Equatable, Sendable {
     public var updatedAt: Date
     /// When you met your pet: its birthday comes round once a year.
     public var adoptedAt: Date?
+    /// Yesterday was a rough day (see `PetSnapshot.wasRough`); today it greets you gently until
+    /// you log something.
+    public var roughYesterday: Bool?
 
     public init(identity: PetIdentity, mood: Mood? = nil, intensity: MoodIntensity? = nil, loggedAt: Date? = nil, today: [MoodStamp] = [], updatedAt: Date = .now,
-                adoptedAt: Date? = nil) {
+                adoptedAt: Date? = nil, roughYesterday: Bool? = nil) {
         self.adoptedAt = adoptedAt
+        self.roughYesterday = roughYesterday
         self.identity = identity
         self.mood = mood
         self.intensity = intensity
@@ -44,6 +48,16 @@ public struct PetSnapshot: Codable, Equatable, Sendable {
 
     /// Moods older than this are treated as "faded": the pet gets on with its own day.
     public static let freshness: TimeInterval = 8 * 60 * 60
+
+    /// A day was rough if it ended on a hard feeling, or at least half of it was hard.
+    public static func wasRough(_ moods: [Mood]) -> Bool {
+        let hard: Set<Mood> = [.sad, .stressed, .tired, .frustrated]
+        guard let last = moods.last else { return false }
+        return hard.contains(last) || moods.filter(hard.contains).count * 2 >= moods.count
+    }
+
+    /// Greet gently: yesterday was rough and nothing is logged yet today.
+    public var greetsGently: Bool { roughYesterday == true && today.isEmpty }
 
     /// The fresh mood at `date`, if there is one.
     public func freshMood(at date: Date = .now) -> Mood? {

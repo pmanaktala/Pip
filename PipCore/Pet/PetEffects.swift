@@ -46,6 +46,17 @@ enum PetEffects {
         }
         // Everything else floats above the head, in the body's space (it doesn't tilt with the head).
         let top = CGPoint(x: fig.headCenter.x, y: fig.headCenter.y - fig.headRY + CGFloat(pose.headBob))
+        if pose.bubble > 0.02 {
+            // Bubbles leave the mouth, grow a little and drift up and to one side.
+            let mouth = CGPoint(x: fig.headCenter.x + 4, y: fig.headCenter.y + fig.mouthY + CGFloat(pose.headBob))
+            for i in 0..<3 {
+                let ph = (t * 0.42 + Double(i) / 3).truncatingRemainder(dividingBy: 1)
+                let a = pose.bubble * min(1, ph * 6) * (1 - ph * ph)
+                let r = 4 + CGFloat(ph) * 8 + CGFloat(i) * 1.5
+                let pt = CGPoint(x: mouth.x + 8 + CGFloat(ph) * 34 + CGFloat(sin(ph * 8 + Double(i))) * 5, y: mouth.y - CGFloat(ph) * 82)
+                bubble(body, at: pt, radius: r, alpha: a)
+            }
+        }
         if pose.zzz > 0.02 {
             for i in 0..<3 {
                 let ph = (t * 0.28 + Double(i) / 3).truncatingRemainder(dividingBy: 1)
@@ -160,6 +171,14 @@ enum PetEffects {
         h.addArc(center: CGPoint(x: c.x + s * 0.5, y: c.y - s * 0.25), radius: s * 0.5, startAngle: .degrees(180), endAngle: .degrees(0), clockwise: false)
         h.addCurve(to: CGPoint(x: c.x, y: c.y + s * 0.8), control1: CGPoint(x: c.x + s, y: c.y + s * 0.2), control2: CGPoint(x: c.x + s * 0.5, y: c.y + s * 0.45))
         ctx.fill(h, color)
+    }
+
+    /// A soap bubble: a thin tinted rim, a faint fill and a highlight.
+    static func bubble(_ ctx: GraphicsContext, at c: CGPoint, radius r: CGFloat, alpha a: Double) {
+        let circle = PetDraw.ellipse(c, r, r)
+        ctx.fill(circle, PetRGB(0.75, 0.9, 1.0, 0.3 * a))
+        ctx.stroke(circle, PetRGB(0.45, 0.66, 0.92, 0.95 * a), width: 1.5)
+        ctx.fill(PetDraw.ellipse(CGPoint(x: c.x - r * 0.38, y: c.y - r * 0.38), r * 0.24, r * 0.16), PetRGB(1, 1, 1, 0.9 * a))
     }
 
     static func sparkle(_ ctx: GraphicsContext, at c: CGPoint, size s: CGFloat, color: PetRGB) {

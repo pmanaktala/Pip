@@ -17,6 +17,8 @@ final class AppState {
     private(set) var identity: PetIdentity = .placeholder
     private(set) var latestEntry: MoodEntry?
     private(set) var todayEntries: [MoodEntry] = []
+    private(set) var adoptedAt: Date?
+    private(set) var roughYesterday = false
     @ObservationIgnored private var iconChangeInFlight = false
     /// Headphones, battery, time zone, network: see `PetContextMonitor`.
     @ObservationIgnored let surroundings = PetContextMonitor()
@@ -42,7 +44,17 @@ final class AppState {
         // Reactions played here are played on the watch too, if it is showing the pet.
         pet.broadcast = { event in DeviceSync.shared.send(event) }
         surroundings.onChange = { [pet] c in pet.setContext(c) }
+        updateFavourite()
         surroundings.didBecomeActive()
+    }
+
+    /// The toy you play with most, for the main screen's "brings it to you" moment.
+    func updateFavourite() {
+        var toy = PetToy.favourite()
+        #if DEBUG
+        if let forced = ProcessInfo.processInfo.environment["PIP_FAVOURITE"] { toy = PetToy(rawValue: forced) }
+        #endif
+        pet.setFavourite(toy)
     }
 
     // MARK: Derived state
@@ -52,7 +64,8 @@ final class AppState {
                     mood: latestEntry?.mood,
                     intensity: latestEntry?.intensity,
                     loggedAt: latestEntry?.timestamp,
-                    today: todayEntries.map { MoodStamp(id: $0.id, mood: $0.mood, intensity: $0.intensity, time: $0.timestamp) })
+                    today: todayEntries.map { MoodStamp(id: $0.id, mood: $0.mood, intensity: $0.intensity, time: $0.timestamp) },
+                    adoptedAt: adoptedAt, roughYesterday: roughYesterday)
     }
 
     /// True if the latest entry is recent enough to still "be" the current mood.
@@ -64,7 +77,10 @@ final class AppState {
     // MARK: Loading
 
     func refresh() {
-        identity = PipQueries.petProfile(in: context)?.identity ?? .placeholder
+        let profile = PipQueries.petProfile(in: context)
+        identity = profile?.identity ?? .placeholder
+        adoptedAt = profile?.createdAt
+        roughYesterday = PipQueries.roughYesterday(in: context)
         #if DEBUG
         // Screenshot automation: `PIP_SPECIES=penguin` overrides the stored pet.
         if let forced = ProcessInfo.processInfo.environment["PIP_SPECIES"], let species = PetSpecies(rawValue: forced) {
@@ -84,6 +100,8 @@ final class AppState {
         if let forced = ProcessInfo.processInfo.environment["PIP_MOOD"], let mood = Mood(rawValue: forced) {
             s.mood = mood; s.intensity = .moderate; s.loggedAt = Date.now.addingTimeInterval(-600)
         }
+        // PIP_ROUGH=1: yesterday was rough and nothing is logged today (the gentle hello).
+        if ProcessInfo.processInfo.environment["PIP_ROUGH"] == "1" { s.roughYesterday = true; s.today = [] }
         #endif
         return s
     }

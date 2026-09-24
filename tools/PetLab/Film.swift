@@ -25,7 +25,8 @@ enum LabFilm {
         var out: [(PetPose, PetProp?)] = []
         for i in 0..<n {
             let t = clip.duration * Double(i) / Double(n - 1)
-            out.append((clip.apply(to: rest, at: t).clamped(), stance.prop))
+            let pose = clip.apply(to: rest, at: t).clamped()
+            out.append((pose, pose.holdToy > 0.5 ? .heldBall : stance.prop))
         }
         return Row(title: clip.name, frames: out)
     }
@@ -58,12 +59,14 @@ enum LabFilm {
     }
 
     /// The director over time, for a stance: what a viewer would actually see.
-    static func director(_ s: PetSpecies, stance: PetStance, seconds: Double, frames n: Int = 12, start: Double = 1_800_000_000) -> Row {
-        let scene = PetScene(species: s, stance: stance)
+    static func director(_ s: PetSpecies, stance: PetStance, seconds: Double, frames n: Int = 12, start: Double = 1_800_000_000, dancing: Bool = false) -> Row {
+        var scene = PetScene(species: s, stance: stance)
+        scene.dancing = dancing
         var out: [(PetPose, PetProp?)] = []
         for i in 0..<n {
             let t = start + seconds * Double(i) / Double(n - 1)
-            out.append((PetDirector.pose(scene, at: Date(timeIntervalSince1970: t)), scene.prop))
+            let pose = PetDirector.pose(scene, at: Date(timeIntervalSince1970: t))
+            out.append((pose, scene.prop(for: pose)))
         }
         return Row(title: "\(stance)".replacingOccurrences(of: "PipCore.", with: ""), frames: out)
     }
@@ -256,6 +259,10 @@ enum LabDressing {
             ("travelling", .mood(.neutral, .moderate), .headphones, nil, .suitcase, nil),
             ("charging", .life(.reading), nil, nil, nil, .charging),
             ("low battery", .mood(.tired, .moderate), nil, .scarf, nil, .lowBattery),
+            ("halloween", .mood(.happy, .moderate), nil, nil, .pumpkin, nil),
+            ("diwali", .mood(.calm, .moderate), nil, nil, .diya, nil),
+            ("lunar new year", .mood(.excited, .moderate), nil, nil, .lantern, nil),
+            ("christmas", .mood(.neutral, .moderate), nil, .scarf, .tree, nil),
         ]
         return VStack(spacing: 6) {
             ForEach(PetSpecies.allCases, id: \.self) { s in
@@ -264,7 +271,7 @@ enum LabDressing {
                         let l = looks[i]
                         VStack(spacing: 1) {
                             LabPet(species: s, pose: l.1.rest(s), prop: l.1.prop, wear: l.2, neck: l.3, extra: l.4, sign: l.5)
-                                .frame(width: 190, height: 190).background(Color(red: 0.93, green: 0.95, blue: 0.97))
+                                .frame(width: 150, height: 150).background(Color(red: 0.93, green: 0.95, blue: 0.97))
                             Text(l.0).font(.system(size: 10)).foregroundStyle(.black)
                         }
                     }
@@ -281,5 +288,22 @@ enum LabMeditate {
                 LabPet(species: s, pose: PetStance.meditating.rest(s)).frame(width: 230, height: 230).background(Color(red: 0.93, green: 0.95, blue: 0.97))
             }
         }.padding(8).background(Color.white)
+    }
+}
+
+enum LabFun {
+    static func rows(_ s: PetSpecies) -> [LabFilm.Row] {
+        var rows: [LabFilm.Row] = [PetVignette.mondayStretch, .fridayWiggle, .offerBall, .blowBubble, .hopeful].map {
+            LabFilm.sample(PetClips.vignette($0, s), stance: .mood(.neutral, .moderate), species: s)
+        }
+        rows.append(LabFilm.sample(PetClips.gentleHello(s), stance: .life(.daydreaming), species: s))
+        rows.append(LabFilm.sample(PetClips.swat(s), stance: .mood(.happy, .slight), species: s))
+        var dance = LabFilm.director(s, stance: .mood(.happy, .moderate), seconds: 2.2, frames: 9, dancing: true)
+        dance.title = "dance (happy)"
+        rows.append(dance)
+        var sway = LabFilm.director(s, stance: .mood(.sad, .moderate), seconds: 2.2, frames: 9, dancing: true)
+        sway.title = "dance (sad: sways)"
+        rows.append(sway)
+        return rows
     }
 }

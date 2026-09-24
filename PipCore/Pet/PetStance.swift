@@ -19,6 +19,37 @@ public enum PetActivity: String, Codable, CaseIterable, Sendable {
     }
 }
 
+/// A toy from the Play tray. The one you play with most becomes its favourite, and now and then
+/// it brings it to you on the main screen.
+public enum PetToy: String, Codable, CaseIterable, Sendable {
+    case treat, ball, bubbles
+
+    var vignette: PetVignette {
+        switch self {
+        case .treat: .hopeful
+        case .ball: .offerBall
+        case .bubbles: .blowBubble
+        }
+    }
+
+    static let countKey = "play.toyCounts"
+
+    /// Counts one play with `toy` (kept on this device only).
+    public static func played(_ toy: PetToy, defaults: UserDefaults = .standard) {
+        var counts = defaults.dictionary(forKey: countKey) as? [String: Int] ?? [:]
+        counts[toy.rawValue, default: 0] += 1
+        defaults.set(counts, forKey: countKey)
+    }
+
+    /// The favourite: played with at least five times, and clearly more than the others.
+    public static func favourite(defaults: UserDefaults = .standard) -> PetToy? {
+        let counts = defaults.dictionary(forKey: countKey) as? [String: Int] ?? [:]
+        let ranked = PetToy.allCases.map { ($0, counts[$0.rawValue] ?? 0) }.sorted { $0.1 > $1.1 }
+        guard let top = ranked.first, top.1 >= 5, top.1 >= ranked[1].1 + 2 else { return nil }
+        return top.0
+    }
+}
+
 /// What the pet is being: company in a mood you logged, getting on with its day, or sitting
 /// with you. A stance is a resting pose, what it holds, how it idles and what it does now and then.
 public enum PetStance: Codable, Hashable, Sendable {
@@ -36,6 +67,12 @@ public enum PetStance: Codable, Hashable, Sendable {
         case .life(let a), .busy(let a, _, _): a
         default: nil
         }
+    }
+
+    /// Company in a hard feeling (sad, stressed, tired, frustrated): nothing bouncy, nothing festive.
+    public var isHard: Bool {
+        if case .mood(let m, _) = self { return [.sad, .stressed, .tired, .frustrated].contains(m) }
+        return false
     }
 
     public var isAsleep: Bool {

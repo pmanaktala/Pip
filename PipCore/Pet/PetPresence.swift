@@ -28,6 +28,7 @@ public final class PetPresence {
         let stance = snapshot.stance(at: now)
         self.scene = PetScene(species: snapshot.identity.species, stance: stance,
                               dressing: PetDressing.choose(for: stance, at: now, adoptedAt: snapshot.adoptedAt))
+        self.scene.gentle = snapshot.greetsGently
         self.lastLoggedAt = snapshot.loggedAt
     }
 
@@ -53,6 +54,7 @@ public final class PetPresence {
         self.snapshot = snapshot
         identity = snapshot.identity
         scene.species = snapshot.identity.species
+        if scene.gentle != snapshot.greetsGently { scene.gentle = snapshot.greetsGently }
         if let at = snapshot.loggedAt, let mood = snapshot.mood, at != lastLoggedAt {
             lastLoggedAt = at
             if now.timeIntervalSince(at) < 20 { add(PetEvent(.logged(mood, snapshot.intensity ?? .moderate), at: now), share: false) }
@@ -101,6 +103,12 @@ public final class PetPresence {
         setStance(scene.stance, now: now)
     }
 
+    /// The toy you play with most (see `PetToy.favourite`); now and then it brings it to you.
+    public func setFavourite(_ toy: PetToy?) {
+        guard scene.favourite != toy else { return }
+        scene.favourite = toy
+    }
+
     // MARK: Things that happen
 
     /// You arrived (the app came forward, the wrist came up).
@@ -115,6 +123,7 @@ public final class PetPresence {
         self.snapshot = snapshot
         lastLoggedAt = snapshot.loggedAt
         scene.preview = nil
+        scene.gentle = false
         add(PetEvent(.logged(mood, intensity), at: now), share: false)
         setStance(.mood(mood, intensity), now: now)
     }

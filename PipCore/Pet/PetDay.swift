@@ -10,9 +10,11 @@ public enum PetDay {
         if let forced = ProcessInfo.processInfo.environment["PIP_HOUR"], let fh = Double(forced) { h = fh }
         #endif
         let day = Double(calendar.ordinality(of: .day, in: .era, for: date) ?? 0)
+        // Weekends start slower: a lie-in until 7:30 and no hurry until 10:30.
+        let weekend = !isWeekday(c.weekday)
         switch h {
-        case 22.5..., ..<6: return .sleeping
-        case ..<9: return .waking
+        case 22.5..., ..<(weekend ? 7.5 : 6): return .sleeping
+        case ..<(weekend ? 10.5 : 9): return .waking
         case 21.5...: return .windingDown
         case 18.5...: return .reading
         case 14..<15 where PetMath.hash01(day * 3.1) < 0.55: return .napping
@@ -26,6 +28,18 @@ public enum PetDay {
             var i = pick(block)
             if block > 0, i == pick(block - 1) { i = (i + 1) % 3 }
             return options[i]
+        }
+    }
+
+    /// The week has a shape too: a big stretch and yawn on Monday morning, a happy wiggle on
+    /// Friday evening. Vignettes that join the repertoire at those times (easy stances only).
+    public static func weekVignettes(at date: Date, calendar: Calendar = .current) -> [PetVignette] {
+        let c = calendar.dateComponents([.hour, .weekday], from: date)
+        let h = c.hour ?? 12
+        switch c.weekday {
+        case 2 where (6..<12).contains(h): return [.mondayStretch]
+        case 6 where (17..<23).contains(h): return [.fridayWiggle]
+        default: return []
         }
     }
 

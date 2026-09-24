@@ -57,7 +57,7 @@ final class PetContextMonitor {
         c.offline = offline
         c.missedYou = now < missedYouUntil
         #if DEBUG
-        // Screenshot automation: PIP_CONTEXT=travelling,offline,charging,lowBattery,headphones,missedYou
+        // Screenshot automation: PIP_CONTEXT=travelling,offline,charging,lowBattery,headphones,music,missedYou
         if let forced = ProcessInfo.processInfo.environment["PIP_CONTEXT"] {
             let set = Set(forced.split(separator: ","))
             if set.contains("travelling") { c.travelling = true }
@@ -65,6 +65,7 @@ final class PetContextMonitor {
             if set.contains("charging") { c.charging = true }
             if set.contains("lowBattery") { c.lowBattery = true }
             if set.contains("headphones") { c.headphones = true }
+            if set.contains("music") { c.audioPlaying = true }
             if set.contains("missedYou") { c.missedYou = true }
         }
         #endif

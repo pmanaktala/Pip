@@ -15,6 +15,8 @@ final class WatchState {
     private(set) var identity: PetIdentity = .placeholder
     private(set) var latestEntry: MoodEntry?
     private(set) var todayEntries: [MoodEntry] = []
+    private(set) var adoptedAt: Date?
+    private(set) var roughYesterday = false
     /// The same live pet as the phone's: same stance, same clock, reactions shared both ways.
     let pet: PetPresence
     private let logger: MoodLogger
@@ -43,7 +45,10 @@ final class WatchState {
     }
 
     func refresh() {
-        identity = PipQueries.petProfile(in: context)?.identity ?? .placeholder
+        let profile = PipQueries.petProfile(in: context)
+        identity = profile?.identity ?? .placeholder
+        adoptedAt = profile?.createdAt
+        roughYesterday = PipQueries.roughYesterday(in: context)
         latestEntry = PipQueries.latestEntry(in: context)
         todayEntries = PipQueries.entries(on: .now, in: context)
         logger.refreshSnapshot()
@@ -52,7 +57,8 @@ final class WatchState {
 
     var snapshot: PetSnapshot {
         PetSnapshot(identity: identity, mood: latestEntry?.mood, intensity: latestEntry?.intensity, loggedAt: latestEntry?.timestamp,
-                    today: todayEntries.map { MoodStamp(id: $0.id, mood: $0.mood, intensity: $0.intensity, time: $0.timestamp) })
+                    today: todayEntries.map { MoodStamp(id: $0.id, mood: $0.mood, intensity: $0.intensity, time: $0.timestamp) },
+                    adoptedAt: adoptedAt, roughYesterday: roughYesterday)
     }
 
     var hasFreshMood: Bool {

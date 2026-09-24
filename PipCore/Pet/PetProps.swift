@@ -171,6 +171,111 @@ enum PetPropArt {
             flame.addQuadCurve(to: CGPoint(x: 36, y: floor - 36), control: CGPoint(x: 39.5, y: floor - 38))
             flame.addQuadCurve(to: CGPoint(x: 36 + flicker, y: floor - 44), control: CGPoint(x: 32.5, y: floor - 38))
             ctx.fill(flame, PetRGB(1.0, 0.72, 0.25))
+        case .pumpkin:
+            let orange = PetRGB(0.96, 0.58, 0.22)
+            let c = CGPoint(x: 35, y: floor - 13)
+            // Three lobes, the middle one in front.
+            for dx in [-8.0, 8.0] as [CGFloat] {
+                PetDraw.solid(ctx, PetDraw.ellipse(CGPoint(x: c.x + dx, y: c.y), 11, 12), orange.mix(PetRGB(0.8, 0.4, 0.15), 0.2), rim: p.rim, depth: 3)
+            }
+            PetDraw.solid(ctx, PetDraw.ellipse(c, 11, 13), orange, rim: p.rim, depth: 3)
+            var stem = Path()
+            stem.move(to: CGPoint(x: c.x - 1.5, y: c.y - 12))
+            stem.addQuadCurve(to: CGPoint(x: c.x + 3, y: c.y - 19), control: CGPoint(x: c.x - 1, y: c.y - 17))
+            ctx.stroke(stem, PetRGB(0.35, 0.55, 0.3), width: 3.2)
+            // A friendly face, lit from inside.
+            let glow = PetRGB(1.0, 0.86, 0.4)
+            for dx in [-4.5, 4.5] as [CGFloat] {
+                var eye = Path()
+                eye.move(to: CGPoint(x: c.x + dx - 2.4, y: c.y - 1))
+                eye.addLine(to: CGPoint(x: c.x + dx, y: c.y - 5))
+                eye.addLine(to: CGPoint(x: c.x + dx + 2.4, y: c.y - 1))
+                eye.closeSubpath()
+                ctx.fill(eye, glow)
+            }
+            var mouth = Path()
+            mouth.move(to: CGPoint(x: c.x - 6, y: c.y + 3))
+            mouth.addQuadCurve(to: CGPoint(x: c.x + 6, y: c.y + 3), control: CGPoint(x: c.x, y: c.y + 10))
+            mouth.addQuadCurve(to: CGPoint(x: c.x - 6, y: c.y + 3), control: CGPoint(x: c.x, y: c.y + 6))
+            ctx.fill(mouth, glow)
+        case .diya:
+            let t = p.time ?? 0.3
+            let c = CGPoint(x: 36, y: floor - 7)
+            let glow = 0.16 + 0.05 * sin(t * 5)
+            ctx.fill(PetDraw.ellipse(CGPoint(x: c.x + 14, y: c.y - 15), 9, 10), PetRGB(1.0, 0.8, 0.35, glow))
+            var bowl = Path()
+            bowl.move(to: CGPoint(x: c.x - 15, y: c.y - 5))
+            bowl.addQuadCurve(to: CGPoint(x: c.x + 15, y: c.y - 5), control: CGPoint(x: c.x, y: c.y + 12))
+            bowl.addLine(to: CGPoint(x: c.x + 19, y: c.y - 8))
+            bowl.addQuadCurve(to: CGPoint(x: c.x - 15, y: c.y - 5), control: CGPoint(x: c.x, y: c.y - 3))
+            bowl.closeSubpath()
+            PetDraw.solid(ctx, bowl, PetRGB(0.82, 0.45, 0.28), rim: p.rim, depth: 2.5)
+            // Painted dots round the rim.
+            for i in 0..<4 {
+                ctx.fill(PetDraw.ellipse(CGPoint(x: c.x - 8 + CGFloat(i) * 5.5, y: c.y + 0.5), 1.3, 1.3), PetRGB(1.0, 0.86, 0.45))
+            }
+            let flicker = CGFloat(sin(t * 11) * 0.8)
+            var flame = Path()
+            flame.move(to: CGPoint(x: c.x + 14 + flicker, y: c.y - 21))
+            flame.addQuadCurve(to: CGPoint(x: c.x + 14, y: c.y - 9), control: CGPoint(x: c.x + 19, y: c.y - 12))
+            flame.addQuadCurve(to: CGPoint(x: c.x + 14 + flicker, y: c.y - 21), control: CGPoint(x: c.x + 9, y: c.y - 12))
+            ctx.fill(flame, PetRGB(1.0, 0.72, 0.25))
+            ctx.fill(PetDraw.ellipse(CGPoint(x: c.x + 14, y: c.y - 12), 1.8, 3), PetRGB(1, 0.95, 0.75))
+        case .lantern:
+            let t = p.time ?? 0.3
+            let red = PetRGB(0.90, 0.25, 0.22), gold = PetRGB(0.98, 0.78, 0.3)
+            let c = CGPoint(x: 35, y: floor - 20)
+            ctx.fill(PetDraw.ellipse(c, 20, 20), PetRGB(1.0, 0.5, 0.3, 0.14 + 0.04 * sin(t * 3)))
+            ctx.fill(Path(roundedRect: CGRect(x: c.x - 7, y: c.y - 19, width: 14, height: 5), cornerSize: CGSize(width: 1.5, height: 1.5)), gold)
+            ctx.fill(Path(roundedRect: CGRect(x: c.x - 7, y: c.y + 14, width: 14, height: 5), cornerSize: CGSize(width: 1.5, height: 1.5)), gold)
+            let body = PetDraw.ellipse(c, 16, 15)
+            PetDraw.solid(ctx, body, red, rim: p.rim, depth: 3)
+            // Ribs.
+            for dx in [-8.0, 0, 8.0] as [CGFloat] {
+                var rib = Path()
+                rib.move(to: CGPoint(x: c.x + dx * 0.6, y: c.y - 14))
+                rib.addQuadCurve(to: CGPoint(x: c.x + dx * 0.6, y: c.y + 14), control: CGPoint(x: c.x + dx * 1.5, y: c.y))
+                ctx.stroke(rib, red.shade, width: 1.2)
+            }
+            // Tassel.
+            ctx.fill(Path(CGRect(x: c.x - 1, y: c.y + 19, width: 2, height: 4)), gold)
+            var tassel = Path()
+            tassel.move(to: CGPoint(x: c.x - 3, y: c.y + 23))
+            tassel.addLine(to: CGPoint(x: c.x + 3, y: c.y + 23))
+            tassel.addLine(to: CGPoint(x: c.x + 2, y: floor - 1))
+            tassel.addLine(to: CGPoint(x: c.x - 2, y: floor - 1))
+            tassel.closeSubpath()
+            ctx.fill(tassel, red.shade)
+        case .tree:
+            let t = p.time ?? 0.3
+            let green = PetRGB(0.30, 0.62, 0.42)
+            ctx.fill(Path(roundedRect: CGRect(x: 31, y: floor - 9, width: 10, height: 8), cornerSize: CGSize(width: 2, height: 2)), PetRGB(0.62, 0.42, 0.28))
+            let tiers: [(CGFloat, CGFloat, CGFloat)] = [(floor - 8, 19, 16), (floor - 19, 15, 14), (floor - 29, 10, 13)]
+            for (i, (base, half, h)) in tiers.enumerated() {
+                var tier = Path()
+                tier.move(to: CGPoint(x: 36 - half, y: base))
+                tier.addQuadCurve(to: CGPoint(x: 36 + half, y: base), control: CGPoint(x: 36, y: base + 4))
+                tier.addLine(to: CGPoint(x: 36, y: base - h))
+                tier.closeSubpath()
+                PetDraw.solid(ctx, tier, green.mix(PetRGB(0.4, 0.75, 0.5), Double(i) * 0.12), rim: p.rim, depth: 3)
+            }
+            // Baubles that twinkle in turn.
+            let baubles: [(CGFloat, CGFloat, PetRGB)] = [(28, floor - 12, PetRGB(0.95, 0.4, 0.4)), (44, floor - 14, PetRGB(0.42, 0.62, 0.95)),
+                                                       (33, floor - 24, PetRGB(0.98, 0.8, 0.3)), (40, floor - 31, PetRGB(0.95, 0.5, 0.75))]
+            for (i, (x, y, color)) in baubles.enumerated() {
+                let twinkle = 0.75 + 0.25 * sin(t * 2.4 + Double(i) * 1.7)
+                ctx.fill(PetDraw.ellipse(CGPoint(x: x, y: y), 2.6, 2.6), color.alpha(twinkle))
+            }
+            var star = Path()
+            let sc = CGPoint(x: 36, y: floor - 45)
+            for k in 0..<10 {
+                let r: CGFloat = k % 2 == 0 ? 6 : 2.6
+                let a = Double(k) * .pi / 5 - .pi / 2
+                let pt = CGPoint(x: sc.x + r * CGFloat(cos(a)), y: sc.y + r * CGFloat(sin(a)))
+                if k == 0 { star.move(to: pt) } else { star.addLine(to: pt) }
+            }
+            star.closeSubpath()
+            ctx.fill(star, PetRGB(1.0, 0.84, 0.3))
         }
     }
 

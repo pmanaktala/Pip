@@ -72,6 +72,12 @@ public enum PipQueries {
         let latest = latestEntry(in: context)
         let today = entries(on: now, in: context).map { MoodStamp(id: $0.id, mood: $0.mood, intensity: $0.intensity, time: $0.timestamp) }
         return PetSnapshot(identity: identity, mood: latest?.mood, intensity: latest?.intensity, loggedAt: latest?.timestamp, today: today, updatedAt: now,
-                           adoptedAt: profile?.createdAt)
+                           adoptedAt: profile?.createdAt, roughYesterday: roughYesterday(before: now, in: context))
+    }
+
+    /// Whether the day before `date` was rough (see `PetSnapshot.wasRough`).
+    public static func roughYesterday(before date: Date = .now, calendar: Calendar = .current, in context: ModelContext) -> Bool {
+        guard let yesterday = calendar.date(byAdding: .day, value: -1, to: date) else { return false }
+        return PetSnapshot.wasRough(entries(on: yesterday, calendar: calendar, in: context).map(\.mood))
     }
 }
