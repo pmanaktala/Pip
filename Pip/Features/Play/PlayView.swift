@@ -418,9 +418,12 @@ struct PlayView: View {
         if abs(x - center) < size.width * 0.22 { x = x < center ? center - size.width * 0.3 : center + size.width * 0.3 }
         flying = (.ball, start)
         Task { @MainActor in
-            withAnimation(.easeOut(duration: 0.35)) { flying = (.ball, CGPoint(x: (start.x + x) / 2, y: ground - 150)) }
-            scene.look = CGPoint(x: (x - center) / (size.width * 0.4), y: -0.4)
-            try? await Task.sleep(for: .seconds(0.35))
+            // A hard upward flick sends it high, up under the glass buttons, before it drops.
+            let peak = max(34, ground - 150 - max(0, -velocity.height) * 0.45)
+            let rise = peak < ground - 250 ? 0.55 : 0.35
+            withAnimation(.easeOut(duration: rise)) { flying = (.ball, CGPoint(x: (start.x + x) / 2, y: peak)) }
+            scene.look = CGPoint(x: (x - center) / (size.width * 0.4), y: peak < ground - 250 ? -0.9 : -0.4)
+            try? await Task.sleep(for: .seconds(rise))
             withAnimation(.interpolatingSpring(stiffness: 90, damping: 8)) { flying = (.ball, CGPoint(x: x, y: ground)) }
             scene.look = CGPoint(x: (x - center) / (size.width * 0.4), y: 0.5)
             try? await Task.sleep(for: .seconds(0.6))

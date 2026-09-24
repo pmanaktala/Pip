@@ -11,6 +11,8 @@ struct HistoryView: View {
     @State private var entryToDelete: MoodEntry?
     @State private var weekWords: String?
     @State private var dayWords: [String: String] = [:]
+    /// The calendar shows this week by default; the month is one tap away, in the same place.
+    @State private var showsMonth = false
     @Environment(\.colorScheme) private var scheme
 
     private var stamps: [MoodStamp] {
@@ -27,8 +29,12 @@ struct HistoryView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: PipSpacing.l) {
                 weekSummary
-                section("This week") { weekStrip }
-                section(month.formatted(.dateTime.month(.wide).year()), trailing: { monthControls }) { monthGrid }
+                section(showsMonth ? month.formatted(.dateTime.month(.wide).year()) : "This week", trailing: { calendarControls }) {
+                    Group {
+                        if showsMonth { monthGrid } else { weekStrip }
+                    }
+                    .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+                }
                 daySection
             }
             .padding(.horizontal, PipSpacing.m)
@@ -166,6 +172,27 @@ struct HistoryView: View {
     }
 
     // MARK: Month
+
+    /// Week ⇄ month, and the month arrows while the month is showing.
+    private var calendarControls: some View {
+        HStack(spacing: 6) {
+            if showsMonth { monthControls }
+            Button {
+                Haptics.selection()
+                withAnimation(.smooth(duration: 0.35)) {
+                    showsMonth.toggle()
+                    if showsMonth { month = selectedDay }
+                }
+            } label: {
+                Text(showsMonth ? "Week" : "Month")
+                    .font(PipFont.callout.weight(.semibold))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+            }
+            .buttonStyle(.glass)
+            .accessibilityLabel(showsMonth ? "Show this week" : "Show the month")
+        }
+    }
 
     private var monthControls: some View {
         HStack(spacing: 4) {
@@ -315,6 +342,7 @@ struct HistoryView: View {
 /// One day in the month grid: the number with a mood dot. Past days without an entry read as
 /// quiet, not disabled; future days are out of reach.
 struct DayCell: View {
+    @Environment(\.colorScheme) private var scheme
     var day: Date
     var stamp: MoodStamp?
     var isSelected: Bool
@@ -327,6 +355,10 @@ struct DayCell: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(isSelected ? Color.accentColor.opacity(0.14) : Color.clear)
+                // A logged day carries its mood's soft colour, so the month reads at a glance.
+                if let stamp {
+                    Circle().fill(MoodColor.soft(stamp.mood, scheme: scheme)).frame(width: 36, height: 36)
+                }
                 VStack(spacing: 3) {
                     Text(day, format: .dateTime.day())
                         .font(Calendar.current.isDateInToday(day) ? PipFont.caption.weight(.heavy) : PipFont.caption)

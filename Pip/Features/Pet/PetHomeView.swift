@@ -7,6 +7,7 @@ import SwiftUI
 struct PetHomeView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showPlay = false
     /// The evening the goodnight card was put away (it comes back the next night).
     @AppStorage("goodnight.dismissed") private var goodnightDismissed = ""
@@ -107,6 +108,17 @@ struct PetHomeView: View {
             ZStack {
                 PetRoom(mood: mood, horizon: floor)
                 PetStage(scene: appState.pet.scene, petScale: petScale, floor: floor, showsRoom: false)
+                // Petting: a few hearts float up and away to the upper right, past the glass buttons.
+                if appState.pet.isPetting && !reduceMotion {
+                    let head = PetStage.headRect(in: geo.size, species: appState.identity.species, petScale: petScale, floor: floor)
+                    TimelineView(.animation) { clock in
+                        Canvas { ctx, _ in
+                            RisingHearts.draw(ctx, from: CGPoint(x: head.maxX - head.width * 0.15, y: head.minY), t: clock.date.timeIntervalSince1970)
+                        }
+                    }
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+                }
             }
             .contentShape(Rectangle())
             .animation(.spring(duration: 0.55, bounce: 0.12), value: appState.isPickingMood)
@@ -369,5 +381,30 @@ struct GoodnightCard: View {
                                              species: appState.identity.species.displayName.lowercased(), entries: input),
               !Task.isCancelled else { return }
         withAnimation(.smooth) { words = text }
+    }
+}
+
+/// Hearts that rise off the pet while you pet it, drifting up and to the right so they pass under
+/// the glass buttons and off the top of the screen, never across the name.
+enum RisingHearts {
+    static func draw(_ ctx: GraphicsContext, from origin: CGPoint, t: Double) {
+        for i in 0..<5 {
+            let period = 3.2 + Double(i % 3) * 0.5
+            let phase = t / period + Double(i) * 0.23
+            let u = phase.truncatingRemainder(dividingBy: 1)
+            let seed = floor(phase) * 5.1 + Double(i) * 2.3
+            let drift = CGFloat(40 + (sin(seed * 7.3) * 0.5 + 0.5) * 110)
+            let x = origin.x + drift * CGFloat(u) + CGFloat(sin(u * 7 + seed)) * 10
+            let y = origin.y - CGFloat(u) * (origin.y + 60)
+            let alpha = min(1, u * 6) * (u > 0.8 ? (1 - u) / 0.2 : 1)
+            let r = 7 + CGFloat(u) * 5
+            var heart = Path()
+            heart.move(to: CGPoint(x: x, y: y + r * 0.9))
+            heart.addCurve(to: CGPoint(x: x - r, y: y - r * 0.2), control1: CGPoint(x: x - r * 0.4, y: y + r * 0.55), control2: CGPoint(x: x - r, y: y + r * 0.3))
+            heart.addArc(center: CGPoint(x: x - r * 0.5, y: y - r * 0.25), radius: r * 0.5, startAngle: .degrees(180), endAngle: .degrees(0), clockwise: false)
+            heart.addArc(center: CGPoint(x: x + r * 0.5, y: y - r * 0.25), radius: r * 0.5, startAngle: .degrees(180), endAngle: .degrees(0), clockwise: false)
+            heart.addCurve(to: CGPoint(x: x, y: y + r * 0.9), control1: CGPoint(x: x + r, y: y + r * 0.3), control2: CGPoint(x: x + r * 0.4, y: y + r * 0.55))
+            ctx.fill(heart, with: .color(Color(red: 0.98, green: 0.45, blue: 0.55).opacity(0.85 * alpha)))
+        }
     }
 }
