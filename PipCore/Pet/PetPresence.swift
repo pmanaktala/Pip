@@ -19,11 +19,14 @@ public final class PetPresence {
     @ObservationIgnored private var lastTapAt = Date.distantPast
     @ObservationIgnored private var clock: Task<Void, Never>?
     @ObservationIgnored private var snapshot: PetSnapshot
+    /// Another app is playing audio (checked by the app while it is in front).
+    @ObservationIgnored private var music = false
 
     public init(snapshot: PetSnapshot, now: Date = .now) {
         self.snapshot = snapshot
         self.identity = snapshot.identity
-        self.scene = PetScene(species: snapshot.identity.species, stance: snapshot.stance(at: now))
+        let stance = snapshot.stance(at: now)
+        self.scene = PetScene(species: snapshot.identity.species, stance: stance, wear: PetWear.choose(for: stance, at: now, music: false))
         self.lastLoggedAt = snapshot.loggedAt
     }
 
@@ -75,10 +78,19 @@ public final class PetPresence {
     }
 
     private func setStance(_ stance: PetStance, now: Date) {
+        let wear = PetWear.choose(for: stance, at: now, music: music)
+        if wear != scene.wear { scene.wear = wear }
         guard stance != scene.stance else { return }
         scene.previous = scene.stance
         scene.stance = stance
         scene.stanceSince = now
+    }
+
+    /// You're listening to something: the pet puts its headphones on (and takes them off).
+    public func setMusic(_ playing: Bool, now: Date = .now) {
+        guard playing != music else { return }
+        music = playing
+        setStance(scene.stance, now: now)
     }
 
     // MARK: Things that happen
@@ -156,10 +168,24 @@ public final class PetPresence {
 public extension PetSnapshot {
     /// The stance the pet is in at `date`: a fresh mood is always the mood (company in it);
     /// otherwise the pet is getting on with its day.
+    ///
+    /// Mood gates everything (Bible §4): after a hard feeling (sad, stressed, tired, frustrated)
+    /// the pet only keeps you company. After a good or neutral one it can get on with its day in
+    /// that mood — working at its laptop in work hours, getting ready for bed late in the evening.
+    /// Late at night, an hour after you last told it something, it dozes off beside you.
     func stance(at date: Date = .now, calendar: Calendar = .current) -> PetStance {
-        if let mood, let loggedAt, date.timeIntervalSince(loggedAt) <= Self.freshness, date >= loggedAt.addingTimeInterval(-60) {
-            return .mood(mood, intensity ?? .moderate)
+        let day = PetDay.activity(at: date, calendar: calendar)
+        guard let mood, let loggedAt, date.timeIntervalSince(loggedAt) <= Self.freshness, date >= loggedAt.addingTimeInterval(-60) else {
+            return .life(day)
         }
-        return .life(PetDay.activity(at: date, calendar: calendar))
+        let intensity = intensity ?? .moderate
+        if day == .sleeping, date.timeIntervalSince(loggedAt) > 3600 { return .life(.sleeping) }
+        let easy: Set<Mood> = [.happy, .excited, .calm, .neutral]
+        guard easy.contains(mood), date.timeIntervalSince(loggedAt) > 90 else { return .mood(mood, intensity) }
+        switch day {
+        case .working: return .busy(.working, mood, intensity)
+        case .windingDown: return mood == .excited ? .mood(mood, intensity) : .busy(.windingDown, mood, intensity)
+        default: return .mood(mood, intensity)
+        }
     }
 }

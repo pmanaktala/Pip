@@ -2,7 +2,7 @@ import Foundation
 
 /// What the pet gets up to when no mood is fresh (Bible §4, "the pet's day").
 public enum PetActivity: String, Codable, CaseIterable, Sendable {
-    case sleeping, waking, daydreaming, playing, reading, napping, windingDown
+    case sleeping, waking, daydreaming, playing, reading, napping, windingDown, working
 
     /// "Pebble is …" — always matches what the pet is visibly doing.
     public var phrase: String {
@@ -14,6 +14,7 @@ public enum PetActivity: String, Codable, CaseIterable, Sendable {
         case .reading: "is reading"
         case .napping: "is having a little nap"
         case .windingDown: "is winding down with some cocoa"
+        case .working: "is working alongside you"
         }
     }
 }
@@ -23,8 +24,19 @@ public enum PetActivity: String, Codable, CaseIterable, Sendable {
 public enum PetStance: Codable, Hashable, Sendable {
     case mood(Mood, MoodIntensity)
     case life(PetActivity)
+    /// Getting on with something in a mood you logged — only ever a good or neutral one (you
+    /// never see a cheerful pet at work after telling it you're sad; see `PetSnapshot.stance`).
+    case busy(PetActivity, Mood, MoodIntensity)
     /// Sit With Pet: eyes closed, breathing with you.
     case meditating
+
+    /// The activity underneath, for `life` and `busy`.
+    public var activity: PetActivity? {
+        switch self {
+        case .life(let a), .busy(let a, _, _): a
+        default: nil
+        }
+    }
 
     public var isAsleep: Bool {
         switch self {
@@ -43,7 +55,9 @@ public enum PetStance: Codable, Hashable, Sendable {
             case .waking, .windingDown: 0.2
             case .reading, .daydreaming: 0.3
             case .playing: 0.7
+            case .working: 0.35
             }
+        case .busy(let a, let m, _): max(PetStance.life(a).energy, m.energy * 0.6)
         case .meditating: 0.1
         }
     }
@@ -58,12 +72,14 @@ public enum PetStance: Codable, Hashable, Sendable {
             }
         case .life(let a):
             switch a {
-            case .sleeping: .nightcap
+            case .sleeping: .blanket
             case .reading: .book
             case .playing: .ball
             case .windingDown: .mug
+            case .working: .laptop
             default: nil
             }
+        case .busy(let a, _, _): PetStance.life(a).prop
         case .meditating: nil
         }
     }
@@ -84,6 +100,15 @@ public enum PetStance: Codable, Hashable, Sendable {
             case .frustrated: "\(name) is huffing along with you"
             }
         case .life(let a): "\(name) \(a.phrase)"
+        case .busy(let a, let m, _):
+            switch (a, m) {
+            case (.working, .happy): "\(name) is working, humming along"
+            case (.working, .excited): "\(name) is typing at top speed"
+            case (.working, .calm): "\(name) is working quietly beside you"
+            case (.working, _): "\(name) is working alongside you"
+            case (.windingDown, _): "\(name) is getting ready for bed"
+            default: "\(name) \(a.phrase)"
+            }
         case .meditating: "\(name) is breathing with you"
         }
     }
@@ -111,6 +136,14 @@ public enum PetStance: Codable, Hashable, Sendable {
             if let arms = Self.grip(for: prop, mood: m) { p.armL = arms; p.armR = arms }
         case .life(let a):
             p = p.adding(Self.lifeDelta(a, s))
+        case .busy(let a, let m, let intensity):
+            // The activity's body with the mood's face: how it feels while it does the thing.
+            p = p.adding(Self.lifeDelta(a, s))
+            let face = Self.moodDelta(m, s)
+            for k in [\PetPose.smile, \.smileEyes, \.blush, \.lidSlant, \.eyeWide, \.browShow, \.browSlant, \.earL, \.earR, \.tailUp] {
+                p[keyPath: k] += face[keyPath: k] * intensity.scale * 0.8
+            }
+            if m == .calm { p.lidL = max(p.lidL, 0.3); p.lidR = max(p.lidR, 0.3) }
         case .meditating:
             p.lidL = 1; p.lidR = 1; p.smile = 0.3; p.armL = -38; p.armR = -38; p.headTilt = 0; p.slump = 0.05
             p.earL = 0.1; p.earR = 0.1
@@ -175,6 +208,10 @@ public enum PetStance: Codable, Hashable, Sendable {
             p.armL = -45; p.armR = -45; p.gazeY = 0.85; p.gazeX = 0.3; p.headNod = 0.35; p.lidL = 0.25; p.lidR = 0.25; p.smile = 0.15
         case .windingDown:
             p.armL = -57; p.armR = -57; p.lidL = 0.45; p.lidR = 0.45; p.smile = 0.3; p.slump = 0.15; p.headTilt = 4
+        case .working:
+            // Paws on the keyboard behind the lid, eyes on the screen.
+            p.armL = -22; p.armR = -22; p.gazeY = 0.45; p.headNod = 0.15; p.smile = 0.15; p.lidL = 0.1; p.lidR = 0.1
+            p.earL = 0.2; p.earR = 0.2
         }
         return p
     }
@@ -233,15 +270,28 @@ public enum PetStance: Codable, Hashable, Sendable {
             case .playing: Idle(breathRate: 0.3, breathDepth: 0.5, sway: 2, tiltNoise: 3, gazeRange: 0.2, blinks: true, tailWag: 0.8, bob: 0)
             case .reading: Idle(breathRate: 0.2, breathDepth: 0.5, sway: 0.6, tiltNoise: 1.5, gazeRange: 0.15, blinks: true, tailWag: 0.1, bob: 0)
             case .windingDown: Idle(breathRate: 0.16, breathDepth: 0.7, sway: 1, tiltNoise: 2, gazeRange: 0.2, blinks: true, tailWag: 0, bob: 0)
+            case .working: Idle(breathRate: 0.22, breathDepth: 0.5, sway: 0.6, tiltNoise: 1.5, gazeRange: 0.35, blinks: true, tailWag: 0.15, bob: 0)
             }
+        case .busy(let a, let m, let i): Self.busyIdle(a, m, i)
         case .meditating:
             Idle(breathRate: 0.1, breathDepth: 1.1, sway: 0.3, tiltNoise: 0.5, gazeRange: 0, blinks: false, tailWag: 0, bob: 0)
         }
     }
 
+    static func busyIdle(_ a: PetActivity, _ m: Mood, _ i: MoodIntensity) -> Idle {
+        var idle = PetStance.life(a).idle
+        let mood = PetStance.mood(m, i).idle
+        idle.tailWag = max(idle.tailWag, mood.tailWag * 0.7)
+        idle.sway = (idle.sway + mood.sway) / 2
+        return idle
+    }
+
     /// Seconds between vignette slots. Livelier moods do more; sleep does little.
     var vignetteEvery: Double {
-        switch energy {
+        // Hard feelings get company that is unhurried, however much energy they carry.
+        if case .mood(.stressed, _) = self { return 13 }
+        if case .mood(.frustrated, _) = self { return 11 }
+        return switch energy {
         case ..<0.1: 16
         case ..<0.35: 13
         case ..<0.7: 11
@@ -277,7 +327,17 @@ public enum PetStance: Codable, Hashable, Sendable {
             case .playing: return [.batBall, .wiggle, .bounce] + signature.prefix(1)
             case .reading: return [.pageTurn, .chuckle, .lookAtYou]
             case .windingDown: return [.sip, .yawn, .lookAtYou]
+            case .working: return [.typing, .lookAtYou, .stretch, .typing2]
             }
+        case .busy(let a, let m, _):
+            let base = PetStance.life(a).repertoire(s)
+            let flavour: [PetVignette] = switch m {
+            case .happy: [.hum]
+            case .excited: [.fistPump]
+            case .calm: [.sigh]
+            default: [.curious]
+            }
+            return base + flavour
         case .meditating:
             return []
         }
@@ -291,27 +351,44 @@ public enum PetStance: Codable, Hashable, Sendable {
         look.gazeX = 0; look.gazeY = -0.1; look.smile += 0.25; look.smileEyes += 0.3; look.headTilt += 5
         var aside = rest
         aside.gazeX = -0.6; aside.headTurn -= 0.25; aside.headTilt -= 4
+        var tilt = rest
+        tilt.headTilt += 11; tilt.earL += 0.4; tilt.earR -= 0.2; tilt.browRaise += 0.4; tilt.gazeX = 0.2
+        var other = rest
+        other.gazeX = 0.6; other.headTurn += 0.2; other.headTilt += 3; other.tail += 0.5
         switch self {
         case .life(.sleeping), .life(.napping), .meditating:
             var deeper = rest
             deeper.headTilt += 5; deeper.breath = 0.6
-            return [rest, deeper]
+            var turned = rest
+            turned.headTilt -= 6; turned.smile += 0.15; turned.earL -= 0.2
+            return [rest, deeper, turned]
         case .life(.reading):
             var chuckle = rest
             chuckle.smileEyes = 0.7; chuckle.smile = 0.5
-            return [rest, chuckle, look]
+            var page = rest
+            page.gazeX = -0.5
+            return [rest, chuckle, page, look]
+        case .life(.working), .busy(.working, _, _):
+            var glance = rest
+            glance.gazeY = -0.1; glance.gazeX = 0; glance.headNod = 0; glance.smile += 0.25; glance.smileEyes += 0.25
+            var thinking = rest
+            thinking.headTilt += 8; thinking.gazeY = 0.1; thinking.gazeX = 0.4; thinking.browRaise += 0.4
+            return [rest, glance, thinking]
         case .mood(.happy, _), .mood(.excited, _):
             var cheer = rest
             cheer.armR = 130; cheer.smileEyes = 0.8
-            return [rest, look, cheer]
+            return [rest, look, cheer, tilt, other]
         case .mood(.sad, _):
             var up = rest
             up.headNod -= 0.3; up.gazeY = -0.1; up.smile += 0.35; up.lidSlant += 0.3
-            return [rest, up]
+            var down = rest
+            down.headTilt -= 5; down.gazeX = -0.3
+            return [rest, up, down]
         default:
-            return [rest, look, aside]
+            return [rest, look, aside, tilt, other]
         }
     }
+
 }
 
 extension MoodIntensity {

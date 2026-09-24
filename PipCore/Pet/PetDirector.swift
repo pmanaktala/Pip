@@ -43,9 +43,12 @@ public struct PetScene: Equatable, Sendable {
     public var breathGuide: Double?
     /// The mood picker is showing this mood; the pet tries it on.
     public var preview: Mood?
+    /// What it has on its head (see `PetWear.choose`).
+    public var wear: PetWear?
 
     public init(species: PetSpecies, stance: PetStance, previous: PetStance? = nil, stanceSince: Date = .distantPast, events: [PetEvent] = [],
-                pettingSince: Date? = nil, look: CGPoint? = nil, breathGuide: Double? = nil, preview: Mood? = nil) {
+                pettingSince: Date? = nil, look: CGPoint? = nil, breathGuide: Double? = nil, preview: Mood? = nil, wear: PetWear? = nil) {
+        self.wear = wear
         self.species = species
         self.stance = stance
         self.previous = previous
@@ -110,6 +113,7 @@ public enum PetDirector {
 
         // 2. Idle.
         p = idle(p, stance: stance, species: s, t: t)
+        if scene.wear == .headphones { p = listening(p, stance: stance, t: t) }
 
         // 3. Event clips (and how much they push vignettes aside).
         var busy = 0.0
@@ -224,6 +228,24 @@ public enum PetDirector {
             p.tail += sin(t * (species == .dog ? 14 : 5) * idle.tailWag) * 0.7 * idle.tailWag
         } else {
             p.tail += PetMath.noise(t * 0.4, seed: 6) * 0.6
+        }
+        return p
+    }
+
+    /// Headphones on: a good mood nods along to the beat with a note or two; a hard one just
+    /// sways slowly with its eyes half closed. Music is company too.
+    static func listening(_ base: PetPose, stance: PetStance, t: Double) -> PetPose {
+        var p = base
+        let hard: Bool = if case .mood(let m, _) = stance { [.sad, .stressed, .tired, .frustrated].contains(m) } else { false }
+        if hard {
+            p.headTilt += sin(t * 1.1) * 4
+            p.lidL = max(p.lidL, 0.45); p.lidR = max(p.lidR, 0.45)
+        } else {
+            let beat = t * 2 * .pi * 1.7
+            p.headNod += max(0, sin(beat)) * 0.12
+            p.headTilt += sin(beat / 2) * 3.5
+            p.notes = max(p.notes, 0.4)
+            p.smile += 0.1
         }
         return p
     }

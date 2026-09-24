@@ -49,7 +49,12 @@ enum QuadrupedArt {
         chest.addQuadCurve(to: CGPoint(x: bx, y: 162), control: CGPoint(x: bx + 18, y: 158))
         chest.addQuadCurve(to: CGPoint(x: bx - 21 - breathe, y: 134), control: CGPoint(x: bx - 18, y: 158))
         chest.addQuadCurve(to: CGPoint(x: bx, y: 104), control: CGPoint(x: bx - 22, y: 108))
-        PetDraw.solid(bib, chest, pal.cream, rim: 0, depth: 3)
+        if dog {
+            // A fluffy chest instead of a smooth bib.
+            PetDraw.solid(bib, PetDraw.fluffy(CGPoint(x: bx, y: 128), 20 + breathe, 22, bumps: 11, depth: 1.5), pal.cream, rim: 0, depth: 3)
+        } else {
+            PetDraw.solid(bib, chest, pal.cream, rim: 0, depth: 3)
+        }
     }
 
     static func foreleg(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure, angle: Double) {
@@ -97,14 +102,14 @@ enum QuadrupedArt {
             tipPath.addLine(to: tip)
             ctx.stroke(tipPath, pal.marking, width: 12)
         } else {
-            // A short, thick tail that stands up and wags.
-            let base = CGPoint(x: 128, y: 158)
-            let angle = (-50 - Double(up) * 22 + Double(swing) * 30) * .pi / 180
-            let len: CGFloat = 30
+            // A fluffy plume that stands up and wags.
+            let base = CGPoint(x: 128, y: 156)
+            let angle = (-55 - Double(up) * 22 + Double(swing) * 30) * .pi / 180
+            let len: CGFloat = 26
             let tip = CGPoint(x: base.x + cos(angle) * len, y: base.y + sin(angle) * len)
-            path = PetDraw.limb(from: base, to: tip, bend: -4 - swing * 3, rootWidth: 14, tipWidth: 9)
-            PetDraw.solid(ctx, path, pal.coat, rim: p.rim, depth: 2.5)
-            ctx.fill(PetDraw.ellipse(tip, 4.5, 4.5), pal.cream)
+            let mid = CGPoint(x: (base.x + tip.x) / 2, y: (base.y + tip.y) / 2)
+            let plume = PetDraw.fluffy(mid, 9, 9, bumps: 7, depth: 1.4).union(PetDraw.fluffy(tip, 10, 10, bumps: 7, depth: 1.6, phase: 0.5))
+            PetDraw.solid(ctx, plume, pal.coat, rim: p.rim, depth: 3)
         }
     }
 

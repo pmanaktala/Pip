@@ -72,8 +72,8 @@ struct SettingsView: View {
 
             Section {
                 notificationToggle("Company", "“\(appState.identity.name) wants some company.”", $prefs.notificationsCompany)
-                notificationToggle("Wind-down", "“\(appState.identity.name) looks sleepy.”", $prefs.notificationsSleepy)
-                notificationToggle("Little moments", "“\(appState.identity.name) is watching something out the window.”", $prefs.notificationsMoments)
+                notificationToggle("Wind-down", "“\(appState.identity.name) has its nightcap on.”", $prefs.notificationsSleepy)
+                notificationToggle("Little moments", "“\(appState.identity.name) is reading.”", $prefs.notificationsMoments)
             } header: {
                 Text("Notifications")
             } footer: {

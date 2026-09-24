@@ -2,7 +2,9 @@ import SwiftUI
 
 /// Filmstrips: a clip played over a stance, sampled evenly.
 enum LabFilm {
-    struct Row: Identifiable { let id = UUID(); var title: String; var frames: [(PetPose, PetProp?)] }
+    struct Row: Identifiable {
+        let id = UUID(); var title: String; var frames: [(PetPose, PetProp?)]; var wear: PetWear? = nil; var wears: [PetWear?]? = nil
+    }
 
     @MainActor static func strips(species: PetSpecies, rows: [Row], size: CGFloat = 120) -> some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -10,7 +12,7 @@ enum LabFilm {
                 HStack(spacing: 2) {
                     Text(row.title).font(.system(size: 11, weight: .semibold, design: .rounded)).foregroundStyle(.black).frame(width: 90, alignment: .leading)
                     ForEach(row.frames.indices, id: \.self) { i in
-                        LabPet(species: species, pose: row.frames[i].0, prop: row.frames[i].1)
+                        LabPet(species: species, pose: row.frames[i].0, prop: row.frames[i].1, wear: row.wears?[i] ?? row.wear)
                             .frame(width: size, height: size).background(Color(red: 0.93, green: 0.95, blue: 0.97))
                     }
                 }
@@ -105,5 +107,77 @@ enum LabCast {
             }
         }
         .padding(24).background(Color(red: 0.96, green: 0.95, blue: 0.93))
+    }
+}
+
+enum LabEyes {
+    /// A blink frame by frame, and every closed-eye state, large.
+    @MainActor static func sheet(_ s: PetSpecies) -> some View {
+        let rest = PetStance.mood(.neutral, .moderate).rest(s)
+        let blinks: [(String, PetPose)] = [0, 0.3, 0.6, 0.85, 1, 0.6, 0.2].map { b in var p = rest; p.blink = b; return ("blink \(b)", p) }
+        let closed: [(String, PetPose)] = [
+            ("sleeping", PetStance.life(.sleeping).rest(s)), ("napping", PetStance.life(.napping).rest(s)),
+            ("meditating", PetStance.meditating.rest(s)), ("calm token", PetStance.tokenFace(.calm, s)),
+            ("tired", PetStance.mood(.tired, .moderate).rest(s)), ("lid 0.5", { var p = rest; p.lidL = 0.5; p.lidR = 0.5; return p }()),
+            ("happy ^", { var p = rest; p.smileEyes = 1; return p }()),
+        ]
+        return VStack(alignment: .leading, spacing: 8) {
+            ForEach([blinks, closed].indices, id: \.self) { r in
+                let row = [blinks, closed][r]
+                HStack(spacing: 6) {
+                    ForEach(row.indices, id: \.self) { i in
+                        VStack(spacing: 2) {
+                            LabPet(species: s, pose: row[i].1, detail: .face).frame(width: 190, height: 190)
+                                .background(Color(red: 0.93, green: 0.95, blue: 0.97))
+                            Text(row[i].0).font(.system(size: 11)).foregroundStyle(.black)
+                        }
+                    }
+                }
+            }
+        }.padding(10).background(Color.white)
+    }
+}
+
+enum LabSmile {
+    @MainActor static func sheet() -> some View {
+        VStack(spacing: 6) {
+            ForEach(PetSpecies.allCases, id: \.self) { s in
+                HStack(spacing: 6) {
+                    ForEach([0, 0.2, 0.35, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], id: \.self) { v in
+                        let p: PetPose = { var p = PetStance.mood(.neutral, .moderate).rest(s); p.smileEyes = v; p.smile = v * 0.7; return p }()
+                        VStack(spacing: 1) {
+                            LabPet(species: s, pose: p, detail: .face).frame(width: 150, height: 150).background(Color(red: 0.93, green: 0.95, blue: 0.97))
+                            Text("smileEyes \(v, specifier: "%.2f")").font(.system(size: 10)).foregroundStyle(.black)
+                        }
+                    }
+                }
+            }
+        }.padding(8).background(Color.white)
+    }
+}
+
+enum LabBlush {
+    @MainActor static func sheet() -> some View {
+        HStack(spacing: 8) {
+            ForEach(PetSpecies.allCases, id: \.self) { s in
+                ForEach([0.0, 0.6, 1.0], id: \.self) { e in
+                    let p: PetPose = { var p = PetStance.mood(.happy, .moderate).rest(s); p.blush = 1; p.smileEyes = e; p.headTilt = 0; return p }()
+                    LabPet(species: s, pose: p, detail: .face).frame(width: 220, height: 220).background(Color(red: 0.93, green: 0.95, blue: 0.97))
+                }
+            }
+        }.padding(8).background(Color.white)
+    }
+}
+
+enum LabFloorProps {
+    @MainActor static func sheet() -> some View {
+        let cases: [(PetStance, Double, Double)] = [(.life(.working), 0, 0), (.life(.working), 14, 0), (.life(.working), 0, 16), (.life(.playing), 0, 0), (.life(.playing), 16, 0), (.mood(.calm, .moderate), 12, 10)]
+        return HStack(spacing: 6) {
+            ForEach(cases.indices, id: \.self) { i in
+                let (st, lift, lean) = cases[i]
+                let p: PetPose = { var p = st.rest(.dog); p.lift = lift; p.lean = lean; return p }()
+                LabPet(species: .dog, pose: p, prop: st.prop).frame(width: 170, height: 170).background(Color(red: 0.93, green: 0.95, blue: 0.97))
+            }
+        }.padding(8).background(Color.white)
     }
 }

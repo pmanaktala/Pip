@@ -21,6 +21,23 @@ enum PetDraw {
         ctx.fill(Path(ellipseIn: rect), PetRGB(1, 1, 1, amount).mix(color.alpha(amount), 0.35))
     }
 
+    /// An ellipse whose edge is a run of soft bumps — fur, a curl, a cloud.
+    static func fluffy(_ c: CGPoint, _ rx: CGFloat, _ ry: CGFloat, bumps: Int, depth: CGFloat, phase: Double = 0) -> Path {
+        var p = Path()
+        let n = max(bumps, 3)
+        func point(_ a: Double, _ r: CGFloat) -> CGPoint {
+            CGPoint(x: c.x + CGFloat(cos(a)) * (rx + r), y: c.y + CGFloat(sin(a)) * (ry + r))
+        }
+        let step = 2 * Double.pi / Double(n)
+        p.move(to: point(phase, 0))
+        for i in 0..<n {
+            let a0 = phase + Double(i) * step
+            p.addQuadCurve(to: point(a0 + step, 0), control: point(a0 + step / 2, depth * 2))
+        }
+        p.closeSubpath()
+        return p
+    }
+
     static func ellipse(_ c: CGPoint, _ rx: CGFloat, _ ry: CGFloat) -> Path {
         Path(ellipseIn: CGRect(x: c.x - rx, y: c.y - ry, width: rx * 2, height: ry * 2))
     }
@@ -76,75 +93,91 @@ enum PetDraw {
     /// a smile; fully closed eyes become strokes.
     static func eye(_ ctx: GraphicsContext, at c: CGPoint, style s: EyeStyle, lid: Double, slant: Double, smile: Double, squeeze: Double, gazeX: Double, gazeY: Double, wide: Double, blink: Double = 0) {
         let w = s.width * (1 + wide)
-        let h = s.height * (1 + wide * 0.9) * CGFloat(1 - min(blink, 1) * 0.92)
-        let lid = blink > 0.85 ? 1 : lid
+        let fullH = s.height * (1 + wide * 0.9)
         if squeeze > 0.5 {
             // A squeezed "<": the right eye points inward, the mirror makes the left ">".
             var p = Path()
-            p.move(to: CGPoint(x: c.x + w * 0.55, y: c.y - h * 0.38))
+            p.move(to: CGPoint(x: c.x + w * 0.55, y: c.y - fullH * 0.38))
             p.addLine(to: CGPoint(x: c.x - w * 0.45, y: c.y))
-            p.addLine(to: CGPoint(x: c.x + w * 0.55, y: c.y + h * 0.38))
+            p.addLine(to: CGPoint(x: c.x + w * 0.55, y: c.y + fullH * 0.38))
             ctx.stroke(p, s.ink, width: s.stroke * 1.1)
             return
         }
         if smile > 0.82 {
             // Delighted: an upturned crescent, `^`.
             var p = Path()
-            p.move(to: CGPoint(x: c.x - w * 0.62, y: c.y + h * 0.12))
-            p.addQuadCurve(to: CGPoint(x: c.x + w * 0.62, y: c.y + h * 0.12), control: CGPoint(x: c.x, y: c.y - h * 0.52))
+            p.move(to: CGPoint(x: c.x - w * 0.62, y: c.y + fullH * 0.12))
+            p.addQuadCurve(to: CGPoint(x: c.x + w * 0.62, y: c.y + fullH * 0.12), control: CGPoint(x: c.x, y: c.y - fullH * 0.52))
             ctx.stroke(p, s.ink, width: s.stroke * 1.1)
             return
         }
-        if lid > 0.88 {
-            // Closed and resting: a soft downward curve, `‿`, tilted with the slant.
+        if lid > 0.88 || blink > 0.86 {
+            // Closed: a soft downward curve, `‿`, the full width of the eye, tilted with the slant.
             var p = Path()
-            let tiltY = CGFloat(slant) * h * 0.12
-            p.move(to: CGPoint(x: c.x - w * 0.6, y: c.y + h * 0.1 + tiltY))
-            p.addQuadCurve(to: CGPoint(x: c.x + w * 0.6, y: c.y + h * 0.1 - tiltY), control: CGPoint(x: c.x, y: c.y + h * 0.42))
+            let tiltY = CGFloat(slant) * fullH * 0.12
+            let y = c.y + fullH * 0.18
+            p.move(to: CGPoint(x: c.x - w * 0.62, y: y + tiltY))
+            p.addQuadCurve(to: CGPoint(x: c.x + w * 0.62, y: y - tiltY), control: CGPoint(x: c.x, y: y + fullH * 0.34))
             ctx.stroke(p, s.ink, width: s.stroke)
             return
         }
-        let gx = CGFloat(gazeX) * w * 0.28, gy = CGFloat(gazeY) * h * 0.18
-        let eyeRect = CGRect(x: c.x - w / 2 + gx, y: c.y - h / 2 + gy, width: w, height: h)
-        let eye = Path(ellipseIn: eyeRect)
+        // A blink closes toward the lower lid, the way real lids do; the catchlight goes first.
+        let b = CGFloat(min(max(blink, 0), 1))
+        let h = fullH * (1 - b * 0.9)
+        let cy = c.y + (fullH - h) * 0.32
+        let gx = CGFloat(gazeX) * w * 0.28, gy = CGFloat(gazeY) * fullH * 0.18
+        let eyeRect = CGRect(x: c.x - w / 2 + gx, y: cy - h / 2 + gy, width: w, height: h)
+        // A smiling eye is not covered from below: it bends. The oval's lower edge rises into
+        // the upper one, through a crescent, toward the `^` drawn above.
+        let t = CGFloat(min(max(smile, 0), 0.82))
+        let eye: Path
+        if t > 0.01 {
+            let mid = CGPoint(x: eyeRect.midX, y: eyeRect.midY + h * 0.08 * t)
+            let half = w / 2 * (1 + 0.18 * t)
+            let lift = h * 0.667
+            var p = Path()
+            p.move(to: CGPoint(x: mid.x - half, y: mid.y))
+            p.addCurve(to: CGPoint(x: mid.x + half, y: mid.y),
+                       control1: CGPoint(x: mid.x - half, y: mid.y - lift * (1 - 0.2 * t)),
+                       control2: CGPoint(x: mid.x + half, y: mid.y - lift * (1 - 0.2 * t)))
+            p.addCurve(to: CGPoint(x: mid.x - half, y: mid.y),
+                       control1: CGPoint(x: mid.x + half * (1 - 0.3 * t), y: mid.y + lift * (1 - 1.7 * t)),
+                       control2: CGPoint(x: mid.x - half * (1 - 0.3 * t), y: mid.y + lift * (1 - 1.7 * t)))
+            p.closeSubpath()
+            eye = p
+        } else {
+            eye = Path(ellipseIn: eyeRect)
+        }
         ctx.fill(eye, s.ink)
-        if s.catchlight {
+        let glint = (1 - b / 0.3) * (1 - t / 0.4)
+        if s.catchlight, glint > 0 {
             let r = w * 0.2
-            ctx.fill(Path(ellipseIn: CGRect(x: eyeRect.midX - w * 0.2 - r, y: eyeRect.minY + h * 0.2, width: r * 2, height: r * 2)), PetRGB(1, 1, 1, 0.95))
+            ctx.fill(Path(ellipseIn: CGRect(x: eyeRect.midX - w * 0.2 - r, y: eyeRect.minY + h * 0.2, width: r * 2, height: r * 2)), PetRGB(1, 1, 1, 0.95 * Double(glint)))
         }
         var lids = ctx
         lids.clip(to: eye.strokedPath(StrokeStyle(lineWidth: 1)).union(eye))
-        // Upper lid: a line that drops with `lid` and slants (inner corner is toward −x for the right eye).
+        // Upper lid: its edge is an arc that follows the eyeball, lowered by `lid` and slanted
+        // (the inner corner is toward −x for the right eye).
         let top = eyeRect.minY - 1
         let drop = CGFloat(lid) * h
         let slantY = CGFloat(slant) * h * 0.42
-        let inner = CGPoint(x: eyeRect.minX - 1, y: top + drop + slantY)
-        let outer = CGPoint(x: eyeRect.maxX + 1, y: top + drop - slantY)
+        let inner = CGPoint(x: eyeRect.minX - 1, y: max(top + drop + slantY, top))
+        let outer = CGPoint(x: eyeRect.maxX + 1, y: max(top + drop - slantY, top))
+        let sag = CGPoint(x: eyeRect.midX, y: (inner.y + outer.y) / 2 + h * 0.22 * CGFloat(min(lid * 2.5, 1)))
         if lid > 0.02 || abs(slant) > 0.05 {
             var upper = Path()
             upper.move(to: CGPoint(x: eyeRect.minX - 2, y: top - 4))
             upper.addLine(to: CGPoint(x: eyeRect.maxX + 2, y: top - 4))
-            upper.addLine(to: CGPoint(x: outer.x + 1, y: max(outer.y, top)))
-            upper.addLine(to: CGPoint(x: inner.x - 1, y: max(inner.y, top)))
+            upper.addLine(to: CGPoint(x: outer.x + 1, y: outer.y))
+            upper.addQuadCurve(to: CGPoint(x: inner.x - 1, y: inner.y), control: sag)
             upper.closeSubpath()
             lids.fill(upper, s.skin)
-            if lid > 0.12 || abs(slant) > 0.2 {
+            if lid > 0.15 || abs(slant) > 0.25 {
                 var edge = Path()
-                edge.move(to: CGPoint(x: inner.x, y: max(inner.y, top)))
-                edge.addLine(to: CGPoint(x: outer.x, y: max(outer.y, top)))
-                lids.stroke(edge, s.ink, width: s.stroke * 0.7)
+                edge.move(to: outer)
+                edge.addQuadCurve(to: inner, control: sag)
+                lids.stroke(edge, s.ink, width: s.stroke * 0.6)
             }
-        }
-        if smile > 0.02 {
-            // Lower lid rises as an arc: cheeks pushing the eye into a smile.
-            let rise = CGFloat(smile) * h * 0.95
-            var lower = Path()
-            lower.move(to: CGPoint(x: eyeRect.minX - 2, y: eyeRect.maxY + 3))
-            lower.addLine(to: CGPoint(x: eyeRect.minX - 2, y: eyeRect.maxY - rise * 0.35))
-            lower.addQuadCurve(to: CGPoint(x: eyeRect.maxX + 2, y: eyeRect.maxY - rise * 0.35), control: CGPoint(x: eyeRect.midX, y: eyeRect.maxY - rise * 1.4))
-            lower.addLine(to: CGPoint(x: eyeRect.maxX + 2, y: eyeRect.maxY + 3))
-            lower.closeSubpath()
-            lids.fill(lower, s.skin)
         }
     }
 

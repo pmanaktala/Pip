@@ -12,6 +12,7 @@ struct PetHomeView: View {
     @State private var showWidgets = false
     @State private var touch = TouchState()
     @State private var purr: Task<Void, Never>?
+    @State private var listening: Task<Void, Never>?
     @Environment(\.scenePhase) private var scenePhase
 
     /// A finger on the room: where it started, whether it began on the pet, whether it moved.
@@ -118,8 +119,15 @@ struct PetHomeView: View {
         .onAppear {
             appState.pet.startClock()
             appState.pet.arrive(now: .now.addingTimeInterval(0.35))
+            // While the pet is on screen, notice when you start or stop listening to something.
+            listening = Task { @MainActor in
+                while !Task.isCancelled {
+                    appState.checkListening()
+                    try? await Task.sleep(for: .seconds(6))
+                }
+            }
         }
-        .onDisappear { appState.pet.stopClock() }
+        .onDisappear { appState.pet.stopClock(); listening?.cancel() }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { appState.pet.arrive(now: .now.addingTimeInterval(0.3)); appState.pet.startClock() }
             else if phase == .background { appState.pet.stopClock() }

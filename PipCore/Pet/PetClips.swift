@@ -8,6 +8,7 @@ public enum PetVignette: String, CaseIterable, Codable, Sendable {
     case sip, deepBreath, shakeOff, fidget, sigh, patSpot, lookUpSmile
     case huff, stomp, pageTurn, chuckle, snore, earTwitch, stir
     case tailWag, groom, flap, waddle, headTilt, daydream, batBall
+    case typing, typing2
 }
 
 public enum PetClips {
@@ -301,6 +302,23 @@ public enum PetClips {
                 bump(\.smile, 0.35, from: 0.6, peak: 1.2, hold: 2.8, end: 3.4),
                 bump(\.blush, 0.3, from: 0.8, peak: 1.4, hold: 2.6, end: 3.3),
                 bump(\.breath, 0.7, from: 1.4, peak: 2.1, end: 3.0),
+            ])
+        case .typing:
+            // Tap-tap-tap behind the lid, eyes tracking the line, a little nod at the end.
+            return PetClip("typing", 3.0, fadeIn: 0.2, fadeOut: 0.4, [
+                osc(\.armL, from: 0.1, to: 2.4, amp: 7, cycles: 7), osc(\.armR, from: 0.1, to: 2.4, amp: 7, cycles: 7, phase: 1),
+                set(\.gazeX, K(0, -0.5), K(2.3, 0.5, .linear), K(2.6, -0.3), K(3.0, 0)),
+                osc(\.headBob, from: 0.1, to: 2.4, amp: 0.6, cycles: 7),
+                bump(\.headNod, 0.12, from: 2.3, peak: 2.5, end: 2.9),
+                bump(\.smile, 0.2, from: 2.3, peak: 2.6, end: 3.0),
+            ])
+        case .typing2:
+            // Reads something, thinks, then a quick burst of typing.
+            return PetClip("typing2", 3.2, fadeIn: 0.25, fadeOut: 0.4, [
+                bump(\.headTilt, 7, from: 0, peak: 0.5, hold: 1.4, end: 1.8),
+                bump(\.browRaise, 0.6, from: 0.2, peak: 0.5, hold: 1.3, end: 1.7),
+                set(\.gazeY, K(0, 0.45), K(0.5, 0.1), K(1.5, 0.1), K(1.9, 0.5), K(3.2, 0.45)),
+                osc(\.armL, from: 1.8, to: 3.1, amp: 8, cycles: 5), osc(\.armR, from: 1.8, to: 3.1, amp: 8, cycles: 5, phase: 1),
             ])
         case .batBall:
             return PetClip("batBall", 2.2, [

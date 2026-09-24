@@ -27,8 +27,8 @@ Three companions, each a distinct silhouette at 24 pt. Fewer, finished.
 
 | | Pebble — penguin (default, icon) | Mochi — cat | Biscuit — dog |
 |---|---|---|---|
-| Silhouette | Egg body, no ears, flippers, orange feet | Triangle ears, long curling tail | Floppy ears, short wagging tail |
-| Palette | Charcoal, cream face and belly, apricot beak and feet | Warm ginger, cream muzzle and chest, soft stripes | Honey, cream muzzle, chocolate ear |
+| Silhouette | Egg body, no ears, flippers, orange feet | Triangle ears, long curling tail | Soft scalloped outline, top-knot, long curly ears, fluffy plume tail |
+| Palette | Charcoal, cream face and belly, apricot beak and feet | Warm ginger, cream muzzle and chest, soft stripes | Fluffy warm white (a Maltese-poodle sort), curly ears a shade deeper, rosy nose |
 | Nature | Earnest and a bit clumsy. Flaps when happy. | Independent, secretly devoted. Slow-blinks at you. | Wholehearted. Whole back end wags. |
 | Signatures | Flipper flap, waddle, belly-slide shuffle | Slow blink, paw groom, tail curl | Tail wag, head tilt, ear flop |
 
@@ -46,7 +46,7 @@ Old `capybara` and `redPanda` choices migrate to Pebble.
   comes from behind. Paired parts are written once and mirrored.
 - **Face.** Eyes are dark vertical ovals with one small catchlight, set wide and a little below
   the middle of the head. Emotion comes from **lids**, not stickers: the upper lid drops and
-  tilts (sleepy, sad, cross), the lower lid rises (smiling eyes). Closed eyes are strokes: `‿`
+  tilts (sleepy, sad, cross) along an arc; smiling eyes bend into a crescent. Closed eyes are strokes: `‿`
   asleep, `^` delighted. Brows only where a mood needs them. Mouths are small.
 - **Canvas.** 200 × 200 units, floor at `y = 170`, centre line `x = 100`. Feet touch the floor.
 - **Three detail levels.** `full` (≥ 90 pt), `face` (40–90 pt: head and shoulders, no props),
@@ -70,6 +70,11 @@ a beat (so you feel seen), then settles into **keeping you company** in that moo
 | Frustrated | Stomp, puff of steam | Arms folded, cheeks puffed | huff, stomp, lets it go with a shake |
 
 Intensity changes amplitude and tempo, never the story. A mood stays fresh for 8 hours.
+
+**Mood gates activity.** After a hard feeling the pet only keeps you company; after an easy one it
+can get on with its day in that mood (working at a laptop in work hours, getting ready for bed).
+**Context** comes only from on-device signals with no permission: the clock, and whether other
+audio is playing (headphones). No location, no accounts. Full table: [WhatShowsWhen.md](WhatShowsWhen.md).
 
 **The pet's day** (no fresh mood): asleep 22:30–6:30 (curled, `zzz`), waking until 8 (stretch,
 yawn, rub eyes), then daydreaming, playing, reading or napping by the hour, reading in the

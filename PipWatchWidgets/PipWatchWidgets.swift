@@ -46,7 +46,7 @@ struct PetTimelineProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<PetEntry>) -> Void) {
-        let moments = PetWidgetMoment.timeline(for: current)
+        let moments = PetWidgetMoment.timeline(for: current, step: 5)
         completion(Timeline(entries: moments.map { PetEntry(date: $0.date, moment: $0) }, policy: .atEnd))
     }
 

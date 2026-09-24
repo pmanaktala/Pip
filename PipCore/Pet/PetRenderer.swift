@@ -15,15 +15,17 @@ public struct PetPaint {
     public var species: PetSpecies
     public var pose: PetPose
     public var prop: PetProp?
+    public var wear: PetWear?
     public var detail: PetDetail
     /// Seconds, for things that drift (steam, notes, zzz). `nil` draws them at rest.
     public var time: Double?
     public var palette: PetPalette
 
-    public init(species: PetSpecies, pose: PetPose, prop: PetProp? = nil, detail: PetDetail = .full, time: Double? = nil) {
+    public init(species: PetSpecies, pose: PetPose, prop: PetProp? = nil, wear: PetWear? = nil, detail: PetDetail = .full, time: Double? = nil) {
         self.species = species
         self.pose = pose.clamped()
         self.prop = prop
+        self.wear = wear
         self.detail = detail
         self.time = time
         self.palette = .palette(for: species)
@@ -55,14 +57,14 @@ struct PetFigure {
     static func of(_ species: PetSpecies) -> PetFigure {
         switch species {
         case .penguin:
-            PetFigure(headCenter: CGPoint(x: 100, y: 74), headRX: 41, headRY: 39, neck: CGPoint(x: 100, y: 104), shoulder: CGPoint(x: 37, y: 106),
-                      eyeX: 15.5, eyeY: 1, eyeW: 7.6, eyeH: 10, mouthY: 14, blushX: 26, blushY: 12)
+            PetFigure(headCenter: CGPoint(x: 100, y: 70), headRX: 37.5, headRY: 35.5, neck: CGPoint(x: 100, y: 100), shoulder: CGPoint(x: 36, y: 104),
+                      eyeX: 14.5, eyeY: 1, eyeW: 7.2, eyeH: 9.6, mouthY: 13, blushX: 18.5, blushY: 11.5)
         case .cat:
             PetFigure(headCenter: CGPoint(x: 100, y: 78), headRX: 47, headRY: 37, neck: CGPoint(x: 100, y: 108), shoulder: CGPoint(x: 19, y: 118),
-                      eyeX: 19, eyeY: 0, eyeW: 8, eyeH: 10.5, mouthY: 16, blushX: 30, blushY: 11)
+                      eyeX: 19, eyeY: 0, eyeW: 8, eyeH: 10.5, mouthY: 16, blushX: 25, blushY: 10)
         case .dog:
             PetFigure(headCenter: CGPoint(x: 100, y: 77), headRX: 44, headRY: 39, neck: CGPoint(x: 100, y: 108), shoulder: CGPoint(x: 20, y: 118),
-                      eyeX: 18, eyeY: -3, eyeW: 8, eyeH: 10.5, mouthY: 21, blushX: 30, blushY: 9)
+                      eyeX: 18, eyeY: -2, eyeW: 9, eyeH: 10.8, mouthY: 21, blushX: 23, blushY: 8)
         }
     }
 
@@ -133,11 +135,15 @@ public enum PetRenderer {
             case .penguin: PenguinArt.body(body, p, fig)
             case .cat, .dog: QuadrupedArt.body(body, p, fig)
             }
-            if let prop = p.prop, prop.isWorn == false, prop.drawnBehindArms { PetPropArt.held(body, p, fig, prop) }
+            // Floor props stay on the floor: they are drawn in the room, not with the body, so a
+            // hop or a lean never lifts them. Held props go through the body transform with the paws.
+            if let prop = p.prop, prop.onFloor, prop.drawnBehindArms { PetPropArt.held(ctx, p, fig, prop) }
+            if let prop = p.prop, !prop.onFloor, prop.drawnBehindArms { PetPropArt.held(body, p, fig, prop) }
             drawArms(body, p, fig, front: false)
             drawHead(head, p, fig)
-            if let prop = p.prop, prop.isWorn == false, !prop.drawnBehindArms { PetPropArt.held(body, p, fig, prop) }
+            if let prop = p.prop, !prop.drawnBehindArms, !prop.drawnInFront { PetPropArt.held(body, p, fig, prop) }
             drawArms(body, p, fig, front: true)
+            if let prop = p.prop, prop.drawnInFront { PetPropArt.held(prop.onFloor ? ctx : body, p, fig, prop) }
         }
         PetEffects.draw(ctx, body: body, head: head, p, fig)
     }
@@ -148,7 +154,7 @@ public enum PetRenderer {
         case .cat: CatArt.head(head, p, fig)
         case .dog: DogArt.head(head, p, fig)
         }
-        if p.prop == .nightcap { PetPropArt.nightcap(head, p, fig) }
+        if let wear = p.wear { PetPropArt.worn(head, p, fig, wear) }
     }
 
     /// Arms at the side (angle ≥ 0) sit under the head; folded arms (angle < 0) cross in front of it.

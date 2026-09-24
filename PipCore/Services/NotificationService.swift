@@ -123,21 +123,18 @@ public final class NotificationService {
             let minute = 15 + Int(PetMath.hash01(seed + 5) * 45)
             let date = calendar.date(bySettingHour: 21, minute: minute, second: 0, of: day)!
             let bodies: [(String) -> String] = [
-                { "\($0) looks sleepy." },
-                { "\($0) is winding down for the night." },
-                { "\($0) found a comfortable spot." },
+                { "\($0) has its nightcap on." },
+                { "\($0) is winding down with some cocoa." },
+                { "\($0) is getting ready for bed." },
             ]
             return Plan(category: .sleepy, date: date, body: bodies[variant])
         case .moments:
             let hour = 9 + Int(PetMath.hash01(seed + 3) * 10) // 9…18
             let minute = Int(PetMath.hash01(seed + 5) * 60)
             let date = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day)!
-            let bodies: [(String) -> String] = [
-                { "\($0) is watching something out the window." },
-                { "\($0) is doing absolutely nothing, very well." },
-                { "\($0) stretched, then sat back down." },
-            ]
-            return Plan(category: .moments, date: date, body: bodies[variant])
+            // Says what the pet is actually doing at that moment, so opening the app shows it.
+            let activity = PetDay.activity(at: date, calendar: calendar)
+            return Plan(category: .moments, date: date, body: { "\($0) \(activity.phrase)." })
         }
     }
 }

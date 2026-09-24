@@ -29,14 +29,16 @@ public struct PetPoseView: View, Animatable {
     public var species: PetSpecies
     public var pose: PetPose
     public var prop: PetProp?
+    public var wear: PetWear?
     public var framing: PetFraming
     public var time: Double?
     public var showsShadow: Bool
 
-    public init(species: PetSpecies, pose: PetPose, prop: PetProp? = nil, framing: PetFraming = .full, time: Double? = nil, showsShadow: Bool = true) {
+    public init(species: PetSpecies, pose: PetPose, prop: PetProp? = nil, wear: PetWear? = nil, framing: PetFraming = .full, time: Double? = nil, showsShadow: Bool = true) {
         self.species = species
         self.pose = pose
         self.prop = prop
+        self.wear = wear
         self.framing = framing
         self.time = time
         self.showsShadow = showsShadow
@@ -54,9 +56,8 @@ public struct PetPoseView: View, Animatable {
             ctx.translateBy(x: (size.width - side) / 2, y: (size.height - side) / 2)
             ctx.scaleBy(x: side / 200, y: side / 200)
             Self.frame(&ctx, species: species, framing: framing)
-            // Props on the floor and in the lap belong to the full pet only.
-            let shownProp: PetProp? = framing == .full || prop == .nightcap ? prop : nil
-            PetRenderer.draw(ctx, PetPaint(species: species, pose: pose, prop: framing == .badge && prop != .nightcap ? nil : shownProp, detail: framing.detail, time: time),
+            // Held props belong to the full pet; what it wears shows at every size.
+            PetRenderer.draw(ctx, PetPaint(species: species, pose: pose, prop: framing == .full ? prop : nil, wear: wear, detail: framing.detail, time: time),
                              showsShadow: showsShadow)
         }
         .aspectRatio(1, contentMode: .fit)
@@ -88,9 +89,9 @@ public struct PetView: View {
     public var showsShadow: Bool
 
     /// A pet in a stance, showing the stance's `hold` pose.
-    public init(species: PetSpecies, stance: PetStance, hold: Int = 0, framing: PetFraming = .full, showsShadow: Bool = true) {
+    public init(species: PetSpecies, stance: PetStance, hold: Int = 0, wear: PetWear? = nil, framing: PetFraming = .full, showsShadow: Bool = true) {
         self.species = species
-        self.scene = PetScene(species: species, stance: stance)
+        self.scene = PetScene(species: species, stance: stance, wear: wear ?? (stance.isAsleep ? .nightcap : nil))
         self.hold = hold
         self.framing = framing
         self.showsShadow = showsShadow
@@ -107,7 +108,7 @@ public struct PetView: View {
         if let token {
             PetPoseView(species: species, pose: PetStance.tokenFace(token, species), framing: framing, showsShadow: false)
         } else {
-            PetPoseView(species: species, pose: PetDirector.hold(scene, index: hold), prop: scene.prop, framing: framing, showsShadow: showsShadow)
+            PetPoseView(species: species, pose: PetDirector.hold(scene, index: hold), prop: scene.prop, wear: scene.wear, framing: framing, showsShadow: showsShadow)
         }
     }
 
@@ -146,11 +147,11 @@ public struct LivePetView: View {
 
     public var body: some View {
         if reduceMotion || paused {
-            PetPoseView(species: scene.species, pose: PetDirector.hold(scene), prop: scene.prop, framing: framing, showsShadow: showsShadow)
+            PetPoseView(species: scene.species, pose: PetDirector.hold(scene), prop: scene.prop, wear: scene.wear, framing: framing, showsShadow: showsShadow)
                 .animation(.smooth(duration: 0.6), value: scene.stance)
         } else {
             TimelineView(.animation(minimumInterval: frameInterval)) { context in
-                PetPoseView(species: scene.species, pose: PetDirector.pose(scene, at: context.date), prop: scene.prop, framing: framing,
+                PetPoseView(species: scene.species, pose: PetDirector.pose(scene, at: context.date), prop: scene.prop, wear: scene.wear, framing: framing,
                             time: context.date.timeIntervalSince1970, showsShadow: showsShadow)
             }
         }
@@ -198,7 +199,7 @@ public struct PetStage: View {
                     if live {
                         LivePetView(scene: scene)
                     } else {
-                        PetPoseView(species: scene.species, pose: PetDirector.hold(scene, index: hold), prop: scene.prop)
+                        PetPoseView(species: scene.species, pose: PetDirector.hold(scene, index: hold), prop: scene.prop, wear: scene.wear)
                     }
                 }
                 .frame(width: side, height: side)

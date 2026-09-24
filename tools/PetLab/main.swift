@@ -13,12 +13,21 @@ struct PetLab {
         case "check": LabCheck.choices(); return
         case "tokens": view = AnyView(LabTokens.sheet())
         case "cast": view = AnyView(LabCast.sheet())
+        case "eyes": view = AnyView(LabEyes.sheet(species(args)))
+        case "smile": view = AnyView(LabSmile.sheet())
+        case "blush": view = AnyView(LabBlush.sheet())
+        case "floor": view = AnyView(LabFloorProps.sheet())
         case "reactions": view = AnyView(LabFilm.strips(species: species(args), rows: LabFilm.reactions(species(args))))
         case "vignettes": view = AnyView(LabFilm.strips(species: species(args), rows: LabFilm.vignettes(species(args)), size: 90))
         case "stances":
             let s = species(args)
             let stances: [PetStance] = Mood.allCases.map { .mood($0, .moderate) } + PetActivity.allCases.map { .life($0) } + [.meditating]
-            view = AnyView(LabFilm.strips(species: s, rows: stances.map { st in LabFilm.Row(title: "\(st)", frames: st.holds(s).map { ($0, st.prop) }) }, size: 140))
+                + [.busy(.working, .happy, .moderate), .busy(.working, .calm, .moderate), .busy(.windingDown, .happy, .moderate)]
+            view = AnyView(LabFilm.strips(species: s, rows: stances.map { st in LabFilm.Row(title: "\(st)".replacingOccurrences(of: "petlab.", with: ""), frames: st.holds(s).map { ($0, st.prop) }, wear: st.isAsleep || st.activity == .windingDown ? .nightcap : nil) }, size: 140))
+        case "wear":
+            let s = species(args)
+            let cases: [(PetStance, PetWear?)] = [(.mood(.happy, .moderate), .headphones), (.mood(.sad, .moderate), .headphones), (.mood(.sad, .moderate), .nightcap), (.busy(.working, .happy, .moderate), nil), (.busy(.working, .neutral, .moderate), .headphones), (.life(.sleeping), .nightcap)]
+            view = AnyView(LabFilm.strips(species: s, rows: [LabFilm.Row(title: "wear", frames: cases.map { ($0.0.rest(s), $0.0.prop) }, wears: cases.map(\.1))], size: 170))
         case "director":
             let s = species(args)
             let stances: [PetStance] = [.mood(.happy, .moderate), .mood(.stressed, .moderate), .mood(.sad, .moderate), .life(.reading), .life(.sleeping)]
@@ -44,6 +53,7 @@ struct LabPet: View {
     var species: PetSpecies
     var pose: PetPose
     var prop: PetProp? = nil
+    var wear: PetWear? = nil
     var detail: PetDetail = .full
     var body: some View {
         Canvas { ctx, size in
@@ -53,7 +63,8 @@ struct LabPet: View {
             if detail == .badge {
                 PetPoseView.frame(&c, species: species, framing: .badge)
             }
-            PetRenderer.draw(c, PetPaint(species: species, pose: pose, prop: prop, detail: detail, time: 0.4))
+            if detail == .face { PetPoseView.frame(&c, species: species, framing: .face) }
+            PetRenderer.draw(c, PetPaint(species: species, pose: pose, prop: prop, wear: wear, detail: detail, time: 0.4))
         }
     }
 }
@@ -74,7 +85,7 @@ enum LabSheets {
         var joy = PetPose(); joy.armL = 150; joy.armR = 150; joy.lift = 10; joy.smileEyes = 1; joy.mouthOpen = 0.8; joy.smile = 1; joy.sparkles = 1; joy.squash = -0.2
         var sleep = PetPose(); sleep.lidL = 1; sleep.lidR = 1; sleep.headNod = 0.5; sleep.headTilt = -10; sleep.slump = 0.4; sleep.zzz = 1; sleep.armL = -40; sleep.armR = -40
         var read = PetPose(); read.armL = -52; read.armR = -52; read.gazeY = 0.8; read.headNod = 0.35; read.lidL = 0.25; read.lidR = 0.25
-        let rows: [(String, PetPose, PetProp?)] = [("rest", PetPose(), nil), ("happy wave", smile, nil), ("joy", joy, nil), ("sad", sad, .blanket), ("cross", cross, nil), ("mug", mug, .mug), ("reading", read, .book), ("asleep", sleep, .nightcap)]
+        let rows: [(String, PetPose, PetProp?)] = [("rest", PetPose(), nil), ("happy wave", smile, nil), ("joy", joy, nil), ("sad", sad, .blanket), ("cross", cross, nil), ("mug", mug, .mug), ("reading", read, .book), ("asleep", sleep, .blanket)]
         return VStack(alignment: .leading, spacing: 8) {
             ForEach(PetSpecies.allCases, id: \.self) { sp in
                 HStack(spacing: 6) {

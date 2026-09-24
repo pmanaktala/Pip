@@ -154,7 +154,9 @@ import Testing
         #expect(PetDay.activity(at: at(7), calendar: cal) == .waking)
         #expect(PetDay.activity(at: at(20), calendar: cal) == .reading)
         #expect(PetDay.activity(at: at(22), calendar: cal) == .windingDown)
-        #expect([.daydreaming, .playing, .reading].contains(PetDay.activity(at: at(10, 30), calendar: cal)))
+        #expect(PetDay.activity(at: at(10, 30), calendar: cal) == .working, "weekday work hours")
+        let saturday = at(10, 30).addingTimeInterval(3 * 86400)
+        #expect([.daydreaming, .playing, .reading].contains(PetDay.activity(at: saturday, calendar: cal)), "no work at the weekend")
     }
 
     @Test func freshMoodWinsThenFades() {
@@ -164,11 +166,48 @@ import Testing
         if case .life = snap.stance(at: logged.addingTimeInterval(PetSnapshot.freshness + 60)) {} else { Issue.record("mood should fade") }
     }
 
+    /// Mood gates what the pet does: never cheerful work after a hard feeling.
+    @Test func moodGatesActivities() {
+        let cal = Calendar(identifier: .gregorian)
+        let workday = at(10, 30)   // a Wednesday
+        #expect(PetDay.activity(at: workday, calendar: cal) == .working)
+        let logged = workday.addingTimeInterval(-1800)
+        for mood in [Mood.sad, .stressed, .tired, .frustrated] {
+            let snap = PetSnapshot(identity: .placeholder, mood: mood, intensity: .moderate, loggedAt: logged)
+            #expect(snap.stance(at: workday, calendar: cal) == .mood(mood, .moderate), "\(mood) keeps you company")
+        }
+        for mood in [Mood.happy, .calm, .neutral, .excited] {
+            let snap = PetSnapshot(identity: .placeholder, mood: mood, intensity: .moderate, loggedAt: logged)
+            #expect(snap.stance(at: workday, calendar: cal) == .busy(.working, mood, .moderate), "\(mood) gets on with work")
+        }
+        // Right after a log the pet is with you in the mood, not busy.
+        let fresh = PetSnapshot(identity: .placeholder, mood: .happy, intensity: .moderate, loggedAt: workday.addingTimeInterval(-20))
+        #expect(fresh.stance(at: workday, calendar: cal) == .mood(.happy, .moderate))
+    }
+
+    @Test func nightDozesAndWearsTheNightcap() {
+        let cal = Calendar(identifier: .gregorian)
+        let late = at(23, 30)
+        let sad = PetSnapshot(identity: .placeholder, mood: .sad, intensity: .moderate, loggedAt: late.addingTimeInterval(-600))
+        #expect(sad.stance(at: late, calendar: cal) == .mood(.sad, .moderate), "stays up with you")
+        #expect(PetWear.choose(for: sad.stance(at: late, calendar: cal), at: late, music: false, calendar: cal) == .nightcap)
+        let later = PetSnapshot(identity: .placeholder, mood: .sad, intensity: .moderate, loggedAt: late.addingTimeInterval(-5400))
+        #expect(later.stance(at: late, calendar: cal) == .life(.sleeping), "then dozes off beside you")
+        #expect(PetWear.choose(for: .mood(.happy, .moderate), at: at(15), music: true, calendar: cal) == .headphones)
+        #expect(PetWear.choose(for: .life(.sleeping), at: late, music: true, calendar: cal) == .nightcap, "asleep, it never wears headphones")
+    }
+
     @Test func widgetTimelineIsOrderedAndCyclesPoses() {
         let moments = PetWidgetMoment.timeline(for: PetSnapshot(identity: .placeholder), from: at(9, 10))
         #expect(moments.count >= 16)
         #expect(zip(moments, moments.dropFirst()).allSatisfy { $0.date < $1.date })
         #expect(Set(moments.map(\.hold)).count > 1)
+        // The pet shifts on every entry: no two neighbouring entries share a pose.
+        for (a, b) in zip(moments.dropFirst(), moments.dropFirst(2)) where a.stance == b.stance {
+            #expect(a.hold != b.hold, "\(a.date) → \(b.date)")
+        }
+        let watch = PetWidgetMoment.timeline(for: PetSnapshot(identity: .placeholder), from: at(9, 10), step: 5)
+        #expect(watch.count >= 90, "every five minutes on the watch")
     }
 }
 

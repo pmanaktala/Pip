@@ -16,20 +16,24 @@ public struct PetWidgetMoment: Sendable {
 
     public var identity: PetIdentity { snapshot.identity }
     public var stance: PetStance { snapshot.stance(at: date) }
-    public var scene: PetScene { PetScene(species: identity.species, stance: stance) }
+    public var scene: PetScene { PetScene(species: identity.species, stance: stance, wear: PetWear.choose(for: stance, at: date, music: false)) }
     public var status: String { stance.describe(identity.name) }
     public var freshMood: Mood? { snapshot.freshMood(at: date) }
 
     /// Entries for a widget timeline: every half hour for eight hours, plus the moment the
     /// pet's day or the mood's freshness changes, each with the next still pose. The system
     /// animates between entries, so the pet visibly shifts now and then without any work.
-    public static func timeline(for snapshot: PetSnapshot, from now: Date = .now, calendar: Calendar = .current) -> [PetWidgetMoment] {
+    /// `step` is how often the pet shifts: every 10 minutes on the Home Screen, every 5 on the
+    /// watch, so a glance at your wrist catches it doing something a little different.
+    public static func timeline(for snapshot: PetSnapshot, from now: Date = .now, step minutes: Int = 10, calendar: Calendar = .current) -> [PetWidgetMoment] {
         var dates: Set<Date> = [now]
-        var t = now
         let end = now.addingTimeInterval(8 * 3600)
+        // Align to the clock (…:00, :05, :10) so every surface shifts at the same moment.
+        let minute = calendar.component(.minute, from: now)
+        var t = calendar.date(bySetting: .second, value: 0, of: now.addingTimeInterval(Double((minutes - minute % minutes) * 60))) ?? now.addingTimeInterval(Double(minutes * 60))
         while t < end {
-            t = calendar.nextDate(after: t, matching: DateComponents(minute: t.minuteOfHour(calendar) < 30 ? 30 : 0), matchingPolicy: .nextTime) ?? t.addingTimeInterval(1800)
             dates.insert(t)
+            t = t.addingTimeInterval(Double(minutes * 60))
         }
         var change = now
         for _ in 0..<6 {
@@ -41,7 +45,24 @@ public struct PetWidgetMoment: Sendable {
             if fade > now, fade < end { dates.insert(fade) }
         }
         let sorted = dates.sorted()
-        return sorted.enumerated().map { PetWidgetMoment(snapshot: snapshot, date: $1, hold: $0) }
+        // Walk the still poses in a shuffled order that never shows the same one twice in a row.
+        var previous = -1
+        return sorted.enumerated().map { i, date in
+            let slot = Int(date.timeIntervalSince1970 / Double(minutes * 60))
+            let count = snapshot.stance(at: date, calendar: calendar).holds(snapshot.identity.species).count
+            var hold = i == 0 ? 0 : Self.pose(for: slot, of: count)
+            if hold == previous, count > 1 { hold = (hold + 1) % count }
+            previous = hold
+            return PetWidgetMoment(snapshot: snapshot, date: date, hold: hold)
+        }
+    }
+
+    /// A still pose for a clock slot: never the same as the slot before.
+    static func pose(for slot: Int, of count: Int) -> Int {
+        guard count > 1 else { return 0 }
+        let a = Int(PetMath.hash01(Double(slot) * 1.618) * Double(count)) % count
+        let b = Int(PetMath.hash01(Double(slot - 1) * 1.618) * Double(count)) % count
+        return a == b ? (a + 1) % count : a
     }
 }
 
@@ -211,10 +232,16 @@ public struct PetAccessoryView: View {
 
     private var face: some View {
         PetPoseView(species: moment.identity.species, pose: PetDirector.hold(moment.scene, index: moment.hold),
-                    prop: moment.stance.prop == .nightcap ? .nightcap : nil, framing: .badge, showsShadow: false)
+                    wear: moment.scene.wear, framing: .badge, showsShadow: false)
     }
 
     public var body: some View {
+        content
+            .animation(.smooth(duration: 1.0), value: moment.hold)
+    }
+
+    @ViewBuilder
+    private var content: some View {
         switch family {
         case .accessoryCircular:
             ZStack {

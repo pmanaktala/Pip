@@ -16,6 +16,8 @@ public enum PetDay {
         case 21.5...: return .windingDown
         case 18.5...: return .reading
         case 14..<15 where PetMath.hash01(day * 3.1) < 0.55: return .napping
+        case 9..<12 where isWeekday(c.weekday): return .working
+        case 13.5..<17.5 where isWeekday(c.weekday): return .working
         default:
             // Ninety-minute blocks through the day, never the same thing twice in a row.
             let options: [PetActivity] = [.daydreaming, .playing, .reading]
@@ -25,6 +27,26 @@ public enum PetDay {
             if block > 0, i == pick(block - 1) { i = (i + 1) % 3 }
             return options[i]
         }
+    }
+
+    static func isWeekday(_ weekday: Int?) -> Bool {
+        guard let weekday else { return false }
+        return weekday != 1 && weekday != 7
+    }
+
+    /// Bedtime: 21:30 until 6:30. The pet wears its nightcap whatever else it is doing.
+    public static func isBedtime(_ date: Date, calendar: Calendar = .current) -> Bool {
+        let c = calendar.dateComponents([.hour, .minute], from: date)
+        var h = Double(c.hour ?? 12) + Double(c.minute ?? 0) / 60
+        #if DEBUG
+        if let forced = ProcessInfo.processInfo.environment["PIP_HOUR"], let fh = Double(forced) { h = fh }
+        #endif
+        return h >= 21.5 || h < 6.5
+    }
+
+    /// Deep night, when a pet left alone falls asleep: 22:30 until 6:30.
+    public static func isNight(_ date: Date, calendar: Calendar = .current) -> Bool {
+        activity(at: date, calendar: calendar) == .sleeping
     }
 
     /// When the current activity ends — used to schedule widget timeline entries at the change.

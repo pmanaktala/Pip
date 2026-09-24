@@ -1,22 +1,42 @@
 import SwiftUI
 
-/// The few things a pet holds or wears. Each belongs to a stance (Bible §4) and is drawn in the
-/// pet's own transform so it moves with the body, in the paws.
+/// The few things a pet holds. Each belongs to a stance (Bible §4) and is drawn in the pet's own
+/// transform so it moves with the body, in the paws. At most one at a time.
 public enum PetProp: String, Codable, Sendable, Hashable, CaseIterable {
     /// A warm mug held at the chest (calm, the evening). Rises to the mouth for a sip.
     case mug
     /// A book held open in both paws (reading).
     case book
-    /// A blanket round the shoulders (tired, sad, winding down, asleep).
+    /// A blanket round the shoulders (tired, sad).
     case blanket
-    /// A nightcap (asleep).
-    case nightcap
     /// A ball on the floor beside the pet (playing).
     case ball
+    /// A small laptop on the floor, lid toward the pet (working).
+    case laptop
 
-    var isWorn: Bool { self == .nightcap }
     /// Drawn after the body and before the arms (the paws go over or beside it).
     var drawnBehindArms: Bool { self == .blanket || self == .ball }
+    /// Drawn over everything else: the pet works behind it.
+    var drawnInFront: Bool { self == .laptop }
+    /// Rests on the floor rather than in the paws.
+    var onFloor: Bool { self == .laptop || self == .ball }
+}
+
+/// The one thing a pet may wear on its head, on top of any held prop.
+public enum PetWear: String, Codable, Sendable, Hashable, CaseIterable {
+    /// Bedtime: from 21:30 until morning, and whenever it sleeps.
+    case nightcap
+    /// You're listening to something (another app is playing audio).
+    case headphones
+
+    /// What the pet wears for a stance at a moment. Headphones win while it's awake; asleep it
+    /// only ever wears the nightcap. Meditating wears nothing.
+    public static func choose(for stance: PetStance, at date: Date, music: Bool, calendar: Calendar = .current) -> PetWear? {
+        if stance == .meditating { return nil }
+        if stance.isAsleep { return .nightcap }
+        if music { return .headphones }
+        return PetDay.isBedtime(date, calendar: calendar) ? .nightcap : nil
+    }
 }
 
 enum PetPropArt {
@@ -26,7 +46,48 @@ enum PetPropArt {
         case .book: book(ctx, p, fig)
         case .blanket: blanket(ctx, p, fig)
         case .ball: ball(ctx, p)
-        case .nightcap: break
+        case .laptop: laptop(ctx, p)
+        }
+    }
+
+    static func worn(_ head: GraphicsContext, _ p: PetPaint, _ fig: PetFigure, _ wear: PetWear) {
+        switch wear {
+        case .nightcap: nightcap(head, p, fig)
+        case .headphones: headphones(head, p, fig)
+        }
+    }
+
+    /// A little laptop on the floor with its lid toward the pet: we see the back of the screen
+    /// (a paw on it) and the pet peeks over the top.
+    static func laptop(_ ctx: GraphicsContext, _ p: PetPaint) {
+        let floor = PetFigure.floor
+        let metal = PetRGB(0.86, 0.88, 0.92)
+        let base = Path(roundedRect: CGRect(x: 60, y: floor - 9, width: 80, height: 8), cornerSize: CGSize(width: 3, height: 3), style: .continuous)
+        PetDraw.solid(ctx, base, metal.mix(PetRGB(0.5, 0.52, 0.6), 0.25), rim: p.rim, depth: 2)
+        let lid = Path(roundedRect: CGRect(x: 66, y: floor - 44, width: 68, height: 37), cornerSize: CGSize(width: 5, height: 5), style: .continuous)
+        PetDraw.solid(ctx, lid, metal, rim: p.rim, depth: 5)
+        // A tiny paw print on the lid, in the pet's own colour.
+        let c = CGPoint(x: 100, y: floor - 26)
+        let mark = p.palette.prop.alpha(0.85)
+        ctx.fill(PetDraw.ellipse(CGPoint(x: c.x, y: c.y + 2), 4.2, 3.4), mark)
+        for (dx, dy) in [(-4.6, -3.2), (-1.6, -5.4), (1.6, -5.4), (4.6, -3.2)] as [(CGFloat, CGFloat)] {
+            ctx.fill(PetDraw.ellipse(CGPoint(x: c.x + dx, y: c.y + dy), 1.5, 1.8), mark)
+        }
+    }
+
+    /// Headphones: a band over the crown and a cup over each side of the head.
+    static func headphones(_ head: GraphicsContext, _ p: PetPaint, _ fig: PetFigure) {
+        let rx = fig.headRX, ry = fig.headRY
+        let color = p.palette.prop.mix(PetRGB(0.2, 0.2, 0.28), 0.15)
+        var band = Path()
+        band.move(to: CGPoint(x: -rx * 0.96, y: -ry * 0.05))
+        band.addCurve(to: CGPoint(x: rx * 0.96, y: -ry * 0.05), control1: CGPoint(x: -rx * 0.98, y: -ry * 1.38), control2: CGPoint(x: rx * 0.98, y: -ry * 1.38))
+        head.stroke(band, color.rim, width: 6 + p.rim * 2)
+        head.stroke(band, color, width: 6)
+        PetDraw.mirrored(head) { c, _ in
+            let cup = Path(roundedRect: CGRect(x: rx * 0.84, y: -ry * 0.3, width: 12, height: 22), cornerSize: CGSize(width: 6, height: 6), style: .continuous)
+            PetDraw.solid(c, cup, color, rim: p.rim, depth: 3)
+            c.fill(Path(roundedRect: CGRect(x: rx * 0.84 - 2, y: -ry * 0.3 + 3, width: 4, height: 16), cornerSize: CGSize(width: 2, height: 2)), PetRGB(0.98, 0.96, 0.92))
         }
     }
 

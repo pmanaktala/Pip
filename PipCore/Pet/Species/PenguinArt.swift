@@ -16,13 +16,13 @@ enum PenguinArt {
         }
 
         // The egg: widest low down, narrowing into the head.
-        let w: CGFloat = 45 + breathe, top: CGFloat = 86 - breathe * 0.6, bottom = floor - 4
+        let w: CGFloat = 44 + breathe, top: CGFloat = 78 - breathe * 0.6, bottom = floor - 4
         var egg = Path()
         egg.move(to: CGPoint(x: 100, y: top))
-        egg.addCurve(to: CGPoint(x: 100 + w, y: 136), control1: CGPoint(x: 100 + w * 0.62, y: top), control2: CGPoint(x: 100 + w, y: 108))
-        egg.addCurve(to: CGPoint(x: 100, y: bottom), control1: CGPoint(x: 100 + w, y: 158), control2: CGPoint(x: 100 + w * 0.58, y: bottom))
-        egg.addCurve(to: CGPoint(x: 100 - w, y: 136), control1: CGPoint(x: 100 - w * 0.58, y: bottom), control2: CGPoint(x: 100 - w, y: 158))
-        egg.addCurve(to: CGPoint(x: 100, y: top), control1: CGPoint(x: 100 - w, y: 108), control2: CGPoint(x: 100 - w * 0.62, y: top))
+        egg.addCurve(to: CGPoint(x: 100 + w, y: 132), control1: CGPoint(x: 100 + w * 0.55, y: top), control2: CGPoint(x: 100 + w, y: 100))
+        egg.addCurve(to: CGPoint(x: 100, y: bottom), control1: CGPoint(x: 100 + w, y: 157), control2: CGPoint(x: 100 + w * 0.58, y: bottom))
+        egg.addCurve(to: CGPoint(x: 100 - w, y: 132), control1: CGPoint(x: 100 - w * 0.58, y: bottom), control2: CGPoint(x: 100 - w, y: 157))
+        egg.addCurve(to: CGPoint(x: 100, y: top), control1: CGPoint(x: 100 - w, y: 100), control2: CGPoint(x: 100 - w * 0.55, y: top))
         egg.closeSubpath()
         PetDraw.solid(ctx, egg, pal.coat, rim: p.rim, depth: 7)
 
@@ -30,7 +30,7 @@ enum PenguinArt {
         var belly = ctx
         belly.clip(to: egg)
         let bx = 100 + CGFloat(pose.turn) * 6
-        let bellyPath = PetDraw.ellipse(CGPoint(x: bx, y: 138), 31 + breathe * 0.8, 29 + breathe * 0.5)
+        let bellyPath = PetDraw.ellipse(CGPoint(x: bx, y: 134), 31 + breathe * 0.8, 32 + breathe * 0.5)
         PetDraw.solid(belly, bellyPath, pal.cream, rim: 0, depth: 4)
     }
 
@@ -58,15 +58,15 @@ enum PenguinArt {
         let fx = turn * 7, fy = nod * 5
         var face = ctx
         face.clip(to: skull)
-        let lobes = PetDraw.ellipse(CGPoint(x: fx + 14.5, y: fy - 1), 17.5, 18.5)
-            .union(PetDraw.ellipse(CGPoint(x: fx - 14.5, y: fy - 1), 17.5, 18.5))
-            .union(PetDraw.ellipse(CGPoint(x: fx, y: fy + 14), 25, 18))
+        let lobes = PetDraw.ellipse(CGPoint(x: fx + 13.5, y: fy - 1), 16.5, 17.5)
+            .union(PetDraw.ellipse(CGPoint(x: fx - 13.5, y: fy - 1), 16.5, 17.5))
+            .union(PetDraw.ellipse(CGPoint(x: fx, y: fy + 13), 23, 17))
         PetDraw.solid(face, lobes, pal.cream, rim: 0, depth: 3)
 
         // Cheeks.
         if pose.blush > 0.01 {
             PetDraw.mirrored(ctx) { c, side in
-                c.fill(PetDraw.ellipse(CGPoint(x: fig.blushX + fx * (side > 0 ? 0.8 : 1.2) * side, y: fig.blushY + fy), 5.5, 3.2), pal.blush.alpha(pal.blush.a * pose.blush))
+                c.fill(PetDraw.ellipse(CGPoint(x: fig.blushX + fx * (side > 0 ? 0.8 : 1.2) * side, y: fig.blushY + fy), 4.6, 2.8), pal.blush.alpha(pal.blush.a * pose.blush))
             }
         }
 

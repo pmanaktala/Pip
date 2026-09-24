@@ -17,7 +17,7 @@ struct PetCompanyLiveActivity: Widget {
             let color = MoodColor.bold(state.mood)
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    PetPoseView(species: identity.species, pose: pose, framing: .face, showsShadow: false)
+                    PetPoseView(species: identity.species, pose: pose, wear: PetCompanyLook.wear(state, stale: stale), framing: .face, showsShadow: false)
                         .frame(width: 58, height: 58)
                         .animation(.smooth(duration: 0.9), value: state)
                 }
@@ -38,7 +38,7 @@ struct PetCompanyLiveActivity: Widget {
                     .frame(maxWidth: .infinity)
                 }
             } compactLeading: {
-                PetPoseView(species: identity.species, pose: pose, framing: .badge, showsShadow: false)
+                PetPoseView(species: identity.species, pose: pose, wear: PetCompanyLook.wear(state, stale: stale), framing: .badge, showsShadow: false)
                     .frame(width: 26, height: 26)
                     .animation(.smooth(duration: 0.8), value: state)
             } compactTrailing: {
@@ -47,7 +47,7 @@ struct PetCompanyLiveActivity: Widget {
                     .foregroundStyle(color)
                     .contentTransition(.symbolEffect(.replace))
             } minimal: {
-                PetPoseView(species: identity.species, pose: pose, framing: .badge, showsShadow: false)
+                PetPoseView(species: identity.species, pose: pose, wear: PetCompanyLook.wear(state, stale: stale), framing: .badge, showsShadow: false)
                     .frame(width: 24, height: 24)
             }
             .widgetURL(URL(string: "pip://home"))

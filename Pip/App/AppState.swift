@@ -1,3 +1,4 @@
+import AVFoundation
 import CoreData
 import Foundation
 import Observation
@@ -156,6 +157,16 @@ final class AppState {
         refresh()
     }
     #endif
+
+    // MARK: Context
+
+    /// Is something else playing (music, a podcast)? Then the pet wears headphones. A plain
+    /// yes/no from the system: no permission, nothing about what is playing, never stored.
+    func checkListening() {
+        #if os(iOS)
+        pet.setMusic(AVAudioSession.sharedInstance().isOtherAudioPlaying)
+        #endif
+    }
 
     // MARK: Moments & deep links
 
