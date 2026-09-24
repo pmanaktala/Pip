@@ -28,6 +28,8 @@ struct PetComplicationView: View {
 
     var body: some View {
         PetAccessoryView(moment: entry.moment, family: family)
+            // A tap on the pet goes straight to "How are you?": logging is one tap from any face.
+            .widgetURL(URL(string: "pip://log"))
     }
 }
 

@@ -29,7 +29,7 @@ public enum PetCompanyLook {
         }
         let scene = PetScene(species: species, stance: state.stance)
         let base = PetDirector.hold(scene, index: state.hold)
-        return (state.petted ? PetDirector.petting(base, species: species, t: 0, weight: 1).clamped() : base, scene.prop)
+        return (state.petted ? PetDirector.petting(base, stance: state.stance, species: species, t: 0, weight: 1).clamped() : base, scene.prop)
     }
 
     /// Dozing wears the nightcap; so does company after bedtime.

@@ -83,6 +83,12 @@ public struct SharedStateStore: @unchecked Sendable {
         return try? JSONDecoder().decode(PetSnapshot.self, from: data)
     }
 
+    /// When the pet was last petted from a Home Screen widget; the widget leans into it for a moment.
+    public var pettedAt: Date? {
+        get { defaults.object(forKey: "widget.pettedAt") as? Date }
+        nonmutating set { defaults.set(newValue, forKey: "widget.pettedAt") }
+    }
+
     /// Persists the snapshot and asks WidgetKit to refresh.
     public func save(_ snapshot: PetSnapshot, reloadWidgets: Bool = true) {
         if let data = try? JSONEncoder().encode(snapshot) {

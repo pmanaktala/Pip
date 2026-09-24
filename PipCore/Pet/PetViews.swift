@@ -183,9 +183,12 @@ public struct PetStage: View {
     public var showsSeason: Bool
     /// Moves the pet sideways within the room (fetching).
     public var petOffset: CGFloat
+    /// Still surfaces: leaning into a hand (petted from a widget).
+    public var petted: Bool
 
     public init(scene: PetScene, live: Bool = true, hold: Int = 0, petScale: CGFloat = 0.62, floor: CGFloat = 0.62, showsRoom: Bool = true,
-                showsFoliage: Bool = true, mood: Mood? = nil, date: Date = .now, showsSeason: Bool = true, petOffset: CGFloat = 0) {
+                showsFoliage: Bool = true, mood: Mood? = nil, date: Date = .now, showsSeason: Bool = true, petOffset: CGFloat = 0, petted: Bool = false) {
+        self.petted = petted
         self.showsSeason = showsSeason
         self.petOffset = petOffset
         self.scene = scene
@@ -215,7 +218,9 @@ public struct PetStage: View {
                     if live {
                         LivePetView(scene: scene)
                     } else {
-                        PetPoseView(species: scene.species, pose: PetDirector.hold(scene, index: hold), prop: scene.prop, wear: scene.wear, dressing: scene.dressing)
+                        let still = PetDirector.hold(scene, index: hold)
+                        PetPoseView(species: scene.species, pose: petted ? PetDirector.petting(still, stance: scene.stance, species: scene.species, t: 0, weight: 1).clamped() : still,
+                                    prop: scene.prop, wear: scene.wear, dressing: scene.dressing)
                     }
                 }
                 .frame(width: side, height: side)

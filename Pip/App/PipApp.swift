@@ -15,7 +15,11 @@ struct PipApp: App {
         let uiTesting = ProcessInfo.processInfo.environment["PIP_UITEST"] == "1"
         let container = uiTesting ? PipModelContainer.make(inMemory: true) : PipModelContainer.shared
         let preferences = uiTesting ? Preferences(defaults: UserDefaults(suiteName: "uitest.\(UUID().uuidString)")!) : Preferences.shared
-        if uiTesting { preferences.hasCompletedOnboarding = true }
+        if uiTesting {
+            preferences.hasCompletedOnboarding = true
+            // The on-device model's words vary; UI tests check the fixed fallback lines.
+            preferences.petWordsEnabled = false
+        }
         #else
         let container = PipModelContainer.shared
         let preferences = Preferences.shared

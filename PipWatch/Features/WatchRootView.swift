@@ -72,6 +72,10 @@ struct WatchHomeView: View {
         .sheet(isPresented: $showPicker) {
             WatchMoodPicker()
         }
+        .onOpenURL { url in
+            // From the complication.
+            if url.host() == "log" { showPicker = true }
+        }
         #if DEBUG
         .onAppear {
             // Screenshot automation, like the phone: PIP_DEBUG=picker|log

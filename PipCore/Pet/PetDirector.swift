@@ -29,6 +29,9 @@ public struct PetEvent: Codable, Hashable, Sendable {
         case proud
         /// You're back after a rough day: a soft hello, no bounce.
         case gentleHello
+        /// A tap, answered in keeping with what it is doing (see `PetPokes`); `variant` −1 is a
+        /// sleeping pet tapped awake.
+        case poke(head: Bool, variant: Int)
         /// Swatted at a bubble, with the paw on that side (screen left when `left`).
         case swat(left: Bool)
     }
@@ -175,7 +178,7 @@ public enum PetDirector {
         }
         if let since = scene.pettingSince {
             let w = PetMath.smoothstep((t - since.timeIntervalSince1970) / 0.35)
-            p = petting(p, species: s, t: t, weight: w)
+            p = petting(p, stance: stance, species: s, t: t, weight: w)
             busy = max(busy, w)
         }
 
@@ -224,6 +227,7 @@ public enum PetDirector {
         switch kind {
         case .arrive: gentle && !stance.isAsleep ? PetClips.gentleHello(s) : PetClips.arrive(stance, s)
         case .gentleHello: PetClips.gentleHello(s)
+        case .poke(let head, let variant): PetPokes.clip(for: stance, species: s, onHead: head, variant: variant)
         case .swat(let left): PetClips.swat(s, left: left)
         case .missedYou: stance.isAsleep ? PetClips.arrive(stance, s) : PetClips.missedYou(s)
         case .logged(let mood, _): PetClips.reaction(to: mood, s)
@@ -444,8 +448,20 @@ public enum PetDirector {
         return idx
     }
 
-    /// A hand resting on the pet: eyes shut happy, leaning into it, slow breath, hearts.
-    public static func petting(_ base: PetPose, species: PetSpecies, t: Double, weight w: Double) -> PetPose {
+    /// A hand resting on the pet: eyes shut happy, leaning into it, slow breath, hearts. Asleep, it
+    /// smiles in its sleep and snuggles into your hand without waking; in a hard feeling it leans
+    /// in quietly, with a heart or two rather than a shower of them.
+    public static func petting(_ base: PetPose, stance: PetStance = .mood(.happy, .moderate), species: PetSpecies, t: Double, weight w: Double) -> PetPose {
+        if stance.isAsleep {
+            var target = base
+            target.smile = max(base.smile, 0.45)
+            target.blush = 0.6
+            target.headTilt = base.headTilt + 6 + sin(t * 0.9) * 1.5
+            target.lean = base.lean + 3
+            target.earL = -0.3; target.earR = -0.3
+            target.hearts = 0.3
+            return PetPose.mix(base, target, w)
+        }
         var target = base
         target.smileEyes = 1
         target.lidL = 0; target.lidR = 0
@@ -461,7 +477,7 @@ public enum PetDirector {
         target.lean = base.lean + 4
         target.slump = min(base.slump, 0.2)
         target.earL = -0.25; target.earR = -0.25
-        target.hearts = 0.75
+        target.hearts = stance.isHard ? 0.4 : 0.75
         target.tail = species == .dog ? sin(t * 12) * 0.9 : base.tail
         target.tailUp = max(base.tailUp, 0.3)
         target.gazeX = 0; target.gazeY = 0

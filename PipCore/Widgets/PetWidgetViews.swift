@@ -7,11 +7,14 @@ public struct PetWidgetMoment: Sendable {
     public var snapshot: PetSnapshot
     public var date: Date
     public var hold: Int
+    /// You just petted it from the widget: it leans into your hand with hearts.
+    public var petted: Bool
 
-    public init(snapshot: PetSnapshot, date: Date, hold: Int = 0) {
+    public init(snapshot: PetSnapshot, date: Date, hold: Int = 0, petted: Bool = false) {
         self.snapshot = snapshot
         self.date = date
         self.hold = hold
+        self.petted = petted
     }
 
     public var identity: PetIdentity { snapshot.identity }
@@ -27,8 +30,12 @@ public struct PetWidgetMoment: Sendable {
     /// animates between entries, so the pet visibly shifts now and then without any work.
     /// `step` is how often the pet shifts: every 10 minutes on the Home Screen, every 5 on the
     /// watch, so a glance at your wrist catches it doing something a little different.
-    public static func timeline(for snapshot: PetSnapshot, from now: Date = .now, step minutes: Int = 10, calendar: Calendar = .current) -> [PetWidgetMoment] {
+    public static func timeline(for snapshot: PetSnapshot, from now: Date = .now, step minutes: Int = 10, calendar: Calendar = .current,
+                                pettedAt: Date? = nil) -> [PetWidgetMoment] {
         var dates: Set<Date> = [now]
+        // Just petted from the widget: lean into it now, settle a few seconds later.
+        let petted = pettedAt.map { now.timeIntervalSince($0) < 20 } ?? false
+        if petted { dates.insert(now.addingTimeInterval(5)) }
         let end = now.addingTimeInterval(8 * 3600)
         // Align to the clock (…:00, :05, :10) so every surface shifts at the same moment.
         let minute = calendar.component(.minute, from: now)
@@ -50,7 +57,7 @@ public struct PetWidgetMoment: Sendable {
         // Walk the still poses in a shuffled order that never shows the same one twice in a row.
         // Each entry steps to the next still pose (the view wraps it to however many the stance
         // has), so two neighbouring entries never show the same one.
-        return sorted.enumerated().map { i, date in PetWidgetMoment(snapshot: snapshot, date: date, hold: i) }
+        return sorted.enumerated().map { i, date in PetWidgetMoment(snapshot: snapshot, date: date, hold: i, petted: petted && i == 0) }
     }
 }
 
@@ -91,10 +98,15 @@ public struct PetHomeWidgetView: View {
         }
     }
 
+    /// The pet itself is a button: a tap pets it right there on the Home Screen.
     private var pet: some View {
-        PetStage(scene: moment.scene, live: false, hold: moment.hold, petScale: family == .systemLarge ? 0.42 : (family == .systemMedium ? 0.92 : 0.74),
-                 floor: Self.floor(for: family), showsRoom: false, date: moment.date)
-            .animation(.smooth(duration: 1.2), value: moment.hold)
+        Button(intent: PetWidgetIntent()) {
+            PetStage(scene: moment.scene, live: false, hold: moment.hold, petScale: family == .systemLarge ? 0.42 : (family == .systemMedium ? 0.92 : 0.74),
+                     floor: Self.floor(for: family), showsRoom: false, date: moment.date, petted: moment.petted)
+                .animation(.smooth(duration: 1.2), value: moment.hold)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Pet \(moment.identity.name)")
     }
 
     private var small: some View {
@@ -147,9 +159,13 @@ public struct PetHomeWidgetView: View {
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                PetStage(scene: moment.scene, live: false, hold: moment.hold, petScale: 0.8, floor: 0.93, showsRoom: false, date: moment.date)
-                    .animation(.smooth(duration: 1.2), value: moment.hold)
-                    .frame(width: 170)
+                Button(intent: PetWidgetIntent()) {
+                    PetStage(scene: moment.scene, live: false, hold: moment.hold, petScale: 0.8, floor: 0.93, showsRoom: false, date: moment.date, petted: moment.petted)
+                        .animation(.smooth(duration: 1.2), value: moment.hold)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Pet \(moment.identity.name)")
+                .frame(width: 170)
             }
             .frame(maxHeight: .infinity)
             VStack(spacing: 10) {
@@ -171,6 +187,21 @@ public struct PetHomeWidgetView: View {
             .padding(.bottom, 14)
             .padding(.top, 8)
         }
+    }
+}
+
+/// Petting from a Home Screen widget: the widget redraws with the pet leaning into your hand.
+public struct PetWidgetIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Pet"
+    public static let description = IntentDescription("Give your pet a little scratch from the Home Screen.")
+    public static let openAppWhenRun = false
+
+    public init() {}
+
+    public func perform() async throws -> some IntentResult {
+        SharedStateStore.shared.pettedAt = .now
+        WidgetCenter.shared.reloadAllTimelines()
+        return .result()
     }
 }
 

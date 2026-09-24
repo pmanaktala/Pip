@@ -89,9 +89,14 @@ import Testing
     }
 
     @Test func pettingClosesEyesHappily() {
-        let scene = PetScene(species: .dog, stance: .mood(.sad, .moderate), pettingSince: base)
-        let pose = PetDirector.pose(scene, at: base.addingTimeInterval(1))
-        #expect(pose.smileEyes > 0.9 && pose.hearts > 0.5 && pose.blush > 0.5)
+        let happy = PetDirector.pose(PetScene(species: .dog, stance: .mood(.happy, .moderate), pettingSince: base), at: base.addingTimeInterval(1))
+        #expect(happy.smileEyes > 0.9 && happy.hearts > 0.5 && happy.blush > 0.5)
+        // A hard feeling: leans in quietly, a heart or two.
+        let sad = PetDirector.pose(PetScene(species: .dog, stance: .mood(.sad, .moderate), pettingSince: base), at: base.addingTimeInterval(1))
+        #expect(sad.smileEyes > 0.9 && sad.hearts > 0.2 && sad.hearts < happy.hearts)
+        // Asleep: smiles in its sleep, eyes stay shut.
+        let asleep = PetDirector.pose(PetScene(species: .dog, stance: .life(.sleeping), pettingSince: base), at: base.addingTimeInterval(1))
+        #expect(asleep.lidL > 0.9 && asleep.smile > 0.3)
     }
 
     @Test func stanceChangesBlend() {
@@ -125,13 +130,47 @@ import Testing
     }
 
     @Test func tapFlurryGetsFlustered() {
-        let presence = PetPresence(snapshot: PetSnapshot(identity: PetIdentity(species: .dog)))
+        let presence = PetPresence(snapshot: PetSnapshot(identity: PetIdentity(species: .dog), mood: .happy, intensity: .moderate, loggedAt: .now))
         var sent: [PetEvent.Kind] = []
         presence.broadcast = { sent.append($0.kind) }
         let now = Date.now
         for i in 0..<5 { presence.tap(onHead: true, now: now.addingTimeInterval(Double(i) * 0.3)) }
         #expect(sent.last == .flustered)
-        #expect(sent.first == .boop)
+        guard case .poke(head: true, _) = sent.first else { Issue.record("a tap should poke"); return }
+    }
+
+    /// Taps never answer the same way twice running, and the answer fits the stance.
+    @Test func tapsVaryAndFitTheStance() {
+        let presence = PetPresence(snapshot: PetSnapshot(identity: PetIdentity(species: .cat), mood: .happy, intensity: .moderate, loggedAt: .now))
+        var variants: [Int] = []
+        presence.broadcast = { if case .poke(_, let v) = $0.kind { variants.append(v) } }
+        let now = Date.now
+        for i in 0..<30 { presence.tap(onHead: true, now: now.addingTimeInterval(Double(i) * 2)) }
+        #expect(variants.count == 30)
+        for (a, b) in zip(variants, variants.dropFirst()) { #expect(a != b, "same poke twice in a row") }
+        #expect(Set(variants).count > 2, "uses its range")
+
+        #expect(PetPokes.clip(for: .life(.sleeping), species: .cat, onHead: true, variant: 0).name == "poke.grumpyPeek")
+        #expect(PetPokes.clip(for: .mood(.sad, .moderate), species: .cat, onHead: true, variant: 0).name == "poke.leanIn")
+        #expect(PetPokes.clip(for: .life(.working), species: .cat, onHead: true, variant: 0).name == "poke.lookUpWave")
+        // Nothing giggly for a hard feeling.
+        for mood in [Mood.sad, .stressed, .frustrated, .tired] {
+            for v in 0..<5 {
+                let name = PetPokes.clip(for: .mood(mood, .moderate), species: .dog, onHead: v.isMultiple(of: 2), variant: v).name
+                #expect(!["boop", "tickle", "poke.hop", "poke.surprisedLaugh", "poke.wink"].contains(name), "\(mood): \(name)")
+            }
+        }
+    }
+
+    @Test func aSleepingPetTappedAwakeIsGrumpy() {
+        let night = Calendar.current.date(bySettingHour: 2, minute: 0, second: 0, of: .now)!
+        let presence = PetPresence(snapshot: PetSnapshot(identity: PetIdentity(species: .penguin)), now: night)
+        #expect(presence.scene.stance.isAsleep)
+        var sent: [PetEvent.Kind] = []
+        presence.broadcast = { sent.append($0.kind) }
+        for i in 0..<3 { presence.tap(onHead: true, now: night.addingTimeInterval(Double(i) * 0.4)) }
+        if case .poke(true, let v) = sent.first { #expect(v >= 0) } else { Issue.record("first tap pokes") }
+        #expect(sent.last == .poke(head: true, variant: -1))
     }
 
     @Test func staleRemoteEventsAreIgnored() {
@@ -352,7 +391,10 @@ enum PetTestSupport {
     static func allClips(_ s: PetSpecies) -> [PetClip] {
         PetVignette.allCases.map { PetClips.vignette($0, s) } + Mood.allCases.map { PetClips.reaction(to: $0, s) }
             + [PetClips.arrive(.mood(.happy, .moderate), s), PetClips.arrive(.mood(.sad, .moderate), s), PetClips.boop(s), PetClips.tickle(s),
-               PetClips.flustered(s), PetClips.afterPetting(s), PetClips.wave(s), PetClips.gentleHello(s), PetClips.swat(s)]
+               PetClips.flustered(s), PetClips.afterPetting(s), PetClips.wave(s), PetClips.gentleHello(s), PetClips.swat(s), PetPokes.wokenUp(s)]
+            + [PetStance.life(.sleeping), .life(.waking), .mood(.sad, .moderate), .mood(.stressed, .moderate), .mood(.frustrated, .moderate),
+               .mood(.calm, .moderate), .meditating, .life(.working), .life(.reading), .mood(.happy, .moderate), .mood(.neutral, .moderate)]
+                .flatMap { st in (0..<6).flatMap { v in [true, false].map { PetPokes.clip(for: st, species: s, onHead: $0, variant: v) } } }
     }
 }
 

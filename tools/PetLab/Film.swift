@@ -314,3 +314,22 @@ enum LabFun {
         return rows
     }
 }
+
+enum LabPokes {
+    static func rows(_ s: PetSpecies) -> [LabFilm.Row] {
+        let stances: [PetStance] = [.life(.sleeping), .life(.waking), .mood(.sad, .moderate), .mood(.stressed, .moderate), .mood(.frustrated, .moderate),
+                                    .mood(.calm, .moderate), .meditating, .life(.working), .life(.reading), .mood(.happy, .moderate)]
+        var rows: [LabFilm.Row] = []
+        for st in stances {
+            for v in 0..<PetPokes.count(for: st, onHead: true) {
+                var r = LabFilm.sample(PetPokes.clip(for: st, species: s, onHead: true, variant: v), stance: st, species: s, frames: 7)
+                r.title = "\(PetPokes.group(for: st).rawValue): " + r.title.replacingOccurrences(of: "poke.", with: "")
+                rows.append(r)
+            }
+        }
+        var woke = LabFilm.sample(PetPokes.wokenUp(s), stance: .life(.sleeping), species: s, frames: 7)
+        woke.title = "asleep ×3: wokenUp"
+        rows.append(woke)
+        return rows
+    }
+}

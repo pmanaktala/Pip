@@ -17,6 +17,7 @@ public final class PetPresence {
     @ObservationIgnored private var lastLoggedAt: Date?
     @ObservationIgnored private var tapStreak = 0
     @ObservationIgnored private var lastTapAt = Date.distantPast
+    @ObservationIgnored private var lastPoke = -1
     @ObservationIgnored private var clock: Task<Void, Never>?
     @ObservationIgnored private var snapshot: PetSnapshot
     /// What the phone quietly tells us while the app is in front (see `PetContext`).
@@ -128,15 +129,25 @@ public final class PetPresence {
         setStance(.mood(mood, intensity), now: now)
     }
 
-    /// A tap on the pet. Head taps boop, body taps tickle; a flurry gets a flustered peek.
+    /// A tap on the pet, answered in keeping with what it's doing (see `PetPokes`), never the same
+    /// way twice running. A flurry gets a flustered peek; a sleeping pet tapped three times wakes
+    /// up grumpy and flops back to sleep.
     public func tap(onHead: Bool, now: Date = .now) {
         tapStreak = now.timeIntervalSince(lastTapAt) < 1.6 ? tapStreak + 1 : 1
         lastTapAt = now
-        if tapStreak >= 5 {
+        let stance = scene.preview.map { PetStance.mood($0, .moderate) } ?? scene.stance
+        if stance.isAsleep, tapStreak >= 3 {
+            tapStreak = 0
+            add(PetEvent(.poke(head: onHead, variant: -1), at: now))
+        } else if tapStreak >= 5, !stance.isHard {
             tapStreak = 0
             add(PetEvent(.flustered, at: now))
         } else {
-            add(PetEvent(onHead ? .boop : .tickle, at: now))
+            let count = PetPokes.count(for: stance, onHead: onHead)
+            var variant = Int.random(in: 0..<count)
+            if count > 1, variant == lastPoke { variant = (variant + 1 + Int.random(in: 0..<(count - 1))) % count }
+            lastPoke = variant
+            add(PetEvent(.poke(head: onHead, variant: variant), at: now))
         }
     }
 

@@ -225,7 +225,13 @@ struct PetHomeView: View {
     /// What floats over the floor: once there is more than one, today's faces.
     /// The action itself lives in the tab bar.
     private var controls: some View {
-        todayFaces
+        Group {
+            if PetDay.isBedtime(.now), !appState.todayEntries.isEmpty {
+                GoodnightCard()
+            } else {
+                todayFaces
+            }
+        }
             .frame(maxWidth: 520)
             .padding(.horizontal, PipSpacing.l)
             .padding(.bottom, PipSpacing.m)
@@ -266,3 +272,71 @@ struct PressableButtonStyle: ButtonStyle {
     }
 }
 
+
+/// Bedtime on the Pet tab, once you've logged something today: the pet says goodnight with one
+/// plain sentence about your day (the same on-device words as History, or a simple fallback) and
+/// today's faces. No scores, no advice.
+struct GoodnightCard: View {
+    @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var scheme
+    @State private var words: String?
+
+    private var entries: [MoodEntry] { appState.todayEntries.sorted { $0.timestamp < $1.timestamp } }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                PetPoseView(species: appState.identity.species, pose: PetStance.life(.windingDown).holds(appState.identity.species)[0], wear: .nightcap, framing: .face, showsShadow: false)
+                    .frame(width: 34, height: 34)
+                Text("Goodnight from \(appState.identity.name)")
+                    .font(PipFont.headline)
+            }
+            Text(words ?? Self.fallback(entries.map(\.mood)))
+                .font(PipFont.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .contentTransition(.opacity)
+            HStack(spacing: 6) {
+                ForEach(entries.suffix(6)) { entry in
+                    PetView(species: appState.identity.species, mood: entry.mood, intensity: entry.intensity)
+                        .frame(width: 26, height: 26)
+                        .padding(2)
+                        .background(MoodColor.soft(entry.mood, scheme: scheme), in: Circle())
+                        .clipShape(Circle())
+                        .accessibilityHidden(true)
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassEffect(.regular, in: .rect(cornerRadius: 24))
+        .accessibilityElement(children: .combine)
+        .transition(.opacity.combined(with: .move(edge: .bottom)))
+        .task(id: entries.map(\.id)) { await write() }
+    }
+
+    /// "Today: calm, then happy." — the day's feelings in order, without repeats.
+    static func fallback(_ moods: [Mood]) -> String {
+        var seen: [Mood] = []
+        for m in moods where seen.last != m { seen.append(m) }
+        let names = seen.suffix(3).map { $0.displayName.lowercased() }
+        guard let first = names.first else { return "Sleep well." }
+        return names.count == 1 ? "Today felt \(first). Sleep well." : "Today: \(names.dropLast().joined(separator: ", ")), then \(names.last!). Sleep well."
+    }
+
+    private func write() async {
+        guard appState.preferences.petWordsEnabled else { return }
+        var hasher = Hasher()
+        for e in entries { hasher.combine(e.id); hasher.combine(e.moodRaw); hasher.combine(e.note ?? "") }
+        let key = "goodnight.\(Date.now.formatted(.iso8601.year().month().day())).\(hasher.finalize())"
+        let input = entries.map {
+            PetWords.Entry(dayName: "Today", partOfDay: MoodHistory.DayPart.part(of: $0.timestamp).displayName.lowercased(),
+                           mood: $0.mood.displayName.lowercased(), intensity: $0.intensity.adverb ?? "",
+                           contexts: $0.contexts.map { $0.displayName.lowercased() }, note: $0.note)
+        }
+        guard let text = await PetWords.line(kind: .day, key: key, petName: appState.identity.name,
+                                             species: appState.identity.species.displayName.lowercased(), entries: input),
+              !Task.isCancelled else { return }
+        withAnimation(.smooth) { words = text }
+    }
+}
