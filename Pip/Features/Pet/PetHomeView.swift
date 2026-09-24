@@ -8,6 +8,8 @@ struct PetHomeView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var scheme
     @State private var showPlay = false
+    /// The evening the goodnight card was put away (it comes back the next night).
+    @AppStorage("goodnight.dismissed") private var goodnightDismissed = ""
     @State private var playMode: PlayView.Mode = .play
     @State private var showPets = false
     @State private var showWidgets = false
@@ -226,8 +228,8 @@ struct PetHomeView: View {
     /// The action itself lives in the tab bar.
     private var controls: some View {
         Group {
-            if PetDay.isBedtime(.now), !appState.todayEntries.isEmpty {
-                GoodnightCard()
+            if PetDay.isBedtime(.now), !appState.todayEntries.isEmpty, goodnightDismissed != Self.goodnightDay() {
+                GoodnightCard { withAnimation(.smooth) { goodnightDismissed = Self.goodnightDay() } }
             } else {
                 todayFaces
             }
@@ -236,6 +238,11 @@ struct PetHomeView: View {
             .padding(.horizontal, PipSpacing.l)
             .padding(.bottom, PipSpacing.m)
             .frame(maxWidth: .infinity)
+    }
+
+    /// The evening a goodnight belongs to: after midnight it still counts as the night before.
+    static func goodnightDay(_ date: Date = .now) -> String {
+        date.addingTimeInterval(-6 * 3600).formatted(.iso8601.year().month().day())
     }
 
     @ViewBuilder
@@ -277,6 +284,7 @@ struct PressableButtonStyle: ButtonStyle {
 /// plain sentence about your day (the same on-device words as History, or a simple fallback) and
 /// today's faces. No scores, no advice.
 struct GoodnightCard: View {
+    var onDismiss: () -> Void = {}
     @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var scheme
     @State private var words: String?
@@ -290,6 +298,16 @@ struct GoodnightCard: View {
                     .frame(width: 34, height: 34)
                 Text("Goodnight from \(appState.identity.name)")
                     .font(PipFont.headline)
+                Spacer(minLength: 0)
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 30, height: 30)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Dismiss goodnight")
             }
             Text(words ?? Self.fallback(entries.map(\.mood)))
                 .font(PipFont.callout)
@@ -310,7 +328,7 @@ struct GoodnightCard: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassEffect(.regular, in: .rect(cornerRadius: 24))
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
         .transition(.opacity.combined(with: .move(edge: .bottom)))
         .task(id: entries.map(\.id)) { await write() }
     }
