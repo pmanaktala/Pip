@@ -41,7 +41,7 @@ public struct PetRoom: View {
                         .fill(RadialGradient(colors: [.white.opacity(0.95), Color(red: 0.92, green: 0.93, blue: 1).opacity(0.7)], center: .topLeading, startRadius: 0, endRadius: w * 0.05))
                         .frame(width: w * 0.07, height: w * 0.07)
                         // Kept to the right half and below the header, clear of the name and buttons.
-                        .position(x: w * (0.5 + light.keyX * 0.45), y: max(floorY * light.keyY, h * 0.2))
+                        .position(x: w * (0.68 + light.keyX * 0.3), y: max(floorY * light.keyY, h * 0.26))
                         .opacity(light.night)
                         .blur(radius: 0.4)
                 }
@@ -64,7 +64,8 @@ public struct PetRoom: View {
                         let y = PetMath.hash01(Double(i) * 3.7 + 9) * floorY * (i < 6 ? 0.8 : 0.7)
                         let r = 0.8 + PetMath.hash01(Double(i) * 1.3) * 1.2
                         // By day the motes are faint; bright white dots at noon read as snow.
-                        let alpha = i < 6 ? (scheme == .dark ? 0.25 : 0.35) * (1 - light.night) + 0.6 * light.night : 0.85 * light.night * (0.5 + 0.5 * PetMath.hash01(Double(i) * 2.9))
+                        // In dark mode, daytime specks read as stars: only real stars there.
+                        let alpha = i < 6 ? (scheme == .dark ? 0 : 0.35) * (1 - light.night) + 0.6 * light.night : 0.85 * light.night * (0.5 + 0.5 * PetMath.hash01(Double(i) * 2.9))
                         context.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r * 2, height: r * 2)), with: .color(.white.opacity(alpha)))
                     }
                     guard showsFoliage, size.width > 200 else { return }
@@ -175,13 +176,17 @@ public struct RoomLight: Sendable, Equatable {
     /// Dark appearance: the same sky after dark — blue-grey, never brown — with the light of
     /// day showing as a cooler or warmer cast rather than brightness.
     static let darkFrames: [Frame] = [
+        // Night: navy, the moon and stars.
         Frame(hour: 0, skyTop: (0.05, 0.06, 0.13), skyHorizon: (0.14, 0.15, 0.26), floorFar: (0.12, 0.12, 0.20), floorNear: (0.08, 0.08, 0.14), keyLight: (0.72, 0.76, 1.0), keyStrength: 0.22, foliage: (0.34, 0.36, 0.56)),
-        Frame(hour: 5, skyTop: (0.08, 0.08, 0.16), skyHorizon: (0.24, 0.18, 0.28), floorFar: (0.18, 0.15, 0.22), floorNear: (0.12, 0.10, 0.16), keyLight: (1.0, 0.80, 0.62), keyStrength: 0.26, foliage: (0.40, 0.34, 0.48)),
-        Frame(hour: 7, skyTop: (0.14, 0.13, 0.22), skyHorizon: (0.36, 0.26, 0.28), floorFar: (0.26, 0.21, 0.24), floorNear: (0.17, 0.14, 0.17), keyLight: (1.0, 0.82, 0.60), keyStrength: 0.32, foliage: (0.50, 0.40, 0.40)),
-        Frame(hour: 10, skyTop: (0.11, 0.16, 0.24), skyHorizon: (0.22, 0.26, 0.32), floorFar: (0.20, 0.19, 0.20), floorNear: (0.13, 0.12, 0.13), keyLight: (1.0, 0.96, 0.84), keyStrength: 0.28, foliage: (0.38, 0.46, 0.42)),
-        Frame(hour: 14, skyTop: (0.11, 0.16, 0.24), skyHorizon: (0.22, 0.26, 0.32), floorFar: (0.20, 0.19, 0.20), floorNear: (0.13, 0.12, 0.13), keyLight: (1.0, 0.96, 0.84), keyStrength: 0.26, foliage: (0.38, 0.46, 0.42)),
-        Frame(hour: 17.5, skyTop: (0.14, 0.12, 0.22), skyHorizon: (0.36, 0.24, 0.26), floorFar: (0.26, 0.20, 0.22), floorNear: (0.17, 0.13, 0.15), keyLight: (1.0, 0.74, 0.50), keyStrength: 0.32, foliage: (0.50, 0.38, 0.38)),
-        Frame(hour: 19.5, skyTop: (0.09, 0.08, 0.18), skyHorizon: (0.26, 0.18, 0.28), floorFar: (0.19, 0.15, 0.22), floorNear: (0.12, 0.10, 0.16), keyLight: (1.0, 0.72, 0.56), keyStrength: 0.26, foliage: (0.40, 0.32, 0.46)),
+        Frame(hour: 5, skyTop: (0.10, 0.10, 0.20), skyHorizon: (0.30, 0.22, 0.32), floorFar: (0.20, 0.17, 0.24), floorNear: (0.13, 0.11, 0.17), keyLight: (1.0, 0.80, 0.62), keyStrength: 0.3, foliage: (0.42, 0.36, 0.50)),
+        // Dawn: a warm rose glow low in the sky, so a dark-mode morning is unmistakably morning.
+        Frame(hour: 7, skyTop: (0.22, 0.22, 0.36), skyHorizon: (0.58, 0.40, 0.40), floorFar: (0.34, 0.27, 0.29), floorNear: (0.22, 0.18, 0.21), keyLight: (1.0, 0.78, 0.55), keyStrength: 0.45, foliage: (0.60, 0.46, 0.44)),
+        // Day: a dim blue daylight, never charcoal.
+        Frame(hour: 10, skyTop: (0.16, 0.27, 0.44), skyHorizon: (0.32, 0.42, 0.54), floorFar: (0.27, 0.28, 0.31), floorNear: (0.18, 0.19, 0.22), keyLight: (1.0, 0.96, 0.84), keyStrength: 0.34, foliage: (0.42, 0.54, 0.48)),
+        Frame(hour: 14, skyTop: (0.15, 0.26, 0.43), skyHorizon: (0.31, 0.41, 0.53), floorFar: (0.27, 0.28, 0.31), floorNear: (0.18, 0.19, 0.22), keyLight: (1.0, 0.96, 0.84), keyStrength: 0.32, foliage: (0.42, 0.54, 0.48)),
+        // Evening: apricot into plum.
+        Frame(hour: 17.5, skyTop: (0.22, 0.20, 0.36), skyHorizon: (0.54, 0.36, 0.34), floorFar: (0.32, 0.25, 0.27), floorNear: (0.21, 0.16, 0.19), keyLight: (1.0, 0.72, 0.48), keyStrength: 0.42, foliage: (0.56, 0.42, 0.42)),
+        Frame(hour: 19.5, skyTop: (0.13, 0.11, 0.24), skyHorizon: (0.34, 0.22, 0.34), floorFar: (0.22, 0.17, 0.25), floorNear: (0.14, 0.11, 0.18), keyLight: (1.0, 0.70, 0.56), keyStrength: 0.3, foliage: (0.44, 0.34, 0.48)),
         Frame(hour: 21.5, skyTop: (0.05, 0.06, 0.13), skyHorizon: (0.14, 0.15, 0.26), floorFar: (0.12, 0.12, 0.20), floorNear: (0.08, 0.08, 0.14), keyLight: (0.72, 0.76, 1.0), keyStrength: 0.22, foliage: (0.34, 0.36, 0.56)),
         Frame(hour: 24, skyTop: (0.05, 0.06, 0.13), skyHorizon: (0.14, 0.15, 0.26), floorFar: (0.12, 0.12, 0.20), floorNear: (0.08, 0.08, 0.14), keyLight: (0.72, 0.76, 1.0), keyStrength: 0.22, foliage: (0.34, 0.36, 0.56)),
     ]

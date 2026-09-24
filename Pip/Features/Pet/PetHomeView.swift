@@ -210,12 +210,19 @@ struct PetHomeView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(appState.identity.name)
                 .font(PipFont.display)
-            Text(appState.pet.statusPhrase)
-                .font(PipFont.callout)
-                .foregroundStyle(.secondary)
-                .contentTransition(.opacity)
-                .animation(.smooth(duration: 0.5), value: appState.pet.statusPhrase)
+            // While the mood sheet is up the pet rises into this space: keep the line out of its way.
+            if !appState.isPickingMood {
+                Text(appState.pet.statusPhrase)
+                    .font(PipFont.callout)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .contentTransition(.opacity)
+                    .animation(.smooth(duration: 0.5), value: appState.pet.statusPhrase)
+            }
         }
+        // The name and line sit over the sky; at the largest text sizes they stop growing before
+        // they reach the pet (everything else in the app keeps scaling).
+        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
         .padding(.horizontal, PipSpacing.l)
         .padding(.top, PipSpacing.xs)
         .accessibilityElement(children: .combine)
@@ -282,7 +289,8 @@ struct PressableButtonStyle: ButtonStyle {
 
 /// Bedtime on the Pet tab, once you've logged something today: the pet says goodnight with one
 /// plain sentence about your day (the same on-device words as History, or a simple fallback) and
-/// today's faces. No scores, no advice.
+/// today's faces. No scores, no advice. It shows once an evening: it puts itself away after 15
+/// seconds, or when you close it, and comes back the next night.
 struct GoodnightCard: View {
     var onDismiss: () -> Void = {}
     @Environment(AppState.self) private var appState
@@ -331,6 +339,11 @@ struct GoodnightCard: View {
         .accessibilityElement(children: .contain)
         .transition(.opacity.combined(with: .move(edge: .bottom)))
         .task(id: entries.map(\.id)) { await write() }
+        .task {
+            // Seen once is enough: it tucks itself away after a little while, for the rest of the night.
+            try? await Task.sleep(for: .seconds(15))
+            if !Task.isCancelled { onDismiss() }
+        }
     }
 
     /// "Today: calm, then happy." — the day's feelings in order, without repeats.

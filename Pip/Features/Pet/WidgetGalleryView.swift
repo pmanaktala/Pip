@@ -65,7 +65,7 @@ struct WidgetGalleryView: View {
             }
             .padding()
         }
-        .background(Color(white: 0.9))
+        .background(Color(.systemGroupedBackground))
         .navigationTitle("Widgets")
     }
 
