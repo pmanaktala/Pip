@@ -32,6 +32,22 @@ public enum PetDay {
         }
     }
 
+    /// When the pet wakes: 6:00 on weekdays, a lie-in until 7:30 at the weekend.
+    static func wakeHour(_ date: Date, calendar: Calendar) -> Double {
+        isWeekday(calendar.component(.weekday, from: date)) ? 6 : 7.5
+    }
+
+    /// The start of the pet's day that `date` belongs to. A pet's day runs from one waking to the
+    /// next, not midnight to midnight: a feeling logged at 11pm, at 1am or at 3:44am belongs to that
+    /// night, and once the pet has slept and woken up it starts the new day fresh.
+    public static func dayStart(containing date: Date, calendar: Calendar = .current) -> Date {
+        let midnight = calendar.startOfDay(for: date)
+        let wake = midnight.addingTimeInterval(wakeHour(date, calendar: calendar) * 3600)
+        if date >= wake { return wake }
+        let previous = calendar.date(byAdding: .day, value: -1, to: midnight) ?? midnight.addingTimeInterval(-86400)
+        return previous.addingTimeInterval(wakeHour(previous, calendar: calendar) * 3600)
+    }
+
     /// The week has a shape too: a big stretch and yawn on Monday morning, a happy wiggle on
     /// Friday evening. Vignettes that join the repertoire at those times (easy stances only).
     public static func weekVignettes(at date: Date, calendar: Calendar = .current) -> [PetVignette] {

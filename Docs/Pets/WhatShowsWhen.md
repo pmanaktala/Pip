@@ -93,7 +93,17 @@ device), so a season stays a small treat rather than months of the same leaves: 
 leaves in autumn, blossom in spring, fireflies on summer evenings. They fade out before reaching
 the name and status; **confetti** on New Year and its birthday.
 
-**Gentle hello:** if yesterday was rough (it ended on a hard feeling, or half of it was hard)
+**Sleep ends a mood.** The pet's day runs from waking to waking (6:00 on weekdays, 7:30 at the
+weekend), not midnight to midnight. A mood logged at 10pm, at midnight or at 3:44am belongs to
+that night: it keeps you company and then dozes off beside you, and once morning comes the pet
+wakes up fresh, however short the night was. The "Update your mood" button and the room's tint
+follow the same rule. Otherwise a mood stays current for up to eight hours.
+
+**Good morning:** the first visit after the pet wakes (before noon) gets a proper wake-up: eyes
+blink open, a big stretch with a yawn, then a sleepy wave. After a rough night it greets you with
+the gentle hello instead.
+
+**Gentle hello:** if yesterday was rough (it ended on a hard feeling, or half of it was hard; "yesterday" is the pet's day, so late-night logs count toward it)
 and nothing is logged yet today, arriving gets a soft lean toward you, a kind face and one small
 heart instead of the wave and hop, and the bouncy vignettes (bounce, fist pump, dance, wiggle,
 clap) sit out until you log something.

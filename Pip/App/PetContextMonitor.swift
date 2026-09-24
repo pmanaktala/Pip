@@ -17,6 +17,7 @@ final class PetContextMonitor {
     private var offline = false
     private var observers: [NSObjectProtocol] = []
     private var missedYouUntil = Date.distantPast
+    private var morningUntil = Date.distantPast
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -40,6 +41,9 @@ final class PetContextMonitor {
     func didBecomeActive(now: Date = .now) {
         let last = defaults.object(forKey: Keys.lastVisit) as? Date
         if let last, now.timeIntervalSince(last) > 3 * 86400 { missedYouUntil = now.addingTimeInterval(600) }
+        // First visit since this morning's waking (and still morning): it wakes up to say hello.
+        let dayStart = PetDay.dayStart(containing: now)
+        if last.map({ $0 < dayStart }) ?? false, Calendar.current.component(.hour, from: now) < 12 { morningUntil = now.addingTimeInterval(120) }
         defaults.set(now, forKey: Keys.lastVisit)
         refresh(now: now)
     }
@@ -56,6 +60,7 @@ final class PetContextMonitor {
         c.travelling = travelling(now: now)
         c.offline = offline
         c.missedYou = now < missedYouUntil
+        c.firstThisMorning = now < morningUntil
         #if DEBUG
         // Screenshot automation: PIP_CONTEXT=travelling,offline,charging,lowBattery,headphones,music,missedYou
         if let forced = ProcessInfo.processInfo.environment["PIP_CONTEXT"] {
@@ -67,6 +72,7 @@ final class PetContextMonitor {
             if set.contains("headphones") { c.headphones = true }
             if set.contains("music") { c.audioPlaying = true }
             if set.contains("missedYou") { c.missedYou = true }
+            if set.contains("morning") { c.firstThisMorning = true }
         }
         #endif
         guard c != context else { return }

@@ -75,9 +75,11 @@ public enum PipQueries {
                            adoptedAt: profile?.createdAt, roughYesterday: roughYesterday(before: now, in: context))
     }
 
-    /// Whether the day before `date` was rough (see `PetSnapshot.wasRough`).
+    /// Whether the pet's previous day was rough (see `PetSnapshot.wasRough`). Days run from waking
+    /// to waking, so a sad log at 1am counts toward the night before, not the new morning.
     public static func roughYesterday(before date: Date = .now, calendar: Calendar = .current, in context: ModelContext) -> Bool {
-        guard let yesterday = calendar.date(byAdding: .day, value: -1, to: date) else { return false }
-        return PetSnapshot.wasRough(entries(on: yesterday, calendar: calendar, in: context).map(\.mood))
+        let today = PetDay.dayStart(containing: date, calendar: calendar)
+        let yesterday = PetDay.dayStart(containing: today.addingTimeInterval(-60), calendar: calendar)
+        return PetSnapshot.wasRough(entries(from: yesterday, to: today, in: context).map(\.mood))
     }
 }

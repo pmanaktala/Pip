@@ -611,6 +611,25 @@ public enum PetClips {
     }
 
     /// One little hop.
+    /// First visit of the morning: eyes blink open, a big stretch with a yawn, a blink or two, then
+    /// a small, sleepy wave and a smile.
+    public static func goodMorning(_ s: PetSpecies) -> PetClip {
+        PetClip("goodMorning", 5.0, fadeIn: 0.1, fadeOut: 0.6, [
+            set(\.lidL, K(0, 1), K(0.4, 1), K(0.7, 0.5), K(0.85, 0.9), K(1.1, 0.45), K(1.4, 1), K(2.6, 1), K(3.0, 0.35), K(5.0, 0.35)),
+            set(\.lidR, K(0, 1), K(0.4, 1), K(0.7, 0.5), K(0.85, 0.9), K(1.1, 0.45), K(1.4, 1), K(2.6, 1), K(3.0, 0.35), K(5.0, 0.35)),
+            add(\.armL, K(0, 0), K(1.3, 0), K(1.9, 165, .out), K(2.6, 170), K(3.0, 0), K(5.0, 0)),
+            add(\.armR, K(0, 0), K(1.3, 0), K(1.9, 165, .out), K(2.6, 170), K(3.0, 0), K(3.4, 140, .out), K(3.65, 115), K(3.9, 140), K(4.15, 115), K(4.6, 0)),
+            add(\.squash, K(0, 0), K(1.3, 0.12), K(1.9, -0.32, .out), K(2.6, -0.32), K(3.0, 0.05), K(3.2, 0), K(5.0, 0)),
+            add(\.lift, K(0, 0), K(1.9, 3), K(2.6, 3), K(3.0, 0), K(5.0, 0)),
+            bump(\.mouthOpen, 0.95, from: 1.6, peak: 2.0, hold: 2.5, end: 2.8), bump(\.mouthRound, 0.8, from: 1.6, peak: 2.0, hold: 2.5, end: 2.8),
+            bump(\.headNod, -0.35, from: 1.5, peak: 2.0, hold: 2.5, end: 2.9),
+            set(\.gazeX, K(0, 0), K(3.0, 0), K(5.0, 0)), set(\.gazeY, K(0, 0), K(3.0, -0.1), K(5.0, -0.1)),
+            bump(\.smile, 0.45, from: 3.0, peak: 3.4, hold: 4.5, end: 5.0),
+            bump(\.headTilt, 8, from: 3.0, peak: 3.4, hold: 4.5, end: 5.0),
+            bump(\.blush, 0.4, from: 3.1, peak: 3.5, hold: 4.5, end: 5.0),
+        ])
+    }
+
     /// The day after a rough one: no bounce, just a soft lean toward you and a kind face.
     public static func gentleHello(_ s: PetSpecies) -> PetClip {
         PetClip("gentleHello", 3.2, fadeIn: 0.5, fadeOut: 0.8, [

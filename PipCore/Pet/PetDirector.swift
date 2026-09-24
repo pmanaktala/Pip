@@ -29,6 +29,8 @@ public struct PetEvent: Codable, Hashable, Sendable {
         case proud
         /// You're back after a rough day: a soft hello, no bounce.
         case gentleHello
+        /// Your first visit of the morning: it wakes up, stretches, yawns and waves.
+        case goodMorning
         /// A tap, answered in keeping with what it is doing (see `PetPokes`); `variant` −1 is a
         /// sleeping pet tapped awake.
         case poke(head: Bool, variant: Int)
@@ -227,6 +229,7 @@ public enum PetDirector {
         switch kind {
         case .arrive: gentle && !stance.isAsleep ? PetClips.gentleHello(s) : PetClips.arrive(stance, s)
         case .gentleHello: PetClips.gentleHello(s)
+        case .goodMorning: PetClips.goodMorning(s)
         case .poke(let head, let variant): PetPokes.clip(for: stance, species: s, onHead: head, variant: variant)
         case .swat(let left): PetClips.swat(s, left: left)
         case .missedYou: stance.isAsleep ? PetClips.arrive(stance, s) : PetClips.missedYou(s)

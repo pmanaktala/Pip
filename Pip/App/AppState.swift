@@ -71,7 +71,7 @@ final class AppState {
     /// True if the latest entry is recent enough to still "be" the current mood.
     var hasFreshMood: Bool {
         guard let t = latestEntry?.timestamp else { return false }
-        return Date.now.timeIntervalSince(t) < PetSnapshot.freshness
+        return PetSnapshot.isFresh(loggedAt: t)
     }
 
     // MARK: Loading
@@ -101,7 +101,7 @@ final class AppState {
             s.mood = mood; s.intensity = .moderate; s.loggedAt = Date.now.addingTimeInterval(-600)
         }
         // PIP_ROUGH=1: yesterday was rough and nothing is logged today (the gentle hello).
-        if ProcessInfo.processInfo.environment["PIP_ROUGH"] == "1" { s.roughYesterday = true; s.today = [] }
+        if ProcessInfo.processInfo.environment["PIP_ROUGH"] == "1" { s.roughYesterday = true; s.today = []; s.mood = nil; s.loggedAt = nil }
         #endif
         return s
     }

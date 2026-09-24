@@ -303,6 +303,7 @@ enum LabFun {
             let t = eat.duration * Double(i) / 8
             return (eat.apply(to: rest, at: t).clamped(), t < 2.22 ? PetProp.snack : nil)
         }))
+        rows.append(LabFilm.sample(PetClips.goodMorning(s), stance: .life(.waking), species: s))
         rows.append(LabFilm.sample(PetClips.gentleHello(s), stance: .life(.daydreaming), species: s))
         rows.append(LabFilm.sample(PetClips.swat(s), stance: .mood(.happy, .slight), species: s))
         var dance = LabFilm.director(s, stance: .mood(.happy, .moderate), seconds: 2.2, frames: 9, dancing: true)

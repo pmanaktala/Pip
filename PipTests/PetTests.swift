@@ -383,6 +383,66 @@ import Testing
     }
 }
 
+@Suite struct PetSleepTests {
+    /// Wednesday 30 Sep 2026 (a weekday) and Saturday 3 Oct, at a given hour and minute.
+    func at(_ day: Int, _ h: Int, _ m: Int = 0) -> (Date, Calendar) {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        let month = day > 30 ? 10 : 9
+        return (cal.date(from: DateComponents(year: 2026, month: month, day: day > 30 ? day - 30 : day, hour: h, minute: m))!, cal)
+    }
+
+    func snapshot(_ mood: Mood, at logged: Date) -> PetSnapshot {
+        PetSnapshot(identity: PetIdentity(species: .penguin), mood: mood, intensity: .moderate, loggedAt: logged)
+    }
+
+    /// Logged at 10pm, opened at 8am: the pet has slept, and wakes up fresh.
+    @Test func aNightsSleepResetsTheMood() {
+        let (logged, cal) = at(29, 22)
+        let (morning, _) = at(30, 8)
+        #expect(snapshot(.sad, at: logged).stance(at: morning, calendar: cal) == .life(.waking))
+    }
+
+    /// Logged at midnight, or at 3:44am, and opened at 8am: same thing, however short the night.
+    @Test func aShortNightStillResets() {
+        let (midnight, cal) = at(30, 0)
+        let (late, _) = at(30, 3, 44)
+        let (morning, _) = at(30, 8)
+        #expect(snapshot(.sad, at: midnight).stance(at: morning, calendar: cal) == .life(.waking))
+        #expect(snapshot(.happy, at: late).stance(at: morning, calendar: cal) == .life(.waking))
+        #expect(!PetSnapshot.isFresh(loggedAt: late, at: morning, calendar: cal))
+        // During the night itself it keeps you company, then dozes off an hour later.
+        #expect(snapshot(.sad, at: late).stance(at: late.addingTimeInterval(600), calendar: cal) == .mood(.sad, .moderate))
+        #expect(snapshot(.sad, at: late).stance(at: late.addingTimeInterval(2 * 3600), calendar: cal) == .life(.sleeping))
+    }
+
+    /// A mood logged after waking lasts through the day as before.
+    @Test func aMorningMoodLasts() {
+        let (logged, cal) = at(30, 7)
+        #expect(snapshot(.sad, at: logged).stance(at: logged.addingTimeInterval(3 * 3600), calendar: cal) == .mood(.sad, .moderate))
+    }
+
+    /// Weekends wake at 7:30, so a 7am weekend visit is still last night.
+    @Test func weekendNightsRunLonger() {
+        let (sat1am, cal) = at(33, 1)
+        let (sat7, _) = at(33, 7)
+        let (sat8, _) = at(33, 8)
+        #expect(PetDay.dayStart(containing: sat7, calendar: cal) < sat1am)
+        #expect(PetDay.dayStart(containing: sat8, calendar: cal) > sat1am)
+    }
+
+    /// A rough night counts toward yesterday: the morning after, it greets you gently until you log.
+    @Test func aRoughNightMeansAGentleMorning() {
+        let (logged, cal) = at(30, 1)
+        let (morning, _) = at(30, 8)
+        var s = snapshot(.sad, at: logged)
+        s.roughYesterday = true
+        #expect(s.greetsGently(at: morning, calendar: cal))
+        s.loggedAt = morning.addingTimeInterval(-60)
+        #expect(!s.greetsGently(at: morning, calendar: cal), "you've logged since waking")
+    }
+}
+
 enum PetTestSupport {
     static var allStances: [PetStance] {
         Mood.allCases.flatMap { m in MoodIntensity.allCases.map { PetStance.mood(m, $0) } } + PetActivity.allCases.map { .life($0) } + [.meditating]
@@ -391,7 +451,7 @@ enum PetTestSupport {
     static func allClips(_ s: PetSpecies) -> [PetClip] {
         PetVignette.allCases.map { PetClips.vignette($0, s) } + Mood.allCases.map { PetClips.reaction(to: $0, s) }
             + [PetClips.arrive(.mood(.happy, .moderate), s), PetClips.arrive(.mood(.sad, .moderate), s), PetClips.boop(s), PetClips.tickle(s),
-               PetClips.flustered(s), PetClips.afterPetting(s), PetClips.wave(s), PetClips.gentleHello(s), PetClips.swat(s), PetPokes.wokenUp(s)]
+               PetClips.flustered(s), PetClips.afterPetting(s), PetClips.wave(s), PetClips.gentleHello(s), PetClips.swat(s), PetPokes.wokenUp(s), PetClips.goodMorning(s)]
             + [PetStance.life(.sleeping), .life(.waking), .mood(.sad, .moderate), .mood(.stressed, .moderate), .mood(.frustrated, .moderate),
                .mood(.calm, .moderate), .meditating, .life(.working), .life(.reading), .mood(.happy, .moderate), .mood(.neutral, .moderate)]
                 .flatMap { st in (0..<6).flatMap { v in [true, false].map { PetPokes.clip(for: st, species: s, onHead: $0, variant: v) } } }

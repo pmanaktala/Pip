@@ -63,7 +63,7 @@ final class WatchState {
 
     var hasFreshMood: Bool {
         guard let t = latestEntry?.timestamp else { return false }
-        return Date.now.timeIntervalSince(t) < PetSnapshot.freshness
+        return PetSnapshot.isFresh(loggedAt: t)
     }
 
     // MARK: Actions

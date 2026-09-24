@@ -56,13 +56,23 @@ public struct PetSnapshot: Codable, Equatable, Sendable {
         return hard.contains(last) || moods.filter(hard.contains).count * 2 >= moods.count
     }
 
-    /// Greet gently: yesterday was rough and nothing is logged yet today.
-    public var greetsGently: Bool { roughYesterday == true && today.isEmpty }
+    /// Greet gently: the pet's previous day (waking to waking, so late-night logs count) was rough,
+    /// and nothing has been logged since it woke up this morning.
+    public func greetsGently(at date: Date = .now, calendar: Calendar = .current) -> Bool {
+        guard roughYesterday == true else { return false }
+        guard let loggedAt else { return true }
+        return loggedAt < PetDay.dayStart(containing: date, calendar: calendar)
+    }
 
     /// The fresh mood at `date`, if there is one.
     public func freshMood(at date: Date = .now) -> Mood? {
-        guard let mood, let loggedAt, date.timeIntervalSince(loggedAt) <= Self.freshness else { return nil }
+        guard let mood, let loggedAt, Self.isFresh(loggedAt: loggedAt, at: date) else { return nil }
         return mood
+    }
+
+    /// A mood is current for up to eight hours, and never past a night's sleep (see `PetDay.dayStart`).
+    public static func isFresh(loggedAt: Date, at date: Date = .now, calendar: Calendar = .current) -> Bool {
+        date.timeIntervalSince(loggedAt) <= freshness && loggedAt >= PetDay.dayStart(containing: date, calendar: calendar)
     }
 }
 

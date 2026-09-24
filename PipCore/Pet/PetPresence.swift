@@ -29,7 +29,7 @@ public final class PetPresence {
         let stance = snapshot.stance(at: now)
         self.scene = PetScene(species: snapshot.identity.species, stance: stance,
                               dressing: PetDressing.choose(for: stance, at: now, adoptedAt: snapshot.adoptedAt))
-        self.scene.gentle = snapshot.greetsGently
+        self.scene.gentle = snapshot.greetsGently(at: now)
         self.lastLoggedAt = snapshot.loggedAt
     }
 
@@ -55,7 +55,7 @@ public final class PetPresence {
         self.snapshot = snapshot
         identity = snapshot.identity
         scene.species = snapshot.identity.species
-        if scene.gentle != snapshot.greetsGently { scene.gentle = snapshot.greetsGently }
+        if scene.gentle != snapshot.greetsGently(at: now) { scene.gentle = snapshot.greetsGently(at: now) }
         if let at = snapshot.loggedAt, let mood = snapshot.mood, at != lastLoggedAt {
             lastLoggedAt = at
             if now.timeIntervalSince(at) < 20 { add(PetEvent(.logged(mood, snapshot.intensity ?? .moderate), at: now), share: false) }
@@ -115,8 +115,12 @@ public final class PetPresence {
     /// You arrived (the app came forward, the wrist came up).
     public func arrive(now: Date = .now) {
         // Don't greet twice in a row.
-        if let last = scene.events.last(where: { $0.kind == .arrive || $0.kind == .missedYou }), now.timeIntervalSince(last.at) < 20 { return }
-        add(PetEvent(context.missedYou ? .missedYou : .arrive, at: now), share: false)
+        if let last = scene.events.last(where: { [.arrive, .missedYou, .goodMorning].contains($0.kind) }), now.timeIntervalSince(last.at) < 20 { return }
+        let kind: PetEvent.Kind
+        if context.missedYou { kind = .missedYou }
+        else if context.firstThisMorning, !scene.gentle, !scene.stance.isAsleep, !scene.stance.isHard { kind = .goodMorning }
+        else { kind = .arrive }
+        add(PetEvent(kind, at: now), share: false)
     }
 
     /// A mood was logged on this device. The stance changes at once; the reaction plays over it.
@@ -212,6 +216,10 @@ public extension PetSnapshot {
         guard let mood, let loggedAt, date.timeIntervalSince(loggedAt) <= Self.freshness, date >= loggedAt.addingTimeInterval(-60) else {
             return .life(day)
         }
+        // Sleep ends a feeling: anything logged before this morning's waking belongs to last night,
+        // however few hours ago that was. The pet wakes up fresh (and greets you gently if the night
+        // was rough; see `greetsGently`).
+        if loggedAt < PetDay.dayStart(containing: date, calendar: calendar) { return .life(day) }
         let intensity = intensity ?? .moderate
         if day == .sleeping, date.timeIntervalSince(loggedAt) > 3600 { return .life(.sleeping) }
         let easy: Set<Mood> = [.happy, .excited, .calm, .neutral]

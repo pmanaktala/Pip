@@ -43,6 +43,8 @@ public struct PetContext: Equatable, Sendable {
     public var offline = false
     /// You haven't opened Pip for a few days.
     public var missedYou = false
+    /// The first visit since the pet woke up this morning.
+    public var firstThisMorning = false
 
     public init() {}
 }
