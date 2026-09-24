@@ -22,6 +22,15 @@ struct AppIconRenderTests {
             if let layerData = layer.uiImage?.pngData() {
                 try layerData.write(to: URL(fileURLWithPath: path.replacingOccurrences(of: ".png", with: "-layer.png")))
             }
+            // Alternate icons for the other pets.
+            for species in [PetSpecies.cat, .dog] {
+                let alt = ImageRenderer(content: AppIconView(species: species))
+                alt.scale = 1
+                alt.isOpaque = true
+                if let data = alt.uiImage?.pngData() {
+                    try data.write(to: URL(fileURLWithPath: path.replacingOccurrences(of: ".png", with: "-\(species.defaultName.lowercased()).png")))
+                }
+            }
         }
     }
 }

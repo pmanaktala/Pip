@@ -20,7 +20,7 @@ public struct PetRGB: Equatable, Sendable {
     /// shade warm (a white dog is cream in shadow, not grey).
     public var shade: PetRGB { r + g + b > 2.4 ? mix(PetRGB(0.72, 0.62, 0.52), 0.32) : mix(PetRGB(0.20, 0.16, 0.30), 0.22) }
     /// The rim: a deeper tone of the colour, never black.
-    public var rim: PetRGB { r + g + b > 2.4 ? mix(PetRGB(0.45, 0.36, 0.30), 0.62) : mix(PetRGB(0.12, 0.08, 0.16), 0.48) }
+    public var rim: PetRGB { r + g + b > 2.4 ? mix(PetRGB(0.50, 0.40, 0.33), 0.5) : mix(PetRGB(0.12, 0.08, 0.16), 0.48) }
 }
 
 /// The colours of one species. Pets keep their colours in dark mode; the room adapts instead.
@@ -53,7 +53,7 @@ public struct PetPalette: Sendable {
                        blush: PetRGB(0.99, 0.50, 0.46, 0.45), prop: PetRGB(0.34, 0.62, 0.72))
         case .dog:
             // A white, fluffy little dog: warm white coat, curly ears a shade deeper, a rosy nose.
-            PetPalette(coat: PetRGB(0.97, 0.94, 0.88), cream: PetRGB(1.0, 0.99, 0.96), marking: PetRGB(0.92, 0.86, 0.77),
+            PetPalette(coat: PetRGB(0.99, 0.97, 0.93), cream: PetRGB(1.0, 1.0, 0.98), marking: PetRGB(0.95, 0.86, 0.74),
                        pink: PetRGB(0.96, 0.60, 0.62), accent: PetRGB(0.66, 0.40, 0.38), ink: PetRGB(0.17, 0.13, 0.13),
                        blush: PetRGB(0.99, 0.55, 0.55, 0.45), prop: PetRGB(0.24, 0.62, 0.58))
         }

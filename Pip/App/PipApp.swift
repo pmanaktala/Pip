@@ -54,6 +54,7 @@ struct PipApp: App {
             guard phase == .active else { return }
             appState.refresh()
             appState.tidyLiveActivities()
+            appState.updateAppIcon()
             Task {
                 await health.syncPending(context: appState.context, preferences: appState.preferences)
                 await notifications.refreshAuthorization()

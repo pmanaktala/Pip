@@ -63,8 +63,8 @@ struct PetFigure {
             PetFigure(headCenter: CGPoint(x: 100, y: 78), headRX: 47, headRY: 37, neck: CGPoint(x: 100, y: 108), shoulder: CGPoint(x: 19, y: 118),
                       eyeX: 19, eyeY: 0, eyeW: 8, eyeH: 10.5, mouthY: 16, blushX: 25, blushY: 10)
         case .dog:
-            PetFigure(headCenter: CGPoint(x: 100, y: 77), headRX: 44, headRY: 39, neck: CGPoint(x: 100, y: 108), shoulder: CGPoint(x: 20, y: 118),
-                      eyeX: 18, eyeY: -2, eyeW: 9, eyeH: 10.8, mouthY: 21, blushX: 23, blushY: 8)
+            PetFigure(headCenter: CGPoint(x: 100, y: 78), headRX: 42, headRY: 38, neck: CGPoint(x: 100, y: 108), shoulder: CGPoint(x: 20, y: 118),
+                      eyeX: 15.5, eyeY: 0, eyeW: 9, eyeH: 10.6, mouthY: 20, blushX: 23, blushY: 10)
         }
     }
 

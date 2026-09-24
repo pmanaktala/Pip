@@ -59,26 +59,45 @@ enum QuadrupedArt {
 
     static func foreleg(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure, angle: Double) {
         let pal = p.palette
-        let root = CGPoint(x: 100 + fig.shoulder.x, y: fig.shoulder.y)
+        let shoulder = CGPoint(x: 100 + fig.shoulder.x, y: fig.shoulder.y)
         let off = fig.paw(p.species, angle: angle)
         var tip = CGPoint(x: 100 + off.x, y: off.y)
+        let resting = angle > -12 && angle < 25
         // A standing paw lifts with a step.
-        if angle > -10 && angle < 20 { tip.y -= CGFloat(p.pose.stepR) * 0.6 }
-        let reach = hypot(tip.x - root.x, tip.y - root.y)
-        let folded = angle < -20
-        // The elbow bows outward more the more the leg is folded.
-        let bend = -max(0, 46 - reach) * 0.45 - 1.5
-        let leg = PetDraw.limb(from: root, to: tip, bend: bend, rootWidth: 15, tipWidth: folded ? 11 : 13)
-        PetDraw.solid(ctx, leg, pal.coat, rim: p.rim, depth: 3)
-        let paw = PetDraw.ellipse(CGPoint(x: tip.x, y: tip.y + (angle > -20 && angle < 30 ? 1 : 0)), folded ? 7 : 8.5, folded ? 6 : 7)
-        PetDraw.solid(ctx, paw, pal.cream, rim: p.rim, depth: 2)
-        if p.detail == .full && angle > -20 && angle < 30 {
-            // Two toe lines on a paw that rests on the floor.
-            for dx in [-2.6, 2.6] as [CGFloat] {
+        if resting { tip.y -= CGFloat(p.pose.stepR) * 0.6 }
+        // A resting leg is mostly hidden by the chest: only its lower half shows, so it reads as
+        // a paw on the floor rather than a column. A raised or folded leg shows all of it.
+        // Folded arms start at the outside of the shoulder so they wrap round the chest (a hug),
+        // not out from under the chin.
+        let folded = angle < -12
+        let root = resting ? CGPoint(x: shoulder.x + (tip.x - shoulder.x) * 0.45, y: shoulder.y + (tip.y - shoulder.y) * 0.45)
+            : folded ? CGPoint(x: shoulder.x + 8, y: shoulder.y + 5) : shoulder
+        let reach = hypot(tip.x - shoulder.x, tip.y - shoulder.y)
+        let bend = resting ? -1 : folded ? -6 : -max(0, 46 - reach) * 0.45 - 1.5
+        let width: CGFloat = resting ? 14 : 15
+        let pawSize = CGSize(width: resting ? 9.5 : 8.6, height: resting ? 7.2 : 7.6)
+        let pawCenter = CGPoint(x: tip.x, y: tip.y + (resting ? 1 : 0))
+        // Leg and paw are one shape with one outline: no seam at the wrist.
+        let paw = PetDraw.ellipse(pawCenter, pawSize.width, pawSize.height)
+        let shape = PetDraw.limb(from: root, to: tip, bend: bend, rootWidth: width, tipWidth: width - 2).union(paw)
+        if resting {
+            PetDraw.solid(ctx, shape, pal.coat, rim: p.rim * 0.7, depth: 3)
+        } else {
+            PetDraw.solid(ctx, shape, pal.coat, rim: p.rim, depth: 3)
+        }
+        // The paw itself: a sock of cream on the cat, the same white on the dog; toe lines when
+        // it rests on the floor.
+        if p.species == .cat {
+            var sock = ctx
+            sock.clip(to: shape)
+            sock.fill(PetDraw.ellipse(CGPoint(x: pawCenter.x, y: pawCenter.y + 1.5), pawSize.width * 1.05, pawSize.height), pal.cream)
+        }
+        if p.detail == .full && resting {
+            for dx in [-2.8, 2.8] as [CGFloat] {
                 var toe = Path()
                 toe.move(to: CGPoint(x: tip.x + dx, y: tip.y + 3.5))
-                toe.addLine(to: CGPoint(x: tip.x + dx, y: tip.y + 6))
-                ctx.stroke(toe, pal.cream.shade, width: 1.2)
+                toe.addLine(to: CGPoint(x: tip.x + dx, y: tip.y + 6.5))
+                ctx.stroke(toe, pal.coat.shade, width: 1.2)
             }
         }
     }

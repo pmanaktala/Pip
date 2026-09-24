@@ -181,3 +181,24 @@ enum LabFloorProps {
         }.padding(8).background(Color.white)
     }
 }
+
+enum LabDog {
+    @MainActor static func sheet() -> some View {
+        let s = PetSpecies.dog
+        let states: [PetStance] = [.mood(.neutral, .moderate), .mood(.happy, .moderate), .mood(.sad, .moderate), .life(.working)]
+        return VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                ForEach(states.indices, id: \.self) { i in
+                    LabPet(species: s, pose: states[i].holds(s)[0], prop: states[i].prop).frame(width: 300, height: 300)
+                        .background(Color(red: 0.93, green: 0.95, blue: 0.97))
+                }
+            }
+            HStack(spacing: 8) {
+                ForEach(states.indices, id: \.self) { i in
+                    LabPet(species: s, pose: states[i].holds(s)[0], detail: .face).frame(width: 300, height: 300)
+                        .background(Color(red: 0.93, green: 0.95, blue: 0.97))
+                }
+            }
+        }.padding(8).background(Color.white)
+    }
+}

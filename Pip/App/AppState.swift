@@ -17,6 +17,7 @@ final class AppState {
     private(set) var identity: PetIdentity = .placeholder
     private(set) var latestEntry: MoodEntry?
     private(set) var todayEntries: [MoodEntry] = []
+    @ObservationIgnored private var iconChangeInFlight = false
     /// The live pet: its stance, what just happened to it, a finger on it (Docs/Pets/Bible.md).
     let pet: PetPresence
     /// The mood sheet is up (presented from the tab bar accessory; the Pet tab tilts its camera).
@@ -125,6 +126,24 @@ final class AppState {
         refresh()
         Haptics.success()
         DeviceSync.shared.send(identity: identity)
+        updateAppIcon()
+    }
+
+    /// The Home Screen icon follows your pet.
+    /// iOS cancels a change requested while another is running or before the app is fully
+    /// active, so there is only ever one request in flight, made a moment after activation.
+    func updateAppIcon() {
+        guard !iconChangeInFlight else { return }
+        iconChangeInFlight = true
+        Task { @MainActor in
+            defer { iconChangeInFlight = false }
+            try? await Task.sleep(for: .seconds(0.8))
+            let wanted = AppIconView.alternateName(for: identity.species)
+            guard UIApplication.shared.supportsAlternateIcons, UIApplication.shared.applicationState == .active,
+                  UIApplication.shared.alternateIconName != wanted else { return }
+            do { try await UIApplication.shared.setAlternateIconName(wanted) }
+            catch { print("App icon change failed: \(error.localizedDescription)") }
+        }
     }
 
     func rename(_ name: String) {

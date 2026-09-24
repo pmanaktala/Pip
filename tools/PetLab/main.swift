@@ -17,6 +17,7 @@ struct PetLab {
         case "smile": view = AnyView(LabSmile.sheet())
         case "blush": view = AnyView(LabBlush.sheet())
         case "floor": view = AnyView(LabFloorProps.sheet())
+        case "dog": view = AnyView(LabDog.sheet())
         case "reactions": view = AnyView(LabFilm.strips(species: species(args), rows: LabFilm.reactions(species(args))))
         case "vignettes": view = AnyView(LabFilm.strips(species: species(args), rows: LabFilm.vignettes(species(args)), size: 90))
         case "stances":

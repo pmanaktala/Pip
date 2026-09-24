@@ -71,7 +71,7 @@ public struct PetPoseView: View, Animatable {
         case .full: (1, 100)
         case .face: (1.5, head.y + 16)
         case .badge: species == .penguin ? (2.0, head.y + 2) : (1.78, head.y - 5)
-        case .icon: (1.62, head.y + 12)
+        case .icon: species == .cat ? (1.42, head.y + 2) : species == .dog ? (1.52, head.y + 8) : (1.62, head.y + 12)
         }
         guard zoom != 1 else { return }
         ctx.translateBy(x: 100, y: 100)
