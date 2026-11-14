@@ -119,7 +119,7 @@ The reading book rests on the supporting left paw, independently of the right pa
 page-turn clip raises the free paw, sweeps a visible leaf across the spine, then settles. The
 leaf's phase resets only after it is hidden at its landed position, keeping the director
 stateless. The mug uses the existing `propLift` channel to tilt around the grip during a sip;
-its position still comes from the two paws and steam rises separately. `PetLab props` renders
+its position comes from the supporting left paw and steam rises separately. `PetLab props` renders
 both performances frame by frame for any species. This is use/contact choreography; the full
 pickup and put-down lifecycle between different stance props remains a separate milestone.
 
@@ -133,8 +133,32 @@ a moving head. `PetContact` applies these rules after acting and again at the re
 so static poses, vignettes and event clips cannot detach the support paw. Laptop and resting ball
 remain in room/floor space. No average-of-two-hands anchor when one hand is free.
 
-These constraints govern carrying and use. A complete reach/grasp/set-down lifecycle when
-switching between different props remains unfinished; do not disguise that gap with dissolves.
+### Reading-object handling increment
+
+Live pets have a small floor-standing reading shelf. The mug rests on its upper surface and the
+closed book on its lower surface whenever they are not carried. `PetPropHandling` stages
+set-down → release → reach → pickup → settle for all three species and both art styles. Books
+close before landing and open after lifting clear of the shelf. A sleeping pet stands before
+reaching. The right paw keeps its acting while the supporting left paw follows a room-space
+contact target through the inverse body transform. Reading objects remain rigid in room space
+while the body leans and squashes; released objects are painted on the shelf at that same grip.
+
+A new request completes the segment already in progress, discards unstarted work, and routes
+toward the latest requested object. The plan is bounded; completed phases become room ownership,
+not an ever-growing animation queue. A 350 ms base-pose blend preserves contact when the new mood
+changes the body's acting during a carry. No object opacity or timed disappearance is used.
+Reduce Motion and paused views show the final supported arrangement immediately.
+
+This first increment covers the app's reading objects. Blanket folding/unfolding, floor-item
+pickup and headphones donning/removal remain issue #89 work. The user explicitly requires later
+follow-through to Home/Lock Screen/StandBy widgets, Live Activities, Watch and complications.
+Keep the state/renderer shared and use supported still poses/entry updates where continuous
+animation is unavailable. Surface parity and physical-device verification remain tracked;
+this app-first increment does not claim to complete them.
+
+`PetRenderTests.propHandlingSheetRenders` exports an all-species native frame strip when
+`TEST_RUNNER_PIP_HANDLING_OUTPUT` is set. `PIP_DEBUG=handling` opens a reproducible live gallery
+for all three pets. The original state, contact and costume source remains available.
 
 ## 6. Interaction
 
@@ -171,3 +195,14 @@ switching between different props remains unfinished; do not disguise that gap w
 3. The real simulator (iOS 27 phone, paired watch): Pet tab, picker, widgets, Live Activity.
 4. Tests: poses stay in range, clips are finite and end at rest, the director is deterministic,
    no immediate vignette repeats, the phone and the watch compute identical poses for identical input.
+
+### Reading-object checkpoint verification
+
+74 unit/render tests pass, including room/body transform equivalence, floor-contact bounds,
+all-species/both-style grip ownership, interruptions at each phase, bounded request queues,
+wake-before-reach and cancelled-wakeup settling. All five existing UI flow tests pass. The
+all-target Release build, privacy audit and whitespace checks pass. Native frame strips and
+an all-three-pet live gallery were inspected on the dedicated Pip Visual Redesign simulator.
+One local test-host launch stalled before runner connection; restarting that test run completed
+successfully. No other simulator was operated. Real-device timing and the deferred surfaces
+remain acceptance work in #89.

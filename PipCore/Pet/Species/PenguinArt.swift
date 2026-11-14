@@ -42,9 +42,9 @@ enum PenguinArt {
         if cross >= 0.3 { feet() }
     }
 
-    static func flipper(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure, angle: Double) {
+    static func flipper(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure, angle: Double, side: CGFloat = 1) {
         let root = CGPoint(x: 100 + fig.shoulder.x - 3, y: fig.shoulder.y)
-        let tipOffset = fig.paw(.penguin, angle: angle)
+        let tipOffset = fig.paw(.penguin, angle: angle, pose: p.pose, side: side)
         let tip = CGPoint(x: 100 + tipOffset.x, y: tipOffset.y)
         // The flipper bows away from the body as it rises.
         let bend: CGFloat = angle < 0 ? -4 : -6 + CGFloat(min(angle, 90) / 90) * 2

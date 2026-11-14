@@ -37,8 +37,10 @@ public struct PetPoseView: View, Animatable {
     public var monochrome: Bool
     /// The rest of the outfit: neck, floor extra, sign. (The head is `wear`.)
     public var dressing: PetDressing?
+    public var staging: PetPropStage?
 
-    public init(species: PetSpecies, pose: PetPose, prop: PetProp? = nil, wear: PetWear? = nil, framing: PetFraming = .full, time: Double? = nil, showsShadow: Bool = true, monochrome: Bool = false, dressing: PetDressing? = nil) {
+    public init(species: PetSpecies, pose: PetPose, prop: PetProp? = nil, wear: PetWear? = nil, framing: PetFraming = .full, time: Double? = nil, showsShadow: Bool = true, monochrome: Bool = false, dressing: PetDressing? = nil, staging: PetPropStage? = nil) {
+        self.staging = staging
         self.monochrome = monochrome
         self.dressing = dressing
         self.species = species
@@ -86,7 +88,7 @@ public struct PetPoseView: View, Animatable {
             Self.frame(&ctx, species: species, framing: framing, style: illustratedArtwork ? .illustrated : .original)
             // Held props belong to the full pet; what it wears shows at every size.
             PetRenderer.draw(ctx, PetPaint(species: species, pose: pose, prop: framing == .full ? prop : nil, wear: wear, detail: framing.detail, time: time, monochrome: monochrome,
-                                           neck: dressing?.neck, extra: framing == .full ? dressing?.extra : nil, sign: framing == .full ? dressing?.sign : nil, style: illustratedArtwork ? .illustrated : .original),
+                                           neck: dressing?.neck, extra: framing == .full ? dressing?.extra : nil, sign: framing == .full ? dressing?.sign : nil, style: illustratedArtwork ? .illustrated : .original, staging: staging),
                              showsShadow: showsShadow)
         }
         .aspectRatio(1, contentMode: .fit)
@@ -153,10 +155,14 @@ public struct LivePetView: View {
     public var showsShadow: Bool
     public var paused: Bool
 
+    @State private var propHandling: PetPropHandling
+    @AppStorage("pet.illustratedArtwork", store: SharedStateStore.shared.defaultsSuite) private var illustratedArtwork = true
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.self) private var environment
 
     public init(scene: PetScene, framing: PetFraming = .full, showsShadow: Bool = true, paused: Bool = false) {
+        _propHandling = State(initialValue: PetPropHandling(prop: scene.prop))
         self.scene = scene
         self.framing = framing
         self.showsShadow = showsShadow
@@ -183,17 +189,34 @@ public struct LivePetView: View {
     }
 
     public var body: some View {
-        if reduceMotion || paused || isConceptPreview {
-            PetPoseView(species: scene.species, pose: PetDirector.hold(scene), prop: scene.prop, wear: scene.wear, framing: framing, showsShadow: showsShadow, dressing: scene.dressing)
-                .animation(reduceMotion ? nil : .smooth(duration: 0.6), value: scene.stance)
-        } else {
-            TimelineView(.animation(minimumInterval: frameInterval)) { context in
-                let pose = PetDirector.pose(scene, at: context.date)
-                PetPoseView(species: scene.species, pose: pose, prop: scene.prop(for: pose), wear: scene.wear, framing: framing,
-                            time: context.date.timeIntervalSince1970, showsShadow: showsShadow, dressing: scene.dressing)
+        Group {
+            if reduceMotion || paused || isConceptPreview {
+                PetPoseView(species: scene.species, pose: PetDirector.hold(scene), prop: scene.prop, wear: scene.wear, framing: framing, showsShadow: showsShadow, dressing: scene.dressing,
+                            staging: PetPropStage(carried: scene.prop))
+            } else {
+                TimelineView(.animation(minimumInterval: frameInterval)) { context in
+                    let pose = PetDirector.pose(scene, at: context.date)
+                    let frame = propHandling.frame(at: context.date, base: pose, fallback: scene.prop(for: pose),
+                                                   species: scene.species, style: illustratedArtwork ? .illustrated : .original)
+                    PetPoseView(species: scene.species, pose: frame.pose, prop: frame.prop, wear: scene.wear, framing: framing,
+                                time: context.date.timeIntervalSince1970, showsShadow: showsShadow,
+                                dressing: scene.dressing, staging: frame.stage)
+                }
             }
         }
+        .onChange(of: scene) { old, new in
+            if old.species != new.species || reduceMotion || paused {
+                propHandling = PetPropHandling(prop: new.prop)
+            } else if old.prop != new.prop {
+                let now = Date.now
+                propHandling.request(new.prop, at: now, source: PetDirector.pose(old, at: now),
+                                     species: old.species, style: illustratedArtwork ? .illustrated : .original)
+            }
+        }
+        .onChange(of: reduceMotion) { _, _ in propHandling = PetPropHandling(prop: scene.prop) }
+        .onChange(of: paused) { _, _ in propHandling = PetPropHandling(prop: scene.prop) }
     }
+
 }
 
 /// The pet in its room: the room full-bleed, the pet standing on the horizon.

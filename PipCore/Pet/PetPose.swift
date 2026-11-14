@@ -92,6 +92,12 @@ public struct PetPose: Equatable, Sendable {
     // MARK: Props and effects (intensities 0…1)
     /// Raises a held prop toward the mouth (a sip), 0…1.
     public var propLift = 0.0
+    /// A room-space supporting-paw target during physical pickup and set-down.
+    public var leftHandX = 0.0
+    public var leftHandY = 0.0
+    public var leftHandIK = 0.0
+    /// The reading book closes before it is put back on its shelf.
+    public var bookClose = 0.0
     /// Progress through a visible page turn; zero at rest, one when the leaf has landed.
     public var pageTurn = 0.0
     public var tears = 0.0
@@ -122,7 +128,7 @@ public struct PetPose: Equatable, Sendable {
         \.browShow, \.browSlant, \.browRaise,
         \.smile, \.mouthOpen, \.mouthRound, \.cheekPuff, \.blush,
         \.earL, \.earR, \.armL, \.armR, \.crossLegs, \.recline, \.stepL, \.stepR, \.tail, \.tailUp,
-        \.propLift, \.pageTurn, \.tears, \.sweat, \.zzz, \.notes, \.hearts, \.sparkles, \.steam, \.question, \.exclaim, \.thought, \.bubble, \.holdToy, \.bite,
+        \.propLift, \.leftHandX, \.leftHandY, \.leftHandIK, \.bookClose, \.pageTurn, \.tears, \.sweat, \.zzz, \.notes, \.hearts, \.sparkles, \.steam, \.question, \.exclaim, \.thought, \.bubble, \.holdToy, \.bite,
     ]
 
     /// A pose with every channel at zero — the identity for additive layers.
@@ -163,6 +169,8 @@ public struct PetPose: Equatable, Sendable {
         p.lean = p.lean.clamped(-22, 22)
         p.breath = p.breath.clamped(-0.5, 1.5)
         p.slump = p.slump.clamped(0, 1)
+        p.leftHandIK = p.leftHandIK.clamped(0, 1)
+        p.bookClose = p.bookClose.clamped(0, 1)
         p.recline = p.recline.clamped(0, 1)
         p.turn = p.turn.clamped(-1, 1)
         p.headTilt = p.headTilt.clamped(-28, 28)
