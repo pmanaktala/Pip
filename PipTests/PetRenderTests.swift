@@ -98,7 +98,7 @@ struct PetRenderTests {
         let sheet = VStack(spacing: 12) {
             ForEach(PetSpecies.allCases) { species in
                 HStack(spacing: 6) {
-                    ForEach(Array([0.0, 0.3, 0.7, 0.9, 1.15, 1.5, 1.9, 2.4, 2.7].enumerated()), id: \.offset) { _, time in
+                    ForEach(Array([0.0, 0.3, 0.7, 0.9, 1.15, 1.5, 1.9, 2.4, 2.7, 3.3].enumerated()), id: \.offset) { _, time in
                         let old = PetStance.mood(.calm, .moderate).rest(species)
                         let target = PetStance.life(.reading).rest(species)
                         let frame = handlingFrame(species, style, old, target, start, time)
@@ -119,9 +119,15 @@ struct PetRenderTests {
     }
 
     private func handlingFrame(_ species: PetSpecies, _ style: PetArtStyle, _ old: PetPose, _ target: PetPose, _ start: Date, _ time: Double) -> PetPropHandlingFrame {
-        var plan = PetPropHandling(prop: .mug)
-        plan.request(.book, at: start, source: old, species: species, style: style)
-        return plan.frame(at: start.addingTimeInterval(time), base: target, fallback: .book, species: species, style: style)
+        let scenario = ProcessInfo.processInfo.environment["PIP_HANDLING_SCENARIO"]
+        let sourceProp: PetProp = scenario == "blanketBack" || scenario == "sleep" ? .blanket : .mug
+        let desired: PetProp? = scenario == "blanket" ? .blanket : (scenario == "sleep" ? nil : .book)
+        let origin = sourceProp == .blanket ? PetStance.mood(.sad, .moderate).rest(species) : old
+        let destination = scenario == "blanket" ? PetStance.mood(.sad, .moderate).rest(species) :
+            (scenario == "sleep" ? PetStance.life(.sleeping).rest(species) : target)
+        var plan = PetPropHandling(prop: sourceProp)
+        plan.request(desired, at: start, source: origin, species: species, style: style)
+        return plan.frame(at: start.addingTimeInterval(time), base: destination, fallback: desired, species: species, style: style)
     }
 
     @Test func featureScreensRender() async throws {

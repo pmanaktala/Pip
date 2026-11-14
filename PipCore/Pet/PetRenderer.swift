@@ -100,11 +100,13 @@ struct PetFigure {
 
     func paw(_ species: PetSpecies, angle: Double, pose: PetPose, side: CGFloat) -> CGPoint {
         let authored = paw(species, angle: angle)
-        guard side < 0, pose.leftHandIK > 0 else { return authored }
-        let room = CGPoint(x: pose.leftHandX, y: pose.leftHandY)
+        let strength = side < 0 ? pose.leftHandIK : pose.rightHandIK
+        guard strength > 0 else { return authored }
+        let room = side < 0 ? CGPoint(x: pose.leftHandX, y: pose.leftHandY) : CGPoint(x: pose.rightHandX, y: pose.rightHandY)
         let local = room.applying(PetBodyGeometry.transform(pose, style: style).inverted())
-        let weight = CGFloat(pose.leftHandIK)
-        return CGPoint(x: authored.x + (100 - local.x - authored.x) * weight,
+        let weight = CGFloat(strength)
+        let targetX = side < 0 ? 100 - local.x : local.x - 100
+        return CGPoint(x: authored.x + (targetX - authored.x) * weight,
                        y: authored.y + (local.y - authored.y) * weight)
     }
 
@@ -171,7 +173,7 @@ public enum PetRenderer {
         }
 
         if let staging = p.staging, p.detail == .full {
-            PetPropArt.readingShelf(ctx, p, fig, staging)
+            PetPropArt.propShelf(ctx, p, fig, staging)
         }
         var body = ctx
         body.concatenate(PetBodyGeometry.transform(p.pose, style: p.style))
@@ -205,7 +207,9 @@ public enum PetRenderer {
             // hop or a lean never lifts them. Held props go through the body transform with the paws.
             if let extra = p.extra, p.detail == .full { PetPropArt.extra(ctx, p, extra) }
             if let prop = p.prop, prop.onFloor, prop.drawnBehindArms { PetPropArt.held(ctx, p, fig, prop) }
-            if let prop = p.prop, !prop.onFloor, prop.drawnBehindArms { PetPropArt.held(body, p, fig, prop) }
+            if let prop = p.prop, !prop.onFloor, prop.drawnBehindArms {
+                PetPropArt.held(prop == .blanket && p.staging != nil ? ctx : body, p, fig, prop)
+            }
             drawArms(body, p, fig, front: false)
             if let neck = p.neck, p.prop != .blanket || neck == .travelPillow { PetPropArt.neck(body, p, fig, neck) }
             drawHead(head, p, fig)

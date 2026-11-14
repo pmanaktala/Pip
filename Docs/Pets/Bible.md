@@ -135,7 +135,7 @@ remain in room/floor space. No average-of-two-hands anchor when one hand is free
 
 ### Reading-object handling increment
 
-Live pets have a small floor-standing reading shelf. The mug rests on its upper surface and the
+Live pets have a small floor-standing reading shelf. The mug rests on its upper surface, the folded blanket on its middle surface, and the
 closed book on its lower surface whenever they are not carried. `PetPropHandling` stages
 set-down → release → reach → pickup → settle for all three species and both art styles. Books
 close before landing and open after lifting clear of the shelf. A sleeping pet stands before
@@ -149,8 +149,22 @@ not an ever-growing animation queue. A 350 ms base-pose blend preserves contact 
 changes the body's acting during a carry. No object opacity or timed disappearance is used.
 Reduce Motion and paused views show the final supported arrangement immediately.
 
-This first increment covers the app's reading objects. Blanket folding/unfolding, floor-item
-pickup and headphones donning/removal remain issue #89 work. The user explicitly requires later
+The app now handles reading objects and the blanket. Fabric gathers between both paws with a
+visible turning hem, folds into a layered bundle, and returns to its shelf support. A closed
+book or folded blanket slides horizontally clear of the cabinet before lifting, and lowers
+outside it before sliding back in. Two room-space paw targets remain on the fabric corners;
+its wrap drapes with the body while the free hem is kept above the floor. These geometry/pose
+channels are shared, although other surfaces do not yet present the handling sequence.
+
+Illustrated pajama sleep has no carried blanket: `PetScene.handlingProp(style:)` normalizes
+that state before planning, including sad/tired → sleep where the legacy stance still reports
+`blanket`. It is stored before the pet reclines; the original artwork keeps its blanket sleep
+pose. Explicit appearance changes reset to the final supported arrangement. Clock-driven
+poses disable inherited implicit animation so room-camera springs cannot interpolate IK and
+object ownership a second time.
+
+Floor-item pickup, view-to-view inventory continuity, and headphones donning/removal remain
+issue #89 work. The user explicitly requires later
 follow-through to Home/Lock Screen/StandBy widgets, Live Activities, Watch and complications.
 Keep the state/renderer shared and use supported still poses/entry updates where continuous
 animation is unavailable. Surface parity and physical-device verification remain tracked;
@@ -206,3 +220,13 @@ an all-three-pet live gallery were inspected on the dedicated Pip Visual Redesig
 One local test-host launch stalled before runner connection; restarting that test run completed
 successfully. No other simulator was operated. Real-device timing and the deferred surfaces
 remain acceptance work in #89.
+
+### Blanket checkpoint verification
+
+78 unit/render tests and all five app-flow tests pass. Blanket checks cover both fabric corners,
+folded storage dimensions, floor bounds, horizontal shelf clearance, changing moods during
+folding, and illustrated-versus-original sleep ownership. The original renderer remains
+selectable; its sleeping pet puts the blanket away before pickup without repeating a wakeup.
+Native all-species strips cover gathering, unfolding, storage and pajama sleep; a live all-pet
+review also covers these transitions. Release builds include phone/watch apps and extensions.
+Widgets, Live Activities, StandBy and Watch presentation remain explicitly deferred in #89.

@@ -51,7 +51,12 @@ struct PetGalleryView: View {
 
 /// Reproducible all-species live review of physical reading-object changes.
 struct PetHandlingGalleryView: View {
-    private let stances: [PetStance] = [.mood(.calm, .moderate), .life(.reading), .mood(.neutral, .moderate), .mood(.calm, .moderate), .life(.sleeping), .mood(.neutral, .moderate)]
+    private var stances: [PetStance] {
+        if ProcessInfo.processInfo.environment["PIP_HANDLING_SCENARIO"] == "blanket" {
+            return [.mood(.calm, .moderate), .mood(.sad, .moderate), .life(.reading), .mood(.tired, .moderate), .life(.sleeping), .mood(.neutral, .moderate)]
+        }
+        return [.mood(.calm, .moderate), .life(.reading), .mood(.neutral, .moderate), .mood(.calm, .moderate), .life(.sleeping), .mood(.neutral, .moderate)]
+    }
     @State private var index = 0
     @State private var previous: PetStance?
     @State private var since = Date.distantPast
@@ -68,7 +73,7 @@ struct PetHandlingGalleryView: View {
         }
         .task {
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(3.4))
+                try? await Task.sleep(for: .seconds(4.2))
                 guard !Task.isCancelled else { return }
                 previous = stances[index]
                 index = (index + 1) % stances.count

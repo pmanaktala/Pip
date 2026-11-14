@@ -162,12 +162,16 @@ public struct LivePetView: View {
     @Environment(\.self) private var environment
 
     public init(scene: PetScene, framing: PetFraming = .full, showsShadow: Bool = true, paused: Bool = false) {
-        _propHandling = State(initialValue: PetPropHandling(prop: scene.prop))
+        let original = SharedStateStore.shared.defaultsSuite.object(forKey: "pet.illustratedArtwork") as? Bool == false
+        _propHandling = State(initialValue: PetPropHandling(prop: scene.handlingProp(style: original ? .original : .illustrated)))
         self.scene = scene
         self.framing = framing
         self.showsShadow = showsShadow
         self.paused = paused
     }
+
+    private var artStyle: PetArtStyle { illustratedArtwork ? .illustrated : .original }
+    private var carriedProp: PetProp? { scene.handlingProp(style: artStyle) }
 
     private var frameInterval: Double {
         #if os(watchOS)
@@ -192,29 +196,33 @@ public struct LivePetView: View {
         Group {
             if reduceMotion || paused || isConceptPreview {
                 PetPoseView(species: scene.species, pose: PetDirector.hold(scene), prop: scene.prop, wear: scene.wear, framing: framing, showsShadow: showsShadow, dressing: scene.dressing,
-                            staging: PetPropStage(carried: scene.prop))
+                            staging: PetPropStage(carried: carriedProp))
             } else {
                 TimelineView(.animation(minimumInterval: frameInterval)) { context in
                     let pose = PetDirector.pose(scene, at: context.date)
                     let frame = propHandling.frame(at: context.date, base: pose, fallback: scene.prop(for: pose),
-                                                   species: scene.species, style: illustratedArtwork ? .illustrated : .original)
+                                                   species: scene.species, style: artStyle)
                     PetPoseView(species: scene.species, pose: frame.pose, prop: frame.prop, wear: scene.wear, framing: framing,
                                 time: context.date.timeIntervalSince1970, showsShadow: showsShadow,
                                 dressing: scene.dressing, staging: frame.stage)
+                        // The clock already interpolates the bones. A room-camera animation
+                        // must not interpolate ownership and paw targets a second time.
+                        .transaction { $0.animation = nil }
                 }
             }
         }
         .onChange(of: scene) { old, new in
             if old.species != new.species || reduceMotion || paused {
-                propHandling = PetPropHandling(prop: new.prop)
-            } else if old.prop != new.prop {
+                propHandling = PetPropHandling(prop: new.handlingProp(style: artStyle))
+            } else if old.handlingProp(style: artStyle) != new.handlingProp(style: artStyle) {
                 let now = Date.now
-                propHandling.request(new.prop, at: now, source: PetDirector.pose(old, at: now),
-                                     species: old.species, style: illustratedArtwork ? .illustrated : .original)
+                propHandling.request(new.handlingProp(style: artStyle), at: now, source: PetDirector.pose(old, at: now),
+                                     species: old.species, style: artStyle)
             }
         }
-        .onChange(of: reduceMotion) { _, _ in propHandling = PetPropHandling(prop: scene.prop) }
-        .onChange(of: paused) { _, _ in propHandling = PetPropHandling(prop: scene.prop) }
+        .onChange(of: reduceMotion) { _, _ in propHandling = PetPropHandling(prop: carriedProp) }
+        .onChange(of: illustratedArtwork) { _, _ in propHandling = PetPropHandling(prop: carriedProp) }
+        .onChange(of: paused) { _, _ in propHandling = PetPropHandling(prop: carriedProp) }
     }
 
 }
