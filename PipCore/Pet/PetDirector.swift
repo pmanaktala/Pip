@@ -132,7 +132,7 @@ public enum PetDirector {
         p.earL += (-rise * 0.05 + tilt * 0.02).clamped(-0.5, 0.5)
         p.earR += (-rise * 0.05 - tilt * 0.02).clamped(-0.5, 0.5)
         p.tail += (-sway * 0.12 - (p.lean - past.lean) * 0.03).clamped(-0.5, 0.5)
-        return p.clamped()
+        return PetContact.pose(p.clamped(), holding: scene.prop(for: p), species: scene.species)
     }
 
     /// A still pose for surfaces that cannot animate: the stance's `hold` variation `index`.
@@ -172,11 +172,18 @@ public enum PetDirector {
 
         // 3. Event clips (and how much they push vignettes aside).
         var busy = 0.0
-        for event in scene.events {
+        for (index, event) in scene.events.enumerated() {
             let local = t - event.at.timeIntervalSince1970
             guard let clip = clip(for: event.kind, stance: stance, species: s, gentle: scene.gentle), local >= 0, local <= clip.duration else { continue }
-            p = clip.apply(to: p, at: local, weight: weight(for: event.kind))
-            busy = max(busy, clip.envelope(at: local))
+            // A new interaction takes the stage. Ease the previous performance away instead
+            // of adding every tap, greeting and mood reaction until the rig hits its limits.
+            // Include completed successors too: an interrupted long clip must not resume.
+            let successor = scene.events.dropFirst(index + 1).first { next in
+                next.at.timeIntervalSince1970 <= t && Self.clip(for: next.kind, stance: stance, species: s, gentle: scene.gentle) != nil
+            }
+            let blend = successor.map { 1 - PetMath.smoothstep((t - $0.at.timeIntervalSince1970) / 0.22) } ?? 1
+            p = clip.apply(to: p, at: local, weight: weight(for: event.kind) * blend)
+            busy = max(busy, clip.envelope(at: local) * blend)
         }
         if let since = scene.pettingSince {
             let w = PetMath.smoothstep((t - since.timeIntervalSince1970) / 0.35)

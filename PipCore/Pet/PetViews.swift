@@ -50,21 +50,43 @@ public struct PetPoseView: View, Animatable {
         self.showsShadow = showsShadow
     }
 
+    @AppStorage("pet.illustratedArtwork", store: SharedStateStore.shared.defaultsSuite) private var illustratedArtwork = true
+
+    #if DEBUG && os(iOS)
+    @Environment(\.petConceptArtwork) private var conceptArtwork
+    #endif
+
     public var animatableData: PetPose.Vector {
         get { pose.vector }
         set { pose.vector = newValue }
     }
 
     public var body: some View {
+        Group {
+            #if DEBUG && os(iOS)
+            if let directory = conceptArtwork {
+                PetConceptArtwork(species: species, framing: framing, directory: directory)
+            } else {
+                drawing
+            }
+            #else
+            drawing
+            #endif
+        }
+        .aspectRatio(1, contentMode: .fit)
+        .accessibilityHidden(true)
+    }
+
+    private var drawing: some View {
         Canvas(opaque: false, colorMode: .nonLinear, rendersAsynchronously: false) { context, size in
             var ctx = context
             let side = min(size.width, size.height)
             ctx.translateBy(x: (size.width - side) / 2, y: (size.height - side) / 2)
             ctx.scaleBy(x: side / 200, y: side / 200)
-            Self.frame(&ctx, species: species, framing: framing)
+            Self.frame(&ctx, species: species, framing: framing, style: illustratedArtwork ? .illustrated : .original)
             // Held props belong to the full pet; what it wears shows at every size.
             PetRenderer.draw(ctx, PetPaint(species: species, pose: pose, prop: framing == .full ? prop : nil, wear: wear, detail: framing.detail, time: time, monochrome: monochrome,
-                                           neck: dressing?.neck, extra: framing == .full ? dressing?.extra : nil, sign: framing == .full ? dressing?.sign : nil),
+                                           neck: dressing?.neck, extra: framing == .full ? dressing?.extra : nil, sign: framing == .full ? dressing?.sign : nil, style: illustratedArtwork ? .illustrated : .original),
                              showsShadow: showsShadow)
         }
         .aspectRatio(1, contentMode: .fit)
@@ -72,8 +94,8 @@ public struct PetPoseView: View, Animatable {
     }
 
     /// Zooms the 200-unit design space onto the head for the tighter framings.
-    static func frame(_ ctx: inout GraphicsContext, species: PetSpecies, framing: PetFraming) {
-        let head = PetFigure.of(species).headCenter
+    static func frame(_ ctx: inout GraphicsContext, species: PetSpecies, framing: PetFraming, style: PetArtStyle = .illustrated) {
+        let head = PetFigure.of(species, style: style).headCenter
         let (zoom, focusY): (CGFloat, CGFloat) = switch framing {
         case .full: (1, 100)
         case .face: (1.5, head.y + 16)
@@ -152,10 +174,18 @@ public struct LivePetView: View {
         #endif
     }
 
+    private var isConceptPreview: Bool {
+        #if DEBUG && os(iOS)
+        return environment.petConceptArtwork != nil
+        #else
+        return false
+        #endif
+    }
+
     public var body: some View {
-        if reduceMotion || paused {
+        if reduceMotion || paused || isConceptPreview {
             PetPoseView(species: scene.species, pose: PetDirector.hold(scene), prop: scene.prop, wear: scene.wear, framing: framing, showsShadow: showsShadow, dressing: scene.dressing)
-                .animation(.smooth(duration: 0.6), value: scene.stance)
+                .animation(reduceMotion ? nil : .smooth(duration: 0.6), value: scene.stance)
         } else {
             TimelineView(.animation(minimumInterval: frameInterval)) { context in
                 let pose = PetDirector.pose(scene, at: context.date)

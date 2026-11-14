@@ -1,4 +1,5 @@
 import HealthKit
+import WidgetKit
 import SwiftUI
 
 struct SettingsView: View {
@@ -6,6 +7,7 @@ struct SettingsView: View {
     @Environment(HealthSyncService.self) private var health
     @Environment(NotificationService.self) private var notifications
     @Environment(\.openURL) private var openURL
+    @AppStorage("pet.illustratedArtwork", store: SharedStateStore.shared.defaultsSuite) private var illustratedArtwork = true
     @State private var showDeleteConfirmation = false
     @State private var showHealthDenied = false
 
@@ -29,6 +31,14 @@ struct SettingsView: View {
                     }
                     .padding(.vertical, 6)
                 }
+            }
+
+            Section {
+                Toggle("Illustrated pets", isOn: $illustratedArtwork)
+            } header: {
+                Text("Appearance")
+            } footer: {
+                Text("A softer illustrated look for all three pets, including their expressions, play and widgets. Turn off to return to the original artwork.")
             }
 
             Section {
@@ -142,6 +152,10 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("You")
+        .onChange(of: illustratedArtwork) { _, _ in
+            WidgetCenter.shared.reloadAllTimelines()
+            DeviceSync.shared.sendArtworkPreference()
+        }
         .confirmationDialog("Delete all app data?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
             Button("Delete Everything", role: .destructive) { appState.deleteAllData() }
             Button("Cancel", role: .cancel) {}

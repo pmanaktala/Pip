@@ -223,6 +223,25 @@ public enum PetStance: Codable, Hashable, Sendable {
             p.lidL = 0.25; p.lidR = 0.25; p.lidSlant = 0.85; p.browShow = 1; p.browSlant = 0.9; p.smile = -0.4; p.cheekPuff = 0.5
             p.armL = -62; p.armR = -62; p.earL = -0.3; p.earR = -0.3; p.headTurn = -0.22; p.headTilt = -6; p.tailUp = -0.2
         }
+        // The same feeling belongs to three different bodies. Keep their silhouette and
+        // balance distinct before idle motion or props enter the picture.
+        switch (s, m) {
+        case (.penguin, .happy): p.lean = -3; p.armL = 18; p.armR = 38
+        case (.penguin, .excited): p.armL = 58; p.armR = 72; p.lean = 2
+        case (.penguin, .tired): p.squash = 0.22; p.headTilt = -10
+        case (.penguin, .sad): p.slump = 0.7; p.headNod = 0.5; p.lean = -3
+        case (.cat, .happy): p.headTurn = 0.18; p.armL = 8; p.armR = -18; p.tail = 0.5
+        case (.cat, .excited): p.armL = 12; p.armR = 58; p.lean = -4; p.earL = 1; p.earR = 0.7
+        case (.cat, .tired): p.headTilt = 11; p.squash = 0.25; p.tailUp = -0.8
+        case (.cat, .sad): p.slump = 0.75; p.earL = -1; p.earR = -0.85; p.headTurn = -0.18
+        case (.cat, .frustrated): p.turn = -0.2; p.tail = -0.7; p.earL = -0.7; p.earR = -0.4
+        case (.dog, .happy): p.lean = -4; p.armL = 34; p.armR = 16; p.tailUp = 0.9; p.headNod = -0.15
+        case (.dog, .excited): p.armL = 55; p.armR = 72; p.headNod = -0.3; p.squash = -0.3
+        case (.dog, .tired): p.slump = 0.65; p.headTilt = -12; p.earL = -0.65; p.earR = -0.45
+        case (.dog, .sad): p.headTilt = 8; p.slump = 0.7; p.headNod = 0.45
+        case (.dog, .neutral): p.headTilt = -5; p.earL = 0.4; p.earR = 0.1
+        default: break
+        }
         return p
     }
 
@@ -230,9 +249,11 @@ public enum PetStance: Codable, Hashable, Sendable {
         var p = PetPose()
         switch a {
         case .sleeping:
+            p.recline = 1
             p.lidL = 1; p.lidR = 1; p.headNod = 0.5; p.headTilt = -12; p.slump = 0.4; p.zzz = 0.8; p.armL = -58; p.armR = -58
             p.smile = 0.1; p.earL = -0.3; p.earR = -0.3; p.tailUp = -0.5
         case .napping:
+            p.recline = 1
             p.lidL = 1; p.lidR = 1; p.headNod = 0.4; p.headTilt = 9; p.slump = 0.3; p.zzz = 0.5; p.smile = 0.15
             p.earL = -0.2; p.earR = -0.2
         case .waking:

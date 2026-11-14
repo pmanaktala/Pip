@@ -153,6 +153,7 @@ public enum PetClips {
             ])
         case .sip:
             return PetClip("sip", 3.2, fadeIn: 0.3, fadeOut: 0.4, [
+                bump(\.propLift, 1, from: 0.2, peak: 0.95, hold: 1.8, end: 2.6),
                 add(\.armL, K(0, 0), K(0.8, -22), K(2.0, -22), K(2.6, 0)), add(\.armR, K(0, 0), K(0.8, -22), K(2.0, -22), K(2.6, 0)),
                 add(\.headNod, K(0, 0), K(0.8, 0.2), K(2.0, 0.2), K(2.6, -0.1), K(3.1, 0)),
                 set(\.lidL, K(0, 0.3), K(0.8, 1), K(2.0, 1), K(2.5, 0.35)), set(\.lidR, K(0, 0.3), K(0.8, 1), K(2.0, 1), K(2.5, 0.35)),
@@ -231,7 +232,10 @@ public enum PetClips {
             ])
         case .pageTurn:
             return PetClip("pageTurn", 1.8, [
-                add(\.armR, K(0, 0), K(0.3, 30, .out), K(0.55, 0)),
+                // Reach up to the page edge, sweep inward, then settle on the cover again.
+                add(\.armR, K(0, 0), K(0.3, -28, .out), K(0.65, -18), K(1.15, 0)),
+                // Reset only after the leaf is hidden at its landed position.
+                add(\.pageTurn, K(0, 0), K(0.15, 0), K(0.85, 1), K(1.799, 1), K(1.8, 0, .linear)),
                 set(\.gazeX, K(0, 0.6), K(0.35, 0.6), K(0.6, -0.6, .out), K(1.6, 0.3, .linear), K(1.8, 0.3)),
                 add(\.headTurn, K(0, 0), K(0.6, -0.12), K(1.6, 0.08), K(1.8, 0)),
             ])

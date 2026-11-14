@@ -21,7 +21,7 @@ enum QuadrupedArt {
         }
 
         // The bean: narrow under the head, full at the belly.
-        let w: CGFloat = (dog ? 40 : 38) + breathe, top: CGFloat = 96 - breathe * 0.5, bottom = floor - 5
+        let w: CGFloat = (dog ? 35 : 40) + breathe, top: CGFloat = (dog ? 103 : 99) - breathe * 0.5, bottom = floor - 5
         var bean = Path()
         bean.move(to: CGPoint(x: 100, y: top))
         bean.addCurve(to: CGPoint(x: 100 + w, y: 138), control1: CGPoint(x: 100 + w * 0.62, y: top), control2: CGPoint(x: 100 + w, y: 110))
@@ -49,7 +49,7 @@ enum QuadrupedArt {
             f.translateBy(x: center.x, y: center.y)
             f.rotate(by: .degrees(Double(-cross * 25)))
             f.translateBy(x: -center.x, y: -center.y)
-            let foot = PetDraw.ellipse(center, 11, 7)
+            let foot = PetDraw.ellipse(center, dog ? 12 : 10.5, dog ? 8 : 7)
             PetDraw.solid(f, foot, dog ? pal.coat : pal.cream, rim: p.rim, depth: 2.5)
             if p.detail == .full {
                 for dx in [-3.2, 3.2] as [CGFloat] {

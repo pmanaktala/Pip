@@ -10,6 +10,7 @@ struct PetLab {
         let out = args.count > 2 ? args[2] : "/tmp/petlab.png"
         let view: AnyView
         switch command {
+        case "rooms": view = AnyView(LabRooms.sheet())
         case "check": LabCheck.choices(); return
         case "tokens": view = AnyView(LabTokens.sheet())
         case "cast": view = AnyView(LabCast.sheet())
@@ -25,6 +26,10 @@ struct PetLab {
         case "meditate": view = AnyView(LabMeditate.sheet())
         case "complications": view = AnyView(LabComplications.sheet())
         case "complications-mono": view = AnyView(LabComplications.sheet(mono: true))
+        case "props": view = AnyView(LabFilm.strips(species: species(args), rows: [
+            LabFilm.sample(PetClips.vignette(.sip, species(args)), stance: .mood(.calm, .moderate), species: species(args), frames: 13),
+            LabFilm.sample(PetClips.vignette(.pageTurn, species(args)), stance: .life(.reading), species: species(args), frames: 13)
+        ], size: 140))
         case "reactions": view = AnyView(LabFilm.strips(species: species(args), rows: LabFilm.reactions(species(args))))
         case "vignettes": view = AnyView(LabFilm.strips(species: species(args), rows: LabFilm.vignettes(species(args)), size: 90))
         case "stances":

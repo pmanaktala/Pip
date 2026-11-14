@@ -37,7 +37,7 @@ struct PetSelectorView: View {
                             .padding(.vertical, 12)
                             .padding(.horizontal, 20)
                             .frame(maxWidth: 260)
-                            .glassEffect(.regular, in: .capsule)
+                            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                             .accessibilityLabel("Pet name")
                     }
                     Text("This is your pet. Tap the name to change it.")
@@ -95,8 +95,7 @@ struct PetCard: View {
                 .font(PipFont.title)
             Text(species.displayName)
                 .font(PipFont.caption)
-                .opacity(0.7)
-                .textCase(.uppercase)
+                .foregroundStyle(.secondary)
             Text(species.blurb)
                 .font(PipFont.body)
                 .opacity(0.8)

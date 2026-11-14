@@ -3,6 +3,7 @@ import Foundation
 import OSLog
 import SwiftData
 import WatchConnectivity
+import WidgetKit
 
 /// Direct iPhone ↔ Apple Watch sync over WatchConnectivity, so a mood logged on the wrist is on
 /// the phone within seconds (and vice versa) without waiting for iCloud. CloudKit mirroring
@@ -72,9 +73,15 @@ public final class DeviceSync: NSObject {
     private var identityForContext: [String: String]?
     private var latestForContext: [String: Any]?
 
+    /// Appearance is phone-owned and travels with the latest context, including offline changes.
+    public func sendArtworkPreference() { pushContext() }
+
     private func pushContext() {
         guard let session, session.activationState == .activated else { return }
         var context: [String: Any] = [:]
+        #if os(iOS)
+        context["illustratedArtwork"] = sharedStore.defaultsSuite.object(forKey: "pet.illustratedArtwork") as? Bool ?? true
+        #endif
         if let identityForContext { context["pet"] = identityForContext }
         if let latestForContext { context["latest"] = latestForContext }
         guard !context.isEmpty else { return }
@@ -150,6 +157,12 @@ public final class DeviceSync: NSObject {
     }
 
     private func mergeContext(_ context: [String: Any]) {
+        #if os(watchOS)
+        if let illustrated = context["illustratedArtwork"] as? Bool {
+            sharedStore.defaultsSuite.set(illustrated, forKey: "pet.illustratedArtwork")
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+        #endif
         if let latest = context["latest"] as? [String: Any] { merge(["entry": latest]) }
         mergePet(context)
     }

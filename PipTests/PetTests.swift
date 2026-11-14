@@ -40,6 +40,24 @@ import Testing
         }
     }
 
+    @Test func turningPageKeepsBookInSupportingPaw() {
+        for species in PetSpecies.allCases {
+            let rest = PetStance.life(.reading).rest(species)
+            let figure = PetFigure.of(species)
+            let anchor = PetPropArt.bookAnchor(PetPaint(species: species, pose: rest), figure)
+            let clip = PetClips.vignette(.pageTurn, species)
+            var sawRaisedLeaf = false
+            for step in 0...60 {
+                let pose = clip.apply(to: rest, at: clip.duration * Double(step) / 60).clamped()
+                let current = PetPropArt.bookAnchor(PetPaint(species: species, pose: pose), figure)
+                #expect(current == anchor, "The book must not follow the free hand while turning a page")
+                sawRaisedLeaf = sawRaisedLeaf || (pose.pageTurn > 0.1 && pose.pageTurn < 0.9)
+            }
+            #expect(sawRaisedLeaf)
+            #expect(clip.apply(to: rest, at: clip.duration).pageTurn == 0)
+        }
+    }
+
     @Test func clipsStayFiniteAndInRange() {
         for species in PetSpecies.allCases {
             for clip in PetTestSupport.allClips(species) {
@@ -55,6 +73,23 @@ import Testing
 
 @Suite struct PetDirectorTests {
     let base = Date(timeIntervalSince1970: 1_800_000_000)
+
+    @Test func interruptedClipsDoNotStackOrResume() {
+        for species in PetSpecies.allCases {
+            let stance = PetStance.mood(.neutral, .moderate)
+            let last = PetEvent(.boop, at: base.addingTimeInterval(0.6))
+            let interrupted = PetScene(species: species, stance: stance, events: [
+                PetEvent(.missedYou, at: base),
+                PetEvent(.tickle, at: base.addingTimeInterval(0.3)), last
+            ])
+            let latestOnly = PetScene(species: species, stance: stance, events: [last])
+            for elapsed in [0.9, 1.5, 3.0, 5.0] {
+                let date = base.addingTimeInterval(elapsed)
+                #expect(PetDirector.pose(interrupted, at: date) == PetDirector.pose(latestOnly, at: date),
+                        "An interrupted performance must not stack with or return after the latest interaction")
+            }
+        }
+    }
 
     /// The phone and the watch compute the same pet for the same scene and clock.
     @Test func directorIsDeterministic() {
@@ -460,4 +495,39 @@ enum PetTestSupport {
 
 extension PetPose {
     var hasNaN: Bool { PetPose.channels.contains { self[keyPath: $0].isNaN || self[keyPath: $0].isInfinite } }
+}
+
+@Suite struct PetContactTests {
+    @Test func heldPropsRetainTheirSupportingPawThroughGestures() {
+        for species in PetSpecies.allCases {
+            let fig = PetFigure.of(species)
+            for angle in stride(from: -130.0, through: 175, by: 15) {
+                var source = PetPose()
+                source.armL = angle; source.armR = -angle
+                for prop in [PetProp.mug, .book, .blanket, .heldBall, .snack] {
+                    let paint = PetPaint(species: species, pose: source, prop: prop)
+                    #expect(paint.pose == PetContact.pose(paint.pose, holding: prop, species: species), "Contact constraints must be idempotent")
+                    #expect(paint.pose.armL < -40, "The support paw cannot wave away from its held object")
+                }
+                let mug = PetPaint(species: species, pose: source, prop: .mug)
+                let paw = fig.paw(species, angle: mug.pose.armL)
+                let center = PetPropArt.mugAnchor(mug, fig)
+                #expect(center.x - 11 == 100 - paw.x)
+                #expect(center.y == paw.y)
+                var wave = mug.pose
+                wave.armR = 175
+                #expect(PetPropArt.mugAnchor(PetPaint(species: species, pose: wave, prop: .mug), fig) == center,
+                        "The cup must not float toward the waving hand")
+            }
+        }
+    }
+
+    @Test func floorPropsDoNotConstrainOrRideTheBody() {
+        var pose = PetPose()
+        pose.lift = 20; pose.armL = 140; pose.armR = 130
+        #expect(PetContact.pose(pose, holding: .ball, species: .cat) == pose)
+        #expect(PetContact.pose(pose, holding: .laptop, species: .cat) == pose)
+        #expect(PetProp.ball.onFloor && PetProp.laptop.onFloor)
+        #expect(!PetProp.mug.onFloor && !PetProp.book.onFloor)
+    }
 }

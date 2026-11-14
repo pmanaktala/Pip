@@ -26,6 +26,48 @@ opens the app on a bad day. These are the rules every screen is judged against.
 - **Every screen has one job.** Pet: see and greet your pet, log a mood. History: look back
   without being graded. You: choices, support, your data.
 
+## Visual refinement: a quiet illustrated room
+
+The primary task is seeing a companion and acknowledging a feeling. The pet remains the largest
+and most expressive object; surrounding UI gives it space. Use SF Rounded content styles, calm
+teal for actions/selection, semantic primary/secondary text, and existing spacing tokens.
+
+- **Scene materials are illustration.** Soft floorboards and directional daylight establish a
+  plane beneath the pet; potted foliage stays at the edges on larger surfaces. Stars appear only
+  at night. Soap bubbles have a thin iridescent rim, transparent film and a brief dispersing pop;
+  they never merge with navigation buttons. No per-bubble Liquid Glass.
+- **Glass belongs to chrome.** Floating navigation controls may use glass. Mood choices use a
+  softly tinted rounded square, one expressive face and a label; no competing glyph badge, ring
+  or glass layer. Onboarding content uses regular material for readability over the room.
+- **History reads like a journal.** A shared week strip uses proximity, with a subtle selected
+  background and short underline. Daily prose is readable secondary text, not another colored
+  panel. Keep timestamps, context and notes visible in the grouped entry list.
+- **Motion communicates continuity.** Use short eased changes, not decorative entrance cascades.
+  Reduce Motion removes the room-camera spring, button compression and widget pose interpolation;
+  expression, selection and instructions remain available. A new interaction blends the previous
+  event clip out over 220 ms; interrupted clips never resume after the newer clip ends.
+- **Each companion has its own balance.** Pebble opens its flippers and shifts weight; Mochi uses
+  asymmetric paws, head turns and ears; Biscuit leans eagerly and settles with floppy ears. Mood
+  intensity scales these differences. Held props keep their grip at every intensity.
+- **Every widget is composed for its context.** Home widgets prioritize the pet with separate
+  petting and open-app actions; medium layout allocates pet space proportionally to width.
+  Background-free contexts favor a large still companion and its name over mood shortcuts.
+  Accessories use optically enlarged faces and brief supported state transitions. Watch corner
+  and circular faces keep their existing family behavior. Do not assume scheduled entry changes
+  are a continuous animation or that WidgetKit refreshes at an exact instant.
+- **Appearance follows the system and time.** Light/dark room palettes remain distinct from day/
+  night lighting. Widget labels use semantic foregrounds; vibrant/accented faces keep the existing
+  monochrome artwork. Verify actual StandBy night tint and Watch Always On on device.
+
+PetLab `rooms` exports the actual shared stage across all three species at app/widget proportions.
+`PetRenderTests.companionSurfaceSheetsRender` can export the real iOS widget layouts using
+`TEST_RUNNER_PIP_SURFACE_OUTPUT=/tmp/pip-surfaces` (one appearance per invocation; select dark
+with `TEST_RUNNER_PIP_SURFACE_SCHEME=dark`). Hosted feature captures use
+`TEST_RUNNER_PIP_FEATURE_OUTPUT=/tmp/pip-feature` and
+`TEST_RUNNER_PIP_FEATURE_SCREEN=home|picker|history|pets|onboarding|settings|play`, again one screen
+per invocation. These renders verify composition; system
+presentation, tactile quality, performance and continuous motion still require runtime checks.
+
 ## Character: professional, not kids-app
 
 - One construction per species (`Docs/Pets/Bible.md`): flat colour with one form shadow, a rim in

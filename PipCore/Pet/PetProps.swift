@@ -123,7 +123,9 @@ enum PetPropArt {
         case .ball: ball(ctx, p)
         case .laptop: laptop(ctx, p)
         case .snack:
-            break // Drawn with the head (see `PetRenderer`), so it stays at the mouth.
+            let c = between(p, fig)
+            PetSnackArt.draw(ctx, species: p.species, at: CGPoint(x: c.x, y: c.y - 8), size: 30,
+                             bite: p.pose.bite, time: p.time ?? 0, rim: p.rim)
         case .heldBall:
             let c = between(p, fig)
             let ball = PetDraw.ellipse(CGPoint(x: c.x, y: c.y - 4), 10, 10)
@@ -394,20 +396,29 @@ enum PetPropArt {
         return CGPoint(x: 100 + (r.x - l.x) / 2, y: (r.y + l.y) / 2)
     }
 
+    static func mugAnchor(_ p: PetPaint, _ fig: PetFigure) -> CGPoint {
+        let support = fig.paw(p.species, angle: p.pose.armL)
+        return CGPoint(x: 100 - support.x + 11, y: support.y)
+    }
+
     static func mug(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure) {
-        let c = between(p, fig)
+        let c = mugAnchor(p, fig)
+        var cupContext = ctx
+        cupContext.translateBy(x: c.x - 11, y: c.y)
+        cupContext.rotate(by: .degrees(-8 * p.pose.propLift))
+        cupContext.translateBy(x: -(c.x - 11), y: -c.y)
         let body = CGRect(x: c.x - 11, y: c.y - 14, width: 22, height: 20)
         let cup = Path(roundedRect: body, cornerSize: CGSize(width: 5, height: 5), style: .continuous)
         var handle = Path()
         handle.addEllipse(in: CGRect(x: body.maxX - 4, y: body.minY + 4, width: 11, height: 11))
-        ctx.stroke(handle, PetRGB(0.97, 0.95, 0.92).rim, width: 4.6)
-        ctx.stroke(handle, PetRGB(0.97, 0.95, 0.92), width: 2.8)
-        PetDraw.solid(ctx, cup, PetRGB(0.98, 0.96, 0.92), rim: p.rim, depth: 3)
-        var band = ctx
+        cupContext.stroke(handle, PetRGB(0.97, 0.95, 0.92).rim, width: 4.6)
+        cupContext.stroke(handle, PetRGB(0.97, 0.95, 0.92), width: 2.8)
+        PetDraw.solid(cupContext, cup, PetRGB(0.98, 0.96, 0.92), rim: p.rim, depth: 3)
+        var band = cupContext
         band.clip(to: cup)
         band.fill(Path(CGRect(x: body.minX, y: body.minY + 7, width: body.width, height: 5)), p.palette.prop)
         // Cocoa at the rim.
-        ctx.fill(PetDraw.ellipse(CGPoint(x: body.midX, y: body.minY + 1.2), 9.5, 2.2), PetRGB(0.52, 0.33, 0.24))
+        cupContext.fill(PetDraw.ellipse(CGPoint(x: body.midX, y: body.minY + 1.2), 9.5, 2.2), PetRGB(0.52, 0.33, 0.24))
         // Steam, rising and fading.
         let t = p.time ?? 0.6
         for i in 0..<2 {
@@ -422,20 +433,62 @@ enum PetPropArt {
     }
 
     static func book(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure) {
-        let c = between(p, fig)
+        let c = bookAnchor(p, fig)
         let w: CGFloat = 44, h: CGFloat = 28
         let r = CGRect(x: c.x - w / 2, y: c.y - h + 6, width: w, height: h)
-        // Page edges peeking over the top, then the cover facing us.
-        let pages = Path(roundedRect: r.offsetBy(dx: 0, dy: -2.5).insetBy(dx: 2, dy: 0), cornerSize: CGSize(width: 3, height: 3))
-        ctx.fill(pages, PetRGB(0.99, 0.97, 0.92))
-        ctx.stroke(pages, PetRGB(0.85, 0.82, 0.76), width: 1)
-        let cover = Path(roundedRect: r, cornerSize: CGSize(width: 3.5, height: 3.5), style: .continuous)
-        PetDraw.solid(ctx, cover, p.palette.prop, rim: p.rim, depth: 3)
-        var spine = Path()
-        spine.move(to: CGPoint(x: r.midX, y: r.minY + 1))
-        spine.addLine(to: CGPoint(x: r.midX, y: r.maxY - 1))
-        ctx.stroke(spine, p.palette.prop.rim.alpha(0.6), width: 1.6)
-        ctx.fill(Path(roundedRect: CGRect(x: r.midX + 6, y: r.minY + 7, width: 12, height: 3), cornerSize: CGSize(width: 1.5, height: 1.5)), PetRGB(1, 1, 1, 0.55))
+        // Two open leaves meet at the spine; the pet looks into a book, not at a flat tile.
+        var cover = Path()
+        cover.move(to: CGPoint(x: r.minX - 2, y: r.minY + 1))
+        cover.addLine(to: CGPoint(x: r.midX, y: r.minY + 5))
+        cover.addLine(to: CGPoint(x: r.maxX + 2, y: r.minY + 1))
+        cover.addLine(to: CGPoint(x: r.maxX + 2, y: r.maxY))
+        cover.addLine(to: CGPoint(x: r.midX, y: r.maxY + 4))
+        cover.addLine(to: CGPoint(x: r.minX - 2, y: r.maxY))
+        cover.closeSubpath()
+        PetDraw.solid(ctx, cover, p.palette.prop, rim: p.rim, depth: 2)
+        for side in [-1.0, 1.0] {
+            let outer = r.midX + CGFloat(side) * (w / 2 - 1)
+            var page = Path()
+            page.move(to: CGPoint(x: r.midX, y: r.minY + 7))
+            page.addQuadCurve(to: CGPoint(x: outer, y: r.minY + 3),
+                              control: CGPoint(x: r.midX + CGFloat(side) * 10, y: r.minY))
+            page.addLine(to: CGPoint(x: outer, y: r.maxY - 3))
+            page.addLine(to: CGPoint(x: r.midX, y: r.maxY + 1))
+            page.closeSubpath()
+            ctx.fill(page, PetRGB(0.99, 0.97, 0.90))
+            for line in 0..<3 {
+                let y = r.minY + 12 + CGFloat(line) * 4
+                var ink = Path()
+                ink.move(to: CGPoint(x: r.midX + CGFloat(side) * 4, y: y + 1))
+                ink.addLine(to: CGPoint(x: outer - CGFloat(side) * 4, y: y - 1))
+                ctx.stroke(ink, p.palette.prop.alpha(0.28), width: 0.8)
+            }
+        }
+
+        let phase = p.pose.pageTurn
+        if phase > 0.01 && phase < 0.99 {
+            // A leaf travels right to left around the spine. Its arch collapses as it lands;
+            // both underlying pages remain readable and the supporting paw keeps the book still.
+            let reach = CGFloat(cos(phase * .pi)) * (w / 2 - 1)
+            let arch = CGFloat(sin(phase * .pi)) * 13
+            var leaf = Path()
+            leaf.move(to: CGPoint(x: r.midX, y: r.minY + 7))
+            leaf.addQuadCurve(to: CGPoint(x: r.midX + reach, y: r.minY + 3 - arch),
+                              control: CGPoint(x: r.midX + reach * 0.45, y: r.minY - arch * 1.5))
+            leaf.addLine(to: CGPoint(x: r.midX + reach, y: r.maxY - 3 - arch * 0.25))
+            leaf.addQuadCurve(to: CGPoint(x: r.midX, y: r.maxY + 1),
+                              control: CGPoint(x: r.midX + reach * 0.4, y: r.maxY - arch * 0.5))
+            leaf.closeSubpath()
+            ctx.fill(leaf, phase < 0.5 ? PetRGB(1, 0.99, 0.94) : PetRGB(0.92, 0.88, 0.77))
+            ctx.stroke(leaf, p.palette.prop.alpha(0.35), width: 0.7)
+        }
+
+    }
+
+    /// The left paw supports the book; the right is free to turn a page without dragging it.
+    static func bookAnchor(_ p: PetPaint, _ fig: PetFigure) -> CGPoint {
+        let support = fig.paw(p.species, angle: p.pose.armL)
+        return CGPoint(x: 100 - support.x + 18, y: support.y)
     }
 
     /// A soft wrap round the shoulders, held closed at the chest (the paws hold the edges), with

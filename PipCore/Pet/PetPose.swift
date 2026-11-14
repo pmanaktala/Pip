@@ -80,6 +80,8 @@ public struct PetPose: Equatable, Sendable {
     public var armR = 0.0
     /// Sitting cross-legged (meditation): feet tuck in and overlap, haunches spread. 0…1.
     public var crossLegs = 0.0
+    /// Settles from upright to lying on the floor, used by the illustrated sleep rig.
+    public var recline = 0.0
     /// Feet off the floor, for steps and stomps.
     public var stepL = 0.0
     public var stepR = 0.0
@@ -90,6 +92,8 @@ public struct PetPose: Equatable, Sendable {
     // MARK: Props and effects (intensities 0…1)
     /// Raises a held prop toward the mouth (a sip), 0…1.
     public var propLift = 0.0
+    /// Progress through a visible page turn; zero at rest, one when the leaf has landed.
+    public var pageTurn = 0.0
     public var tears = 0.0
     public var sweat = 0.0
     public var zzz = 0.0
@@ -117,8 +121,8 @@ public struct PetPose: Equatable, Sendable {
         \.lidL, \.lidR, \.blink, \.lidSlant, \.smileEyes, \.squeeze, \.gazeX, \.gazeY, \.eyeWide,
         \.browShow, \.browSlant, \.browRaise,
         \.smile, \.mouthOpen, \.mouthRound, \.cheekPuff, \.blush,
-        \.earL, \.earR, \.armL, \.armR, \.crossLegs, \.stepL, \.stepR, \.tail, \.tailUp,
-        \.propLift, \.tears, \.sweat, \.zzz, \.notes, \.hearts, \.sparkles, \.steam, \.question, \.exclaim, \.thought, \.bubble, \.holdToy, \.bite,
+        \.earL, \.earR, \.armL, \.armR, \.crossLegs, \.recline, \.stepL, \.stepR, \.tail, \.tailUp,
+        \.propLift, \.pageTurn, \.tears, \.sweat, \.zzz, \.notes, \.hearts, \.sparkles, \.steam, \.question, \.exclaim, \.thought, \.bubble, \.holdToy, \.bite,
     ]
 
     /// A pose with every channel at zero — the identity for additive layers.
@@ -159,13 +163,14 @@ public struct PetPose: Equatable, Sendable {
         p.lean = p.lean.clamped(-22, 22)
         p.breath = p.breath.clamped(-0.5, 1.5)
         p.slump = p.slump.clamped(0, 1)
+        p.recline = p.recline.clamped(0, 1)
         p.turn = p.turn.clamped(-1, 1)
         p.headTilt = p.headTilt.clamped(-28, 28)
         p.headTurn = p.headTurn.clamped(-1, 1)
         p.headNod = p.headNod.clamped(-1, 1)
         p.headBob = p.headBob.clamped(-12, 16)
         for k in [\PetPose.lidL, \.lidR, \.blink, \.smileEyes, \.squeeze, \.browShow, \.mouthOpen, \.mouthRound, \.cheekPuff, \.blush, \.slump,
-                  \.propLift, \.tears, \.sweat, \.zzz, \.notes, \.hearts, \.sparkles, \.steam, \.question, \.exclaim, \.thought, \.bubble, \.holdToy, \.bite] {
+                  \.propLift, \.pageTurn, \.tears, \.sweat, \.zzz, \.notes, \.hearts, \.sparkles, \.steam, \.question, \.exclaim, \.thought, \.bubble, \.holdToy, \.bite] {
             p[keyPath: k] = p[keyPath: k].clamped(0, 1)
         }
         for k in [\PetPose.lidSlant, \.browSlant, \.browRaise, \.smile, \.gazeX, \.gazeY, \.earL, \.earR, \.tail, \.tailUp] {

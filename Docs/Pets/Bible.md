@@ -34,6 +34,18 @@ Three companions, each a distinct silhouette at 24 pt. Fewer, finished.
 
 Old `capybara` and `redPanda` choices migrate to Pebble.
 
+### Character construction checkpoint
+
+The cast shares a graphic style, not one body with interchangeable heads. Pebble has a broad
+low egg body and a continuous cream heart mask; Mochi has a low cheek-heavy head, shorter ears,
+and a wider pear-shaped seated body; Biscuit has a larger plush head over a shorter body, broad
+paws and simple scalloped drop ears. Biscuit's badge omits the forehead curls so the eyes retain
+clear negative space. The dark coat is a slate blue; Biscuit's warm ears are slightly deeper than
+the white coat. These are construction changes, independent of the mood rig and accessories.
+
+Review the whole cast in `PetLab cast` and `tokens`, then review full/face/badge sizes and
+monochrome complications. Do not substitute recognition at full size for tiny-surface review.
+
 ## 3. Drawing rules
 
 - **Flat and graphic.** Each material is a base colour plus one form shadow (the same shape,
@@ -100,6 +112,29 @@ evening, winding down from 21:30 (yawns, blanket). The same function drives ever
   Stance changes blend over 0.6 s.
 - **Pure function of time.** Given the same pet, mood and clock, the phone, the watch and the
   widgets compute the same pose. That is how the pet stays in sync across devices.
+
+### Prop performance checkpoint
+
+The reading book rests on the supporting left paw, independently of the right paw's reach. A
+page-turn clip raises the free paw, sweeps a visible leaf across the spine, then settles. The
+leaf's phase resets only after it is hidden at its landed position, keeping the director
+stateless. The mug uses the existing `propLift` channel to tilt around the grip during a sip;
+its position still comes from the two paws and steam rises separately. `PetLab props` renders
+both performances frame by frame for any species. This is use/contact choreography; the full
+pickup and put-down lifecycle between different stance props remains a separate milestone.
+
+### World and contact rules
+
+Every prop has a support. The mug and book use the left paw as their owner while the right paw
+can gesture or turn a page. The cup pivots about that contact during a sip, with a species-specific
+reach to the mouth. The blanket and carried ball keep both paws engaged. Food is drawn in the
+same body space as the holding paws, then consumed through its bite state; it is not attached to
+a moving head. `PetContact` applies these rules after acting and again at the renderer boundary,
+so static poses, vignettes and event clips cannot detach the support paw. Laptop and resting ball
+remain in room/floor space. No average-of-two-hands anchor when one hand is free.
+
+These constraints govern carrying and use. A complete reach/grasp/set-down lifecycle when
+switching between different props remains unfinished; do not disguise that gap with dissolves.
 
 ## 6. Interaction
 

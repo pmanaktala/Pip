@@ -94,7 +94,7 @@ struct PetHomeView: View {
                 PetStage(scene: appState.pet.scene, petScale: petScale, floor: floor, showsRoom: false)
             }
             .contentShape(Rectangle())
-            .animation(.spring(duration: 0.55, bounce: 0.12), value: appState.isPickingMood)
+            .animation(reduceMotion ? nil : .spring(duration: 0.55, bounce: 0.12), value: appState.isPickingMood)
             .gesture(touchGesture(in: geo.size))
         }
         .ignoresSafeArea()
@@ -291,10 +291,12 @@ struct PetHomeView: View {
 
 /// A button that squishes under the finger — every primary action in Pip should feel physical.
 struct PressableButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.96 : 1)
-            .animation(.spring(duration: 0.3, bounce: 0.4), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.96 : 1)
+            .opacity(configuration.isPressed ? 0.8 : 1)
+            .animation(reduceMotion ? nil : .spring(duration: 0.3, bounce: 0.2), value: configuration.isPressed)
     }
 }
 

@@ -239,6 +239,7 @@ final class AppState {
         try? context.save()
         SharedStateStore.shared.clear()
         preferences.reset()
+        SharedStateStore.shared.defaultsSuite.removeObject(forKey: "pet.illustratedArtwork")
         refresh()
     }
 }
