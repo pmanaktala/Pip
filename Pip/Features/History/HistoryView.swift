@@ -161,8 +161,11 @@ struct HistoryView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
-                    .background(stamp.map { MoodColor.soft($0.mood, scheme: scheme) } ?? Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: PipRadius.chip, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: PipRadius.chip, style: .continuous).strokeBorder(Color.accentColor, lineWidth: selected ? 2 : 0))
+                    .background(selected ? Color.accentColor.opacity(0.10) : Color.clear, in: RoundedRectangle(cornerRadius: PipRadius.chip, style: .continuous))
+                    .overlay(alignment: .bottom) {
+                        Capsule().fill(selected ? Color.accentColor : Color.clear)
+                            .frame(width: 18, height: 3)
+                    }
                 }
                 .buttonStyle(PressableButtonStyle())
                 .accessibilityLabel(dayLabel(day, stamp))
@@ -261,15 +264,13 @@ struct HistoryView: View {
                 .contentTransition(.numericText())
 
             if let recap = MoodHistory.recap(for: selectedDay, stamps: stamps, petName: appState.identity.name) {
-                let mood = MoodHistory.dominant(days[selectedDay] ?? [])?.mood ?? .neutral
                 Text(dayWords[wordsKey(.day, day: selectedDay)] ?? recap.title)
-                    .font(PipFont.headline)
-                    .foregroundStyle(MoodColor.text(mood, scheme: scheme))
+                    .font(PipFont.body)
+                    .foregroundStyle(.secondary)
                     .contentTransition(.opacity)
-                    .padding(.horizontal, PipSpacing.m)
-                    .padding(.vertical, 12)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.bottom, PipSpacing.s)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(MoodColor.soft(mood, scheme: scheme), in: RoundedRectangle(cornerRadius: PipRadius.tile, style: .continuous))
 
                 VStack(spacing: 1) {
                     ForEach(selectedEntries) { entry in

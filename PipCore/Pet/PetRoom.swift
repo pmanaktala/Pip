@@ -57,16 +57,32 @@ public struct PetRoom: View {
                     .offset(y: floorY - max(12, h * 0.045))
 
                 Canvas { context, size in
-                    // Dust in the light by day; stars at night, more of them the darker it gets.
-                    let starCount = 6 + Int(light.night * 26)
-                    for i in 0..<starCount {
-                        let x = (i < 6 ? 0.45 + PetMath.hash01(Double(i) * 7.1) * 0.5 : PetMath.hash01(Double(i) * 5.3)) * size.width
-                        let y = PetMath.hash01(Double(i) * 3.7 + 9) * floorY * (i < 6 ? 0.8 : 0.7)
-                        let r = 0.8 + PetMath.hash01(Double(i) * 1.3) * 1.2
-                        // By day the motes are faint; bright white dots at noon read as snow.
-                        // In dark mode, daytime specks read as stars: only real stars there.
-                        let alpha = i < 6 ? (scheme == .dark ? 0 : 0.35) * (1 - light.night) + 0.6 * light.night : 0.85 * light.night * (0.5 + 0.5 * PetMath.hash01(Double(i) * 2.9))
-                        context.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r * 2, height: r * 2)), with: .color(.white.opacity(alpha)))
+                    // Broad floorboards establish a real plane without competing with the pet.
+                    let depth = size.height - floorY
+                    for fraction in [0.42, 0.82] as [CGFloat] {
+                        let y = floorY + depth * fraction
+                        var seam = Path()
+                        seam.move(to: CGPoint(x: 0, y: y))
+                        seam.addLine(to: CGPoint(x: size.width, y: y))
+                        context.stroke(seam, with: .color(light.foliage.opacity(scheme == .dark ? 0.12 : 0.10)), lineWidth: 0.7)
+                    }
+                    // A pool of daylight on the floor shares the sky's light direction.
+                    var sunlight = Path()
+                    sunlight.move(to: CGPoint(x: size.width * 0.12, y: floorY))
+                    sunlight.addLine(to: CGPoint(x: size.width * 0.38, y: floorY))
+                    sunlight.addLine(to: CGPoint(x: size.width * 0.9, y: size.height))
+                    sunlight.addLine(to: CGPoint(x: size.width * 0.38, y: size.height))
+                    sunlight.closeSubpath()
+                    context.fill(sunlight, with: .color(light.keyLight.opacity((1 - light.night) * (scheme == .dark ? 0.025 : 0.10))))
+                    // Stars belong to night; no daytime white specks around the character.
+                    if light.night > 0 {
+                        for i in 0..<24 {
+                            let x = PetMath.hash01(Double(i) * 5.3) * size.width
+                            let y = PetMath.hash01(Double(i) * 3.7 + 9) * floorY * 0.65
+                            let r = 0.6 + PetMath.hash01(Double(i) * 1.3) * 0.8
+                            context.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r * 2, height: r * 2)),
+                                         with: .color(.white.opacity(light.night * 0.55)))
+                        }
                     }
                     guard showsFoliage, size.width > 200 else { return }
                     // Quiet botanical silhouettes ground the room at either edge of the floor.
@@ -76,6 +92,10 @@ public struct PetRoom: View {
                         let base = floorY + (size.height - floorY) * 0.34
                         let direction: CGFloat = side == 0 ? 1 : -1
                         let reach = min(size.width, size.height) * 0.22
+                        let potWidth = min(size.width, size.height) * 0.075
+                        let pot = Path(roundedRect: CGRect(x: x - potWidth / 2, y: base - 3, width: potWidth, height: potWidth * 0.8),
+                                       cornerRadius: potWidth * 0.16)
+                        context.fill(pot, with: .color(light.foliage.opacity(scheme == .dark ? 0.28 : 0.22)))
                         var stem = Path()
                         stem.move(to: CGPoint(x: x, y: base))
                         stem.addQuadCurve(to: CGPoint(x: x + direction * reach * 0.12, y: base - reach), control: CGPoint(x: x - direction * reach * 0.12, y: base - reach * 0.5))

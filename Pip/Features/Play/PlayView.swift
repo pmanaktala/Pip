@@ -83,18 +83,9 @@ struct PlayView: View {
 
     // MARK: Chrome
 
-    /// The two floating glass buttons (switch between playing and meditating, and close), sized like
-    /// the Pet tab's. The bubbles are glass too and share their container: one that floats up to a
-    /// button melts into it like a drop of liquid, then drifts on.
-    @ViewBuilder
+    /// Navigation has glass; soap bubbles stay in the illustrated scene beneath it.
     private var chrome: some View {
-        if bubbles.isEmpty || reduceMotion {
-            GlassChrome { chromeButtons }
-        } else {
-            TimelineView(.animation) { clock in
-                GlassChrome(drops: { _ in bubbleDrops(at: clock.date) }) { chromeButtons }
-            }
-        }
+        GlassChrome { chromeButtons }
     }
 
     @ViewBuilder
@@ -103,20 +94,6 @@ struct PlayView: View {
             withAnimation(.smooth(duration: 0.45)) { mode = mode == .play ? .meditate : .play }
         }
         GlassChromeButton(systemImage: "xmark", label: "Close") { dismiss() }
-    }
-
-    private func bubbleDrops(at date: Date) -> [GlassDrop] {
-        bubbles.enumerated().compactMap { i, b in
-            guard date >= b.born, mode == .play else { return nil }
-            if let popped = b.poppedAt {
-                // A popped bubble's glass swells a little and vanishes.
-                let u = date.timeIntervalSince(popped) / 0.25
-                guard u < 1 else { return nil }
-                return GlassDrop(id: i, center: b.position(at: popped), size: b.radius * 2 * (1 + u * 0.4), shape: .bubble, opacity: 1 - u)
-            }
-            let t = date.timeIntervalSince(b.born)
-            return GlassDrop(id: i, center: b.position(at: date), size: b.radius * 2 * min(1, 0.4 + t * 2), shape: .bubble)
-        }
     }
 
     // MARK: Play
@@ -149,7 +126,7 @@ struct PlayView: View {
             Task {
                 try? await Task.sleep(for: .seconds(1.2))
                 let head = PetStage.headRect(in: stageSize, species: scene.species, petScale: petScale, floor: floor)
-                // Off to the right, out of the pet's reach, so they float up into the glass buttons.
+                // Off to the right, out of reach, for reviewing bubbles behind navigation.
                 blowBubbles(from: CGPoint(x: stageSize.width - 60, y: stageSize.height - 70), in: stageSize, head: head,
                             toward: (stageSize.width - 110)...(stageSize.width - 40))
             }
@@ -607,7 +584,7 @@ struct Bubble: Identifiable {
         let r = radius * CGFloat(min(1, 0.4 + t * 2)) * (1 + CGFloat(sin(t * 5 + seed * 9)) * 0.04)
         let rect = CGRect(x: p.x - r, y: p.y - r * 0.97, width: r * 2, height: r * 1.94)
         let shell = Path(ellipseIn: rect)
-        // The bubble's body is real glass (see `GlassChrome`); this is only its soapy shimmer.
+        // Transparent soap film: the highlight and rim carry its shape, not UI glass.
         ctx.fill(shell, with: .radialGradient(Gradient(colors: [.white.opacity(0.0), Color(red: 0.7, green: 0.88, blue: 1).opacity(0.12)]),
                                               center: p, startRadius: 0, endRadius: r))
         // A thin rim that shimmers from blue to pink as it turns.

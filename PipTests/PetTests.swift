@@ -56,6 +56,23 @@ import Testing
 @Suite struct PetDirectorTests {
     let base = Date(timeIntervalSince1970: 1_800_000_000)
 
+    @Test func interruptedClipsDoNotStackOrResume() {
+        for species in PetSpecies.allCases {
+            let stance = PetStance.mood(.neutral, .moderate)
+            let last = PetEvent(.boop, at: base.addingTimeInterval(0.6))
+            let interrupted = PetScene(species: species, stance: stance, events: [
+                PetEvent(.missedYou, at: base),
+                PetEvent(.tickle, at: base.addingTimeInterval(0.3)), last
+            ])
+            let latestOnly = PetScene(species: species, stance: stance, events: [last])
+            for elapsed in [0.9, 1.5, 3.0, 5.0] {
+                let date = base.addingTimeInterval(elapsed)
+                #expect(PetDirector.pose(interrupted, at: date) == PetDirector.pose(latestOnly, at: date),
+                        "An interrupted performance must not stack with or return after the latest interaction")
+            }
+        }
+    }
+
     /// The phone and the watch compute the same pet for the same scene and clock.
     @Test func directorIsDeterministic() {
         let scene = PetScene(species: .cat, stance: .mood(.happy, .moderate), events: [PetEvent(.boop, at: base.addingTimeInterval(3))])

@@ -10,6 +10,7 @@ struct PetLab {
         let out = args.count > 2 ? args[2] : "/tmp/petlab.png"
         let view: AnyView
         switch command {
+        case "rooms": view = AnyView(LabRooms.sheet())
         case "check": LabCheck.choices(); return
         case "tokens": view = AnyView(LabTokens.sheet())
         case "cast": view = AnyView(LabCast.sheet())

@@ -155,7 +155,7 @@ public struct LivePetView: View {
     public var body: some View {
         if reduceMotion || paused {
             PetPoseView(species: scene.species, pose: PetDirector.hold(scene), prop: scene.prop, wear: scene.wear, framing: framing, showsShadow: showsShadow, dressing: scene.dressing)
-                .animation(.smooth(duration: 0.6), value: scene.stance)
+                .animation(reduceMotion ? nil : .smooth(duration: 0.6), value: scene.stance)
         } else {
             TimelineView(.animation(minimumInterval: frameInterval)) { context in
                 let pose = PetDirector.pose(scene, at: context.date)

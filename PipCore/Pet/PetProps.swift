@@ -425,17 +425,35 @@ enum PetPropArt {
         let c = between(p, fig)
         let w: CGFloat = 44, h: CGFloat = 28
         let r = CGRect(x: c.x - w / 2, y: c.y - h + 6, width: w, height: h)
-        // Page edges peeking over the top, then the cover facing us.
-        let pages = Path(roundedRect: r.offsetBy(dx: 0, dy: -2.5).insetBy(dx: 2, dy: 0), cornerSize: CGSize(width: 3, height: 3))
-        ctx.fill(pages, PetRGB(0.99, 0.97, 0.92))
-        ctx.stroke(pages, PetRGB(0.85, 0.82, 0.76), width: 1)
-        let cover = Path(roundedRect: r, cornerSize: CGSize(width: 3.5, height: 3.5), style: .continuous)
-        PetDraw.solid(ctx, cover, p.palette.prop, rim: p.rim, depth: 3)
-        var spine = Path()
-        spine.move(to: CGPoint(x: r.midX, y: r.minY + 1))
-        spine.addLine(to: CGPoint(x: r.midX, y: r.maxY - 1))
-        ctx.stroke(spine, p.palette.prop.rim.alpha(0.6), width: 1.6)
-        ctx.fill(Path(roundedRect: CGRect(x: r.midX + 6, y: r.minY + 7, width: 12, height: 3), cornerSize: CGSize(width: 1.5, height: 1.5)), PetRGB(1, 1, 1, 0.55))
+        // Two open leaves meet at the spine; the pet looks into a book, not at a flat tile.
+        var cover = Path()
+        cover.move(to: CGPoint(x: r.minX - 2, y: r.minY + 1))
+        cover.addLine(to: CGPoint(x: r.midX, y: r.minY + 5))
+        cover.addLine(to: CGPoint(x: r.maxX + 2, y: r.minY + 1))
+        cover.addLine(to: CGPoint(x: r.maxX + 2, y: r.maxY))
+        cover.addLine(to: CGPoint(x: r.midX, y: r.maxY + 4))
+        cover.addLine(to: CGPoint(x: r.minX - 2, y: r.maxY))
+        cover.closeSubpath()
+        PetDraw.solid(ctx, cover, p.palette.prop, rim: p.rim, depth: 2)
+        for side in [-1.0, 1.0] {
+            let outer = r.midX + CGFloat(side) * (w / 2 - 1)
+            var page = Path()
+            page.move(to: CGPoint(x: r.midX, y: r.minY + 7))
+            page.addQuadCurve(to: CGPoint(x: outer, y: r.minY + 3),
+                              control: CGPoint(x: r.midX + CGFloat(side) * 10, y: r.minY))
+            page.addLine(to: CGPoint(x: outer, y: r.maxY - 3))
+            page.addLine(to: CGPoint(x: r.midX, y: r.maxY + 1))
+            page.closeSubpath()
+            ctx.fill(page, PetRGB(0.99, 0.97, 0.90))
+            for line in 0..<3 {
+                let y = r.minY + 12 + CGFloat(line) * 4
+                var ink = Path()
+                ink.move(to: CGPoint(x: r.midX + CGFloat(side) * 4, y: y + 1))
+                ink.addLine(to: CGPoint(x: outer - CGFloat(side) * 4, y: y - 1))
+                ctx.stroke(ink, p.palette.prop.alpha(0.28), width: 0.8)
+            }
+        }
+
     }
 
     /// A soft wrap round the shoulders, held closed at the chest (the paws hold the edges), with

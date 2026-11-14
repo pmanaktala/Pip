@@ -74,6 +74,7 @@ public struct PetHomeWidgetView: View {
     public var showsBackground: Bool
 
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public init(moment: PetWidgetMoment, family: WidgetFamily, showsBackground: Bool = true) {
         self.moment = moment
@@ -91,10 +92,16 @@ public struct PetHomeWidgetView: View {
     }
 
     public var body: some View {
-        switch family {
-        case .systemMedium: medium
-        case .systemLarge: large
-        default: small
+        Group {
+            if !showsBackground {
+                companion
+            } else {
+                switch family {
+                case .systemMedium: medium
+                case .systemLarge: large
+                default: small
+                }
+            }
         }
     }
 
@@ -102,46 +109,74 @@ public struct PetHomeWidgetView: View {
     private var pet: some View {
         Button(intent: PetWidgetIntent()) {
             PetStage(scene: moment.scene, live: false, hold: moment.hold, petScale: family == .systemLarge ? 0.42 : (family == .systemMedium ? 0.92 : 0.74),
-                     floor: Self.floor(for: family), showsRoom: false, date: moment.date, petted: moment.petted)
-                .animation(.smooth(duration: 1.2), value: moment.hold)
+                     floor: Self.floor(for: family), showsRoom: false, date: moment.date, showsSeason: family == .systemLarge, petted: moment.petted)
+                .animation(reduceMotion ? nil : .smooth(duration: 0.7), value: moment.hold)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Pet \(moment.identity.name)")
     }
 
+    /// Background-free contexts such as StandBy favor a large, quiet companion over controls.
+    private var companion: some View {
+        ZStack(alignment: .topLeading) {
+            Button(intent: PetWidgetIntent()) {
+                PetStage(scene: moment.scene, live: false, hold: moment.hold, petScale: 0.88,
+                         floor: 0.88, showsRoom: false, showsFoliage: false, date: moment.date,
+                         showsSeason: false, petted: moment.petted)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Pet \(moment.identity.name)")
+            nameLink
+                .padding(12)
+        }
+    }
+
+    private var nameLink: some View {
+        Link(destination: URL(string: "pip://home")!) {
+            Text(moment.identity.name)
+                .font(.system(.headline, design: .rounded, weight: .bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .foregroundStyle(.primary)
+                .padding(.vertical, 4)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .tint(.primary)
+        .accessibilityLabel("Open \(moment.identity.name) in Pip")
+    }
+
     private var small: some View {
         ZStack(alignment: .topLeading) {
             pet
-            VStack(alignment: .leading, spacing: 0) {
-                Text(moment.identity.name)
-                    .font(.system(.subheadline, design: .rounded, weight: .bold))
-            }
-            .padding(12)
+            nameLink.padding(.horizontal, 14).padding(.top, 8)
         }
-        .accessibilityElement(children: .ignore)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel(moment.status)
     }
 
     private var medium: some View {
-        HStack(spacing: 0) {
-            pet.frame(width: 150)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(moment.identity.name)
-                    .font(.system(.title3, design: .rounded, weight: .bold))
-                Text(moment.status)
-                    .font(.system(.caption, design: .rounded, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                Spacer(minLength: 4)
-                HStack(spacing: 6) {
-                    ForEach([Mood.happy, .calm, .tired, .stressed], id: \.self) { mood in
-                        MoodFaceButton(identity: moment.identity, mood: mood, size: 34)
+        GeometryReader { geo in
+            HStack(spacing: 8) {
+                pet.frame(width: geo.size.width * 0.43)
+                VStack(alignment: .leading, spacing: 3) {
+                    nameLink
+                    Text(moment.stance.phrase(moment.identity.name))
+                        .font(.system(.caption, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                    Spacer(minLength: 4)
+                    HStack(spacing: 4) {
+                        ForEach([Mood.happy, .calm, .tired, .stressed], id: \.self) { mood in
+                            MoodFaceButton(identity: moment.identity, mood: mood,
+                                           size: min(36, max(24, (geo.size.width * 0.57 - 34) / 4)))
+                        }
                     }
                 }
+                .padding(.vertical, 12)
+                .padding(.trailing, 14)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.vertical, 14)
-            .padding(.trailing, 14)
-            Spacer(minLength: 0)
         }
     }
 
@@ -150,9 +185,8 @@ public struct PetHomeWidgetView: View {
             // Name and status on the left, the pet on the right standing on the horizon.
             HStack(alignment: .top, spacing: 0) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(moment.identity.name)
-                        .font(.system(.title3, design: .rounded, weight: .bold))
-                    Text(moment.status)
+                    nameLink
+                    Text(moment.stance.phrase(moment.identity.name))
                         .font(.system(.caption, design: .rounded, weight: .medium))
                         .foregroundStyle(.secondary)
                         .lineLimit(3)
@@ -161,11 +195,11 @@ public struct PetHomeWidgetView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Button(intent: PetWidgetIntent()) {
                     PetStage(scene: moment.scene, live: false, hold: moment.hold, petScale: 0.8, floor: 0.93, showsRoom: false, date: moment.date, petted: moment.petted)
-                        .animation(.smooth(duration: 1.2), value: moment.hold)
+                        .animation(reduceMotion ? nil : .smooth(duration: 0.7), value: moment.hold)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Pet \(moment.identity.name)")
-                .frame(width: 170)
+                .frame(maxWidth: 170)
             }
             .frame(maxHeight: .infinity)
             VStack(spacing: 10) {
@@ -249,6 +283,7 @@ public struct PetAccessoryView: View {
     public var moment: PetWidgetMoment
     public var family: WidgetFamily
     @Environment(\.widgetRenderingMode) private var renderingMode
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public init(moment: PetWidgetMoment, family: WidgetFamily) {
         self.moment = moment
@@ -263,7 +298,8 @@ public struct PetAccessoryView: View {
 
     public var body: some View {
         content
-            .animation(.smooth(duration: 1.0), value: moment.hold)
+            .animation(reduceMotion ? nil : .smooth(duration: 0.7), value: moment.hold)
+            .animation(reduceMotion ? nil : .smooth(duration: 0.7), value: moment.stance)
     }
 
     @ViewBuilder
@@ -272,7 +308,7 @@ public struct PetAccessoryView: View {
         case .accessoryCircular:
             ZStack {
                 AccessoryWidgetBackground()
-                face.padding(3)
+                face.padding(1)
             }
             .accessibilityLabel(moment.status)
         case .accessoryRectangular:
@@ -281,6 +317,8 @@ public struct PetAccessoryView: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(moment.identity.name)
                         .font(.system(.headline, design: .rounded, weight: .bold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                         .widgetAccentable()
                     Text(moment.stance.phrase(moment.identity.name))
                         .font(.system(.caption, design: .rounded))

@@ -4,6 +4,7 @@ import SwiftUI
 /// Every permission is skippable; nothing is requested before its step.
 struct OnboardingView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(HealthSyncService.self) private var health
     @Environment(NotificationService.self) private var notifications
 
@@ -37,20 +38,20 @@ struct OnboardingView: View {
 
                 VStack(spacing: PipSpacing.m) {
                     content
-                        .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .move(edge: .leading).combined(with: .opacity)))
+                        .transition(.opacity)
                         .id(step)
                     controls
                 }
                 .frame(maxWidth: 480)
                 .padding(PipSpacing.l)
-                .glassEffect(.regular, in: .rect(cornerRadius: 32))
+                .background(.regularMaterial, in: .rect(cornerRadius: 32))
                 .padding(.horizontal, PipSpacing.m)
                 .padding(.bottom, PipSpacing.s)
                 .frame(maxHeight: geo.size.height * 0.5, alignment: .bottom)
             }
         }
-        .animation(.spring(duration: 0.5, bounce: 0.1), value: step)
-        .animation(.smooth(duration: 0.35), value: nameFocused)
+        .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: step)
+        .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: nameFocused)
         .onAppear {
             greet(.arrive, after: 0.6)
             #if DEBUG
