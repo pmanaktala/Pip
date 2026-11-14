@@ -396,18 +396,22 @@ enum PetPropArt {
 
     static func mug(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure) {
         let c = between(p, fig)
+        var cupContext = ctx
+        cupContext.translateBy(x: c.x, y: c.y)
+        cupContext.rotate(by: .degrees(-8 * p.pose.propLift))
+        cupContext.translateBy(x: -c.x, y: -c.y)
         let body = CGRect(x: c.x - 11, y: c.y - 14, width: 22, height: 20)
         let cup = Path(roundedRect: body, cornerSize: CGSize(width: 5, height: 5), style: .continuous)
         var handle = Path()
         handle.addEllipse(in: CGRect(x: body.maxX - 4, y: body.minY + 4, width: 11, height: 11))
-        ctx.stroke(handle, PetRGB(0.97, 0.95, 0.92).rim, width: 4.6)
-        ctx.stroke(handle, PetRGB(0.97, 0.95, 0.92), width: 2.8)
-        PetDraw.solid(ctx, cup, PetRGB(0.98, 0.96, 0.92), rim: p.rim, depth: 3)
-        var band = ctx
+        cupContext.stroke(handle, PetRGB(0.97, 0.95, 0.92).rim, width: 4.6)
+        cupContext.stroke(handle, PetRGB(0.97, 0.95, 0.92), width: 2.8)
+        PetDraw.solid(cupContext, cup, PetRGB(0.98, 0.96, 0.92), rim: p.rim, depth: 3)
+        var band = cupContext
         band.clip(to: cup)
         band.fill(Path(CGRect(x: body.minX, y: body.minY + 7, width: body.width, height: 5)), p.palette.prop)
         // Cocoa at the rim.
-        ctx.fill(PetDraw.ellipse(CGPoint(x: body.midX, y: body.minY + 1.2), 9.5, 2.2), PetRGB(0.52, 0.33, 0.24))
+        cupContext.fill(PetDraw.ellipse(CGPoint(x: body.midX, y: body.minY + 1.2), 9.5, 2.2), PetRGB(0.52, 0.33, 0.24))
         // Steam, rising and fading.
         let t = p.time ?? 0.6
         for i in 0..<2 {
@@ -422,7 +426,7 @@ enum PetPropArt {
     }
 
     static func book(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure) {
-        let c = between(p, fig)
+        let c = bookAnchor(p, fig)
         let w: CGFloat = 44, h: CGFloat = 28
         let r = CGRect(x: c.x - w / 2, y: c.y - h + 6, width: w, height: h)
         // Two open leaves meet at the spine; the pet looks into a book, not at a flat tile.
@@ -454,6 +458,30 @@ enum PetPropArt {
             }
         }
 
+        let phase = p.pose.pageTurn
+        if phase > 0.01 && phase < 0.99 {
+            // A leaf travels right to left around the spine. Its arch collapses as it lands;
+            // both underlying pages remain readable and the supporting paw keeps the book still.
+            let reach = CGFloat(cos(phase * .pi)) * (w / 2 - 1)
+            let arch = CGFloat(sin(phase * .pi)) * 13
+            var leaf = Path()
+            leaf.move(to: CGPoint(x: r.midX, y: r.minY + 7))
+            leaf.addQuadCurve(to: CGPoint(x: r.midX + reach, y: r.minY + 3 - arch),
+                              control: CGPoint(x: r.midX + reach * 0.45, y: r.minY - arch * 1.5))
+            leaf.addLine(to: CGPoint(x: r.midX + reach, y: r.maxY - 3 - arch * 0.25))
+            leaf.addQuadCurve(to: CGPoint(x: r.midX, y: r.maxY + 1),
+                              control: CGPoint(x: r.midX + reach * 0.4, y: r.maxY - arch * 0.5))
+            leaf.closeSubpath()
+            ctx.fill(leaf, phase < 0.5 ? PetRGB(1, 0.99, 0.94) : PetRGB(0.92, 0.88, 0.77))
+            ctx.stroke(leaf, p.palette.prop.alpha(0.35), width: 0.7)
+        }
+
+    }
+
+    /// The left paw supports the book; the right is free to turn a page without dragging it.
+    static func bookAnchor(_ p: PetPaint, _ fig: PetFigure) -> CGPoint {
+        let support = fig.paw(p.species, angle: p.pose.armL)
+        return CGPoint(x: 100 - support.x + 18, y: support.y)
     }
 
     /// A soft wrap round the shoulders, held closed at the chest (the paws hold the edges), with

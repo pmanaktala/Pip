@@ -40,6 +40,24 @@ import Testing
         }
     }
 
+    @Test func turningPageKeepsBookInSupportingPaw() {
+        for species in PetSpecies.allCases {
+            let rest = PetStance.life(.reading).rest(species)
+            let figure = PetFigure.of(species)
+            let anchor = PetPropArt.bookAnchor(PetPaint(species: species, pose: rest), figure)
+            let clip = PetClips.vignette(.pageTurn, species)
+            var sawRaisedLeaf = false
+            for step in 0...60 {
+                let pose = clip.apply(to: rest, at: clip.duration * Double(step) / 60).clamped()
+                let current = PetPropArt.bookAnchor(PetPaint(species: species, pose: pose), figure)
+                #expect(current == anchor, "The book must not follow the free hand while turning a page")
+                sawRaisedLeaf = sawRaisedLeaf || (pose.pageTurn > 0.1 && pose.pageTurn < 0.9)
+            }
+            #expect(sawRaisedLeaf)
+            #expect(clip.apply(to: rest, at: clip.duration).pageTurn == 0)
+        }
+    }
+
     @Test func clipsStayFiniteAndInRange() {
         for species in PetSpecies.allCases {
             for clip in PetTestSupport.allClips(species) {

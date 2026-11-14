@@ -113,6 +113,16 @@ evening, winding down from 21:30 (yawns, blanket). The same function drives ever
 - **Pure function of time.** Given the same pet, mood and clock, the phone, the watch and the
   widgets compute the same pose. That is how the pet stays in sync across devices.
 
+### Prop performance checkpoint
+
+The reading book rests on the supporting left paw, independently of the right paw's reach. A
+page-turn clip raises the free paw, sweeps a visible leaf across the spine, then settles. The
+leaf's phase resets only after it is hidden at its landed position, keeping the director
+stateless. The mug uses the existing `propLift` channel to tilt around the grip during a sip;
+its position still comes from the two paws and steam rises separately. `PetLab props` renders
+both performances frame by frame for any species. This is use/contact choreography; the full
+pickup and put-down lifecycle between different stance props remains a separate milestone.
+
 ## 6. Interaction
 
 - **Arrival**: when the Pet tab or the watch app comes to the front, the pet notices you (looks

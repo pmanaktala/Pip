@@ -90,6 +90,8 @@ public struct PetPose: Equatable, Sendable {
     // MARK: Props and effects (intensities 0…1)
     /// Raises a held prop toward the mouth (a sip), 0…1.
     public var propLift = 0.0
+    /// Progress through a visible page turn; zero at rest, one when the leaf has landed.
+    public var pageTurn = 0.0
     public var tears = 0.0
     public var sweat = 0.0
     public var zzz = 0.0
@@ -118,7 +120,7 @@ public struct PetPose: Equatable, Sendable {
         \.browShow, \.browSlant, \.browRaise,
         \.smile, \.mouthOpen, \.mouthRound, \.cheekPuff, \.blush,
         \.earL, \.earR, \.armL, \.armR, \.crossLegs, \.stepL, \.stepR, \.tail, \.tailUp,
-        \.propLift, \.tears, \.sweat, \.zzz, \.notes, \.hearts, \.sparkles, \.steam, \.question, \.exclaim, \.thought, \.bubble, \.holdToy, \.bite,
+        \.propLift, \.pageTurn, \.tears, \.sweat, \.zzz, \.notes, \.hearts, \.sparkles, \.steam, \.question, \.exclaim, \.thought, \.bubble, \.holdToy, \.bite,
     ]
 
     /// A pose with every channel at zero — the identity for additive layers.
@@ -165,7 +167,7 @@ public struct PetPose: Equatable, Sendable {
         p.headNod = p.headNod.clamped(-1, 1)
         p.headBob = p.headBob.clamped(-12, 16)
         for k in [\PetPose.lidL, \.lidR, \.blink, \.smileEyes, \.squeeze, \.browShow, \.mouthOpen, \.mouthRound, \.cheekPuff, \.blush, \.slump,
-                  \.propLift, \.tears, \.sweat, \.zzz, \.notes, \.hearts, \.sparkles, \.steam, \.question, \.exclaim, \.thought, \.bubble, \.holdToy, \.bite] {
+                  \.propLift, \.pageTurn, \.tears, \.sweat, \.zzz, \.notes, \.hearts, \.sparkles, \.steam, \.question, \.exclaim, \.thought, \.bubble, \.holdToy, \.bite] {
             p[keyPath: k] = p[keyPath: k].clamped(0, 1)
         }
         for k in [\PetPose.lidSlant, \.browSlant, \.browRaise, \.smile, \.gazeX, \.gazeY, \.earL, \.earR, \.tail, \.tailUp] {
