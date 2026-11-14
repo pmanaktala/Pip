@@ -249,9 +249,11 @@ public enum PetStance: Codable, Hashable, Sendable {
         var p = PetPose()
         switch a {
         case .sleeping:
+            p.recline = 1
             p.lidL = 1; p.lidR = 1; p.headNod = 0.5; p.headTilt = -12; p.slump = 0.4; p.zzz = 0.8; p.armL = -58; p.armR = -58
             p.smile = 0.1; p.earL = -0.3; p.earR = -0.3; p.tailUp = -0.5
         case .napping:
+            p.recline = 1
             p.lidL = 1; p.lidR = 1; p.headNod = 0.4; p.headTilt = 9; p.slump = 0.3; p.zzz = 0.5; p.smile = 0.15
             p.earL = -0.2; p.earR = -0.2
         case .waking:

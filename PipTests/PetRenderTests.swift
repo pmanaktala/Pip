@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import Testing
 import UIKit
 import WidgetKit
@@ -10,6 +11,11 @@ import WidgetKit
 @MainActor
 @Suite(.serialized)
 struct PetRenderTests {
+    private var conceptDirectory: URL? {
+        guard ProcessInfo.processInfo.environment["PIP_CONCEPT_ART"] == "1" else { return nil }
+        return Bundle(for: ConceptArtworkBundle.self).url(forResource: "PetConcept-penguin", withExtension: "png")?.deletingLastPathComponent()
+    }
+
     @Test func contactSheetRenders() throws {
         let stances: [PetStance] = Mood.allCases.map { .mood($0, .moderate) } + [.life(.reading), .life(.sleeping), .life(.playing)]
         let content = VStack(alignment: .leading, spacing: 10) {
@@ -47,7 +53,7 @@ struct PetRenderTests {
         do {
             let sheet = VStack(alignment: .leading, spacing: 16) {
                 ForEach(PetSpecies.allCases) { species in
-                    let snapshot = PetSnapshot(identity: PetIdentity(species: species), mood: .calm,
+                    let snapshot = PetSnapshot(identity: PetIdentity(species: species), mood: conceptDirectory == nil ? .calm : .neutral,
                                                intensity: .moderate, loggedAt: date)
                     let moment = PetWidgetMoment(snapshot: snapshot, date: date)
                     HStack(alignment: .top, spacing: 12) {
@@ -77,6 +83,7 @@ struct PetRenderTests {
             .padding(20)
             .background(scheme == .dark ? Color.black : Color(white: 0.96))
             .environment(\.colorScheme, scheme)
+            .environment(\.petConceptArtwork, conceptDirectory)
             let renderer = ImageRenderer(content: sheet)
             renderer.scale = 2
             let image = try #require(renderer.uiImage)
@@ -86,6 +93,13 @@ struct PetRenderTests {
 
     @Test func featureScreensRender() async throws {
         guard let output = ProcessInfo.processInfo.environment["PIP_FEATURE_OUTPUT"] else { return }
+        let defaults = SharedStateStore.shared.defaultsSuite
+        let previousArtwork = defaults.object(forKey: "pet.illustratedArtwork")
+        defaults.set(ProcessInfo.processInfo.environment["PIP_ARTWORK_STYLE"] != "original", forKey: "pet.illustratedArtwork")
+        defer {
+            if let previousArtwork { defaults.set(previousArtwork, forKey: "pet.illustratedArtwork") }
+            else { defaults.removeObject(forKey: "pet.illustratedArtwork") }
+        }
         let scheme: ColorScheme = ProcessInfo.processInfo.environment["PIP_SURFACE_SCHEME"] == "dark" ? .dark : .light
         let scene = try #require(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
         let previous = scene.windows.first(where: \.isKeyWindow)
@@ -95,17 +109,23 @@ struct PetRenderTests {
         defer { window.isHidden = true; previous?.makeKeyAndVisible() }
         // One hosted screen per process avoids changing an active SwiftUI root during capture.
         let name = ProcessInfo.processInfo.environment["PIP_FEATURE_SCREEN"] ?? "home"
+        let species = PetSpecies(rawValue: ProcessInfo.processInfo.environment["PIP_FEATURE_SPECIES"] ?? "cat") ?? .cat
         let content: AnyView
         switch name {
-        case "picker": content = AnyView(PreviewHost { MoodPickerSheet() })
-        case "history": content = AnyView(PreviewHost { NavigationStack { HistoryView() } })
-        case "pets": content = AnyView(PreviewHost { NavigationStack { PetSelectorView() } })
-        case "onboarding": content = AnyView(PreviewHost(seeded: false) { OnboardingView() })
-        case "settings": content = AnyView(PreviewHost { NavigationStack { SettingsView() } })
-        case "play": content = AnyView(PreviewHost { PlayView() })
-        default: content = AnyView(PreviewHost { PetHomeView() })
+        case "refinement":
+            let state = AppState.preview(species: species, seeded: false)
+            let entry = state.log(mood: .happy)
+            content = AnyView(MoodPickerSheet(previewEntry: entry).environment(state).modelContainer(state.container).fontDesign(.rounded))
+        case "app": content = AnyView(PreviewHost(species: species) { MainTabView() })
+        case "picker": content = AnyView(PreviewHost(species: species) { MoodPickerSheet() })
+        case "history": content = AnyView(PreviewHost(species: species) { NavigationStack { HistoryView() } })
+        case "pets": content = AnyView(PreviewHost(species: species) { NavigationStack { PetSelectorView() } })
+        case "onboarding": content = AnyView(PreviewHost(species: species, seeded: false) { OnboardingView() })
+        case "settings": content = AnyView(PreviewHost(species: species) { NavigationStack { SettingsView() } })
+        case "play": content = AnyView(PreviewHost(species: species) { PlayView() })
+        default: content = AnyView(PreviewHost(species: species) { PetHomeView() })
         }
-        let controller = UIHostingController(rootView: content)
+        let controller = UIHostingController(rootView: content.environment(\.petConceptArtwork, conceptDirectory))
         window.rootViewController = controller
         window.makeKeyAndVisible()
         controller.view.setNeedsLayout()
@@ -113,7 +133,9 @@ struct PetRenderTests {
         try await Task.sleep(for: .milliseconds(400))
         let renderer = UIGraphicsImageRenderer(bounds: window.bounds)
         let image = renderer.image { _ in window.drawHierarchy(in: window.bounds, afterScreenUpdates: true) }
-        try #require(image.pngData()).write(to: URL(fileURLWithPath: output + "-" + name + (scheme == .dark ? "-dark.png" : "-light.png")))
+        try #require(image.pngData()).write(to: URL(fileURLWithPath: output + "-" + name + (conceptDirectory == nil ? "" : "-" + species.rawValue) + (scheme == .dark ? "-dark.png" : "-light.png")))
     }
 
 }
+
+private final class ConceptArtworkBundle: NSObject {}

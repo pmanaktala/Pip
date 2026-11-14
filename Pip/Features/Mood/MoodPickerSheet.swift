@@ -12,6 +12,14 @@ struct MoodPickerSheet: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.colorScheme) private var scheme
 
+    init() {}
+
+    #if DEBUG
+    init(previewEntry: MoodEntry) {
+        _logged = State(initialValue: previewEntry)
+    }
+    #endif
+
     private var columns: [GridItem] {
         Array(repeating: GridItem(.flexible(), spacing: 8), count: typeSize.isAccessibilitySize ? 2 : 4)
     }

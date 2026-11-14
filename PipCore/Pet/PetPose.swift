@@ -80,6 +80,8 @@ public struct PetPose: Equatable, Sendable {
     public var armR = 0.0
     /// Sitting cross-legged (meditation): feet tuck in and overlap, haunches spread. 0…1.
     public var crossLegs = 0.0
+    /// Settles from upright to lying on the floor, used by the illustrated sleep rig.
+    public var recline = 0.0
     /// Feet off the floor, for steps and stomps.
     public var stepL = 0.0
     public var stepR = 0.0
@@ -119,7 +121,7 @@ public struct PetPose: Equatable, Sendable {
         \.lidL, \.lidR, \.blink, \.lidSlant, \.smileEyes, \.squeeze, \.gazeX, \.gazeY, \.eyeWide,
         \.browShow, \.browSlant, \.browRaise,
         \.smile, \.mouthOpen, \.mouthRound, \.cheekPuff, \.blush,
-        \.earL, \.earR, \.armL, \.armR, \.crossLegs, \.stepL, \.stepR, \.tail, \.tailUp,
+        \.earL, \.earR, \.armL, \.armR, \.crossLegs, \.recline, \.stepL, \.stepR, \.tail, \.tailUp,
         \.propLift, \.pageTurn, \.tears, \.sweat, \.zzz, \.notes, \.hearts, \.sparkles, \.steam, \.question, \.exclaim, \.thought, \.bubble, \.holdToy, \.bite,
     ]
 
@@ -161,6 +163,7 @@ public struct PetPose: Equatable, Sendable {
         p.lean = p.lean.clamped(-22, 22)
         p.breath = p.breath.clamped(-0.5, 1.5)
         p.slump = p.slump.clamped(0, 1)
+        p.recline = p.recline.clamped(0, 1)
         p.turn = p.turn.clamped(-1, 1)
         p.headTilt = p.headTilt.clamped(-28, 28)
         p.headTurn = p.headTurn.clamped(-1, 1)
