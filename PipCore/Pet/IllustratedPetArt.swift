@@ -139,7 +139,7 @@ enum IllustratedPetArt {
         let sleepingRoot: CGFloat = side > 0 ? 132 : 89
         let root = CGPoint(x: standingRoot + (sleepingRoot - standingRoot) * rest,
                            y: fig.shoulder.y + (140 - fig.shoulder.y) * rest)
-        let offset = fig.paw(p.species, angle: angle)
+        let offset = fig.paw(p.species, angle: angle, pose: p.pose, side: side)
         let sleepingPaw: CGFloat = side > 0 ? 108 : 104
         let tip = CGPoint(x: 100 + offset.x + (sleepingPaw - 100 - offset.x) * rest,
                           y: offset.y + (154 - offset.y) * rest)

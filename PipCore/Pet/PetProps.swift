@@ -115,6 +115,26 @@ public enum PetSnackArt {
 }
 
 enum PetPropArt {
+    /// Both reading objects have a stable room-space support before and after a carry.
+    static func readingShelf(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure, _ stage: PetPropStage) {
+        let wood = PetRGB(0.72, 0.59, 0.45)
+        for x: CGFloat in [16, 55] {
+            PetDraw.solid(ctx, Path(roundedRect: CGRect(x: x, y: 148, width: 3, height: 22), cornerSize: CGSize(width: 1, height: 1)), wood, rim: 0.4, depth: 1)
+        }
+        for y: CGFloat in [148, 168] {
+            PetDraw.solid(ctx, Path(roundedRect: CGRect(x: 13, y: y, width: 46, height: 2), cornerSize: CGSize(width: 1, height: 1)), wood, rim: 0.4, depth: 1)
+        }
+        for prop in [PetProp.book, .mug] where stage.carried != prop {
+            var stored = p
+            stored.pose = .zero
+            stored.pose.leftHandIK = 1
+            let hand = PetPropStage.grip(for: prop)
+            stored.pose.leftHandX = hand.x; stored.pose.leftHandY = hand.y
+            stored.pose.bookClose = prop == .book ? 1 : 0
+            held(ctx, stored, fig, prop)
+        }
+    }
+
     static func held(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure, _ prop: PetProp) {
         switch prop {
         case .mug: mug(ctx, p, fig)
@@ -392,12 +412,12 @@ enum PetPropArt {
 
     /// Between the two paws, so it is always in the hands.
     static func between(_ p: PetPaint, _ fig: PetFigure) -> CGPoint {
-        let r = fig.paw(p.species, angle: p.pose.armR), l = fig.paw(p.species, angle: p.pose.armL)
+        let r = fig.paw(p.species, angle: p.pose.armR, pose: p.pose, side: 1), l = fig.paw(p.species, angle: p.pose.armL, pose: p.pose, side: -1)
         return CGPoint(x: 100 + (r.x - l.x) / 2, y: (r.y + l.y) / 2)
     }
 
     static func mugAnchor(_ p: PetPaint, _ fig: PetFigure) -> CGPoint {
-        let support = fig.paw(p.species, angle: p.pose.armL)
+        let support = fig.paw(p.species, angle: p.pose.armL, pose: p.pose, side: -1)
         return CGPoint(x: 100 - support.x + 11, y: support.y)
     }
 
@@ -434,6 +454,10 @@ enum PetPropArt {
 
     static func book(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure) {
         let c = bookAnchor(p, fig)
+        var ctx = ctx
+        ctx.translateBy(x: c.x, y: c.y)
+        ctx.scaleBy(x: 1 - CGFloat(p.pose.bookClose) / 3, y: 1 - CGFloat(p.pose.bookClose) * 0.8)
+        ctx.translateBy(x: -c.x, y: -c.y)
         let w: CGFloat = 44, h: CGFloat = 28
         let r = CGRect(x: c.x - w / 2, y: c.y - h + 6, width: w, height: h)
         // Two open leaves meet at the spine; the pet looks into a book, not at a flat tile.
@@ -465,7 +489,7 @@ enum PetPropArt {
             }
         }
 
-        let phase = p.pose.pageTurn
+        let phase = p.pose.pageTurn * (1 - p.pose.bookClose)
         if phase > 0.01 && phase < 0.99 {
             // A leaf travels right to left around the spine. Its arch collapses as it lands;
             // both underlying pages remain readable and the supporting paw keeps the book still.
@@ -487,7 +511,7 @@ enum PetPropArt {
 
     /// The left paw supports the book; the right is free to turn a page without dragging it.
     static func bookAnchor(_ p: PetPaint, _ fig: PetFigure) -> CGPoint {
-        let support = fig.paw(p.species, angle: p.pose.armL)
+        let support = fig.paw(p.species, angle: p.pose.armL, pose: p.pose, side: -1)
         return CGPoint(x: 100 - support.x + 18, y: support.y)
     }
 

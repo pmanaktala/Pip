@@ -48,4 +48,33 @@ struct PetGalleryView: View {
 #Preview {
     PetGalleryView()
 }
+
+/// Reproducible all-species live review of physical reading-object changes.
+struct PetHandlingGalleryView: View {
+    private let stances: [PetStance] = [.mood(.calm, .moderate), .life(.reading), .mood(.neutral, .moderate), .mood(.calm, .moderate), .life(.sleeping), .mood(.neutral, .moderate)]
+    @State private var index = 0
+    @State private var previous: PetStance?
+    @State private var since = Date.distantPast
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ForEach(PetSpecies.allCases) { species in
+                PetStage(scene: PetScene(species: species, stance: stances[index], previous: previous, stanceSince: since),
+                         petScale: 0.7, floor: 0.85, showsFoliage: false, showsSeason: false)
+                    .frame(height: 220)
+                    .overlay(alignment: .topLeading) { Text(species.defaultName).font(.headline).padding(8) }
+            }
+            Text(stances[index].describe("Review")).font(.caption)
+        }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(3.4))
+                guard !Task.isCancelled else { return }
+                previous = stances[index]
+                index = (index + 1) % stances.count
+                since = .now
+            }
+        }
+    }
+}
 #endif

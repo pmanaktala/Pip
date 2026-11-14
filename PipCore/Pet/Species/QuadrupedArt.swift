@@ -64,10 +64,10 @@ enum QuadrupedArt {
 
     /// A short mitten arm: one rounded shape from the side of the body to a soft paw, the same
     /// construction as Pebble's flippers, following the same designed arc of paw positions.
-    static func foreleg(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure, angle: Double) {
+    static func foreleg(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure, angle: Double, side: CGFloat = 1) {
         let pal = p.palette
         let root = CGPoint(x: 100 + fig.shoulder.x, y: fig.shoulder.y)
-        let off = fig.paw(p.species, angle: angle)
+        let off = fig.paw(p.species, angle: angle, pose: p.pose, side: side)
         let tip = CGPoint(x: 100 + off.x, y: off.y)
         let bend: CGFloat = angle < -12 ? -3 : -4
         let arm = PetDraw.limb(from: root, to: tip, bend: bend, rootWidth: 16, tipWidth: 13)

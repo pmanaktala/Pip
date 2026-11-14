@@ -6,7 +6,9 @@ struct RootView: View {
     var body: some View {
         Group {
             #if DEBUG
-            if ProcessInfo.processInfo.environment["PIP_DEBUG"] == "gallery" {
+            if ProcessInfo.processInfo.environment["PIP_DEBUG"] == "handling" {
+                PetHandlingGalleryView()
+            } else if ProcessInfo.processInfo.environment["PIP_DEBUG"] == "gallery" {
                 PetGalleryView()
             } else if ProcessInfo.processInfo.environment["PIP_DEBUG"] == "onboarding" {
                 OnboardingView()

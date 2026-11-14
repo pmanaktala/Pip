@@ -17,6 +17,7 @@ public enum PetDetail: Sendable {
 /// Everything the renderer needs besides the canvas.
 public struct PetPaint {
     public var species: PetSpecies
+    public var staging: PetPropStage?
     public var style: PetArtStyle
     public var pose: PetPose
     public var prop: PetProp?
@@ -30,7 +31,8 @@ public struct PetPaint {
     public var palette: PetPalette
 
     public init(species: PetSpecies, pose: PetPose, prop: PetProp? = nil, wear: PetWear? = nil, detail: PetDetail = .full, time: Double? = nil, monochrome: Bool = false,
-                neck: PetNeck? = nil, extra: PetExtra? = nil, sign: PetSign? = nil, style: PetArtStyle = .illustrated) {
+                neck: PetNeck? = nil, extra: PetExtra? = nil, sign: PetSign? = nil, style: PetArtStyle = .illustrated, staging: PetPropStage? = nil) {
+        self.staging = staging
         self.style = style
         self.neck = neck
         self.extra = extra
@@ -96,6 +98,16 @@ struct PetFigure {
         return figure
     }
 
+    func paw(_ species: PetSpecies, angle: Double, pose: PetPose, side: CGFloat) -> CGPoint {
+        let authored = paw(species, angle: angle)
+        guard side < 0, pose.leftHandIK > 0 else { return authored }
+        let room = CGPoint(x: pose.leftHandX, y: pose.leftHandY)
+        let local = room.applying(PetBodyGeometry.transform(pose, style: style).inverted())
+        let weight = CGFloat(pose.leftHandIK)
+        return CGPoint(x: authored.x + (100 - local.x - authored.x) * weight,
+                       y: authored.y + (local.y - authored.y) * weight)
+    }
+
     /// Where the right paw (or flipper tip) is for an arm angle, as an offset from the centre
     /// line. Arms follow a designed arc of key positions rather than a rigid rotation, so a paw
     /// at the chest bends the elbow and a paw overhead reaches.
@@ -148,11 +160,7 @@ public enum PetRenderer {
             if p.prop == .blanket { p.prop = nil }
             if p.wear == nil { p.wear = .nightcap }
         }
-        var pose = p.pose
-        pose.lift *= 1 - recline
-        pose.lean *= 1 - recline
-        pose.squash *= 1 - recline
-        pose.slump *= 1 - recline
+        let pose = PetBodyGeometry.pose(p.pose, style: p.style)
         let fig = PetFigure.of(p.species, style: p.style)
         let floor = PetFigure.floor
 
@@ -162,16 +170,11 @@ public enum PetRenderer {
             ctx.fill(PetDraw.ellipse(CGPoint(x: 100 + pose.x, y: floor + 1.5), w, 5.5 * spread), PetRGB(0.10, 0.08, 0.16, 0.16 * Double(spread)))
         }
 
-        // The body transform: lift, then a lean sheared over the feet, then squash about the floor.
+        if let staging = p.staging, p.detail == .full {
+            PetPropArt.readingShelf(ctx, p, fig, staging)
+        }
         var body = ctx
-        body.translateBy(x: CGFloat(pose.x), y: -CGFloat(pose.lift))
-        let lean = CGFloat(pose.lean * .pi / 180)
-        body.concatenate(CGAffineTransform(a: 1, b: 0, c: -tan(lean) * 0.75, d: 1, tx: tan(lean) * 0.75 * floor, ty: 0))
-        body.translateBy(x: 100, y: floor)
-        body.rotate(by: .radians(Double(lean) * 0.25))
-        let sq = CGFloat(pose.squash) * 0.14
-        body.scaleBy(x: 1 + sq, y: 1 - sq - CGFloat(pose.slump) * 0.05)
-        body.translateBy(x: -100, y: -floor)
+        body.concatenate(PetBodyGeometry.transform(p.pose, style: p.style))
 
         // The head settles onto its pillow as the body reclines. Its floor contact
         // is fixed; breathing moves the chest, rather than lifting a sleeping pet.
@@ -206,7 +209,21 @@ public enum PetRenderer {
             drawArms(body, p, fig, front: false)
             if let neck = p.neck, p.prop != .blanket || neck == .travelPillow { PetPropArt.neck(body, p, fig, neck) }
             drawHead(head, p, fig)
-            if let prop = p.prop, !prop.drawnBehindArms, !prop.drawnInFront { PetPropArt.held(body, p, fig, prop) }
+            if let prop = p.prop, !prop.drawnBehindArms, !prop.drawnInFront {
+                if p.staging != nil, PetPropStage.handled.contains(prop) {
+                    // Reading objects are rigid in room space. The body can lean or squash
+                    // underneath them without skewing a mug or moving its shelf contact.
+                    var carried = p
+                    let hand = PetBodyGeometry.leftHand(p.pose, species: p.species, style: p.style)
+                    carried.pose.x = 0; carried.pose.lift = 0; carried.pose.lean = 0
+                    carried.pose.squash = 0; carried.pose.slump = 0; carried.pose.recline = 0
+                    carried.pose.leftHandIK = 1
+                    carried.pose.leftHandX = hand.x; carried.pose.leftHandY = hand.y
+                    PetPropArt.held(ctx, carried, fig, prop)
+                } else {
+                    PetPropArt.held(body, p, fig, prop)
+                }
+            }
             drawArms(body, p, fig, front: true)
             if let prop = p.prop, prop.drawnInFront { PetPropArt.held(prop.onFloor ? ctx : body, p, fig, prop) }
         }
@@ -244,8 +261,8 @@ public enum PetRenderer {
                 IllustratedPetArt.arm(ctx, p, fig, angle: angle, side: side)
             } else {
                 switch p.species {
-                case .penguin: PenguinArt.flipper(ctx, p, fig, angle: angle)
-                case .cat, .dog: QuadrupedArt.foreleg(ctx, p, fig, angle: angle)
+                case .penguin: PenguinArt.flipper(ctx, p, fig, angle: angle, side: side)
+                case .cat, .dog: QuadrupedArt.foreleg(ctx, p, fig, angle: angle, side: side)
                 }
             }
         }

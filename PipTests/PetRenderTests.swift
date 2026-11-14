@@ -91,6 +91,39 @@ struct PetRenderTests {
         }
     }
 
+    @Test func propHandlingSheetRenders() throws {
+        guard let output = ProcessInfo.processInfo.environment["PIP_HANDLING_OUTPUT"] else { return }
+        let start = Date(timeIntervalSince1970: 1000)
+        let style: PetArtStyle = ProcessInfo.processInfo.environment["PIP_ARTWORK_STYLE"] == "original" ? .original : .illustrated
+        let sheet = VStack(spacing: 12) {
+            ForEach(PetSpecies.allCases) { species in
+                HStack(spacing: 6) {
+                    ForEach(Array([0.0, 0.3, 0.7, 0.9, 1.15, 1.5, 1.9, 2.4, 2.7].enumerated()), id: \.offset) { _, time in
+                        let old = PetStance.mood(.calm, .moderate).rest(species)
+                        let target = PetStance.life(.reading).rest(species)
+                        let frame = handlingFrame(species, style, old, target, start, time)
+                        VStack(spacing: 3) {
+                            Canvas { ctx, _ in
+                                PetRenderer.draw(ctx, PetPaint(species: species, pose: frame.pose, prop: frame.prop,
+                                                             style: style, staging: frame.stage))
+                            }.frame(width: 200, height: 200)
+                            Text(String(format: "%.2fs", time)).font(.caption)
+                        }
+                    }
+                }
+            }
+        }.padding(12).background(Color(white: 0.95))
+        let renderer = ImageRenderer(content: sheet)
+        renderer.scale = 2
+        try #require(renderer.uiImage?.pngData()).write(to: URL(fileURLWithPath: output))
+    }
+
+    private func handlingFrame(_ species: PetSpecies, _ style: PetArtStyle, _ old: PetPose, _ target: PetPose, _ start: Date, _ time: Double) -> PetPropHandlingFrame {
+        var plan = PetPropHandling(prop: .mug)
+        plan.request(.book, at: start, source: old, species: species, style: style)
+        return plan.frame(at: start.addingTimeInterval(time), base: target, fallback: .book, species: species, style: style)
+    }
+
     @Test func featureScreensRender() async throws {
         guard let output = ProcessInfo.processInfo.environment["PIP_FEATURE_OUTPUT"] else { return }
         let defaults = SharedStateStore.shared.defaultsSuite
