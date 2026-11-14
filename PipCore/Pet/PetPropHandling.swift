@@ -27,20 +27,36 @@ enum PetBodyGeometry {
     }
 
     static func leftHand(_ pose: PetPose, species: PetSpecies, style: PetArtStyle) -> CGPoint {
+        hand(pose, species: species, style: style, side: -1)
+    }
+
+    static func hand(_ pose: PetPose, species: PetSpecies, style: PetArtStyle, side: CGFloat) -> CGPoint {
         let f = PetFigure.of(species, style: style)
-        let hand = f.paw(species, angle: pose.armL, pose: pose, side: -1)
-        return CGPoint(x: 100 - hand.x, y: hand.y).applying(transform(pose, style: style))
+        let point = f.paw(species, angle: side < 0 ? pose.armL : pose.armR, pose: pose, side: side)
+        return CGPoint(x: 100 + side * point.x, y: point.y).applying(transform(pose, style: style))
     }
 }
 
-/// This checkpoint stages the reading objects. Their shelf is a physical support, not a
+extension PetScene {
+    /// Illustrated sleep uses pajamas; the blanket remains folded on its support.
+    func handlingProp(style: PetArtStyle) -> PetProp? {
+        if style == .illustrated, preview == nil, stance.isAsleep { return nil }
+        return prop
+    }
+}
+
+/// The quiet-time objects have explicit resting places. Their shelf is a physical support, not a
 /// transition mask: objects remain visible there until grasped and after release.
 public struct PetPropStage: Equatable, Sendable {
     var carried: PetProp?
-    static let handled: Set<PetProp> = [.mug, .book]
+    static let handled: Set<PetProp> = [.mug, .book, .blanket]
 
     static func grip(for prop: PetProp) -> CGPoint {
-        prop == .mug ? CGPoint(x: 22, y: 142) : CGPoint(x: 18, y: 166)
+        switch prop {
+        case .mug: CGPoint(x: 22, y: 142)
+        case .blanket: CGPoint(x: 20, y: 152)
+        default: CGPoint(x: 18, y: 166)
+        }
     }
 }
 
@@ -62,11 +78,11 @@ struct PetPropHandling: Equatable, Sendable {
             switch self {
             case .rest: 0.7
             case .prepare: 0.75
-            case .putDown: 0.85
-            case .release: 0.28
-            case .reach: 0.48
-            case .pickUp: 0.8
-            case .settle: 0.22
+            case .putDown(let prop): prop == .blanket ? 1.35 : 0.85
+            case .release(let prop): prop == .blanket ? 0.5 : 0.28
+            case .reach(let prop): prop == .blanket ? 0.6 : 0.48
+            case .pickUp(let prop): prop == .blanket ? 1.2 : 0.8
+            case .settle(let prop): prop == .blanket ? 0.3 : 0.22
             }
         }
         var prop: PetProp {
@@ -147,7 +163,7 @@ struct PetPropHandling: Equatable, Sendable {
                 append(.release(held), at: &cursor)
             }
             if let desired {
-                if current.pose.recline > 0.05, active == nil {
+                if current.pose.recline > 0.05, active == nil, held == nil {
                     append(.prepare(desired), at: &cursor, source: current.pose)
                 }
                 append(.reach(desired), at: &cursor)
@@ -202,6 +218,7 @@ struct PetPropHandling: Equatable, Sendable {
             upright.propLift = 0
             let grip = PetBodyGeometry.leftHand(upright, species: species, style: style)
             var hand: CGPoint
+            var right: CGPoint?
             var active: PetProp?
             var reachWeight = 0.0
             switch s.action {
@@ -222,30 +239,70 @@ struct PetPropHandling: Equatable, Sendable {
                 var sourceGrip = supported
                 sourceGrip.recline = 0
                 let start = s.hand ?? PetBodyGeometry.leftHand(sourceGrip, species: species, style: style)
-                hand = Self.carry(from: start, to: shelf, progress: t)
-                pose.bookClose = min(1, t * 1.8)
+                if prop == .blanket {
+                    let rightStart = PetBodyGeometry.hand(s.source ?? sourceGrip, species: species, style: style, side: 1)
+                    let center = (start.x + rightStart.x) / 2
+                    let folded = CGPoint(x: center - 16, y: (start.y + rightStart.y) / 2)
+                    pose.blanketFold = PetMath.smoothstep(t / 0.4)
+                    if t < 0.4 {
+                        hand = Self.mix(start, folded, pose.blanketFold)
+                        right = Self.mix(rightStart, CGPoint(x: folded.x + 32, y: folded.y), pose.blanketFold)
+                    } else {
+                        hand = Self.lowerShelfCarry(from: folded, to: shelf, progress: (t - 0.4) / 0.6, placing: true)
+                        right = CGPoint(x: hand.x + 32, y: hand.y)
+                    }
+                } else {
+                    hand = prop == .book ? Self.lowerShelfCarry(from: start, to: shelf, progress: t, placing: true) : Self.carry(from: start, to: shelf, progress: t)
+                }
+                pose.bookClose = min(1, t * 4)
                 active = prop
             case .release:
                 reachWeight = 1 - t
                 pose.recline = base.recline * t
                 hand = Self.mix(shelf, PetBodyGeometry.leftHand(base, species: species, style: style), t)
+                if prop == .blanket {
+                    right = Self.mix(CGPoint(x: shelf.x + 32, y: shelf.y), PetBodyGeometry.hand(base, species: species, style: style, side: 1), t)
+                }
                 active = nil
             case .reach:
                 reachWeight = t
                 pose.recline = 0
                 hand = Self.mix(PetBodyGeometry.leftHand(pose, species: species, style: style), shelf, t)
+                if prop == .blanket {
+                    right = Self.mix(PetBodyGeometry.hand(pose, species: species, style: style, side: 1), CGPoint(x: shelf.x + 32, y: shelf.y), t)
+                }
                 active = nil
             case .pickUp:
                 reachWeight = 1 - t
                 pose.recline = 0; pose.propLift = 0
-                hand = Self.carry(from: shelf, to: grip, progress: t)
-                pose.bookClose = 1 - PetMath.smoothstep((t - 0.35) / 0.65)
+                if prop == .blanket {
+                    let rightGrip = PetBodyGeometry.hand(upright, species: species, style: style, side: 1)
+                    let center = CGPoint(x: (grip.x + rightGrip.x) / 2, y: (grip.y + rightGrip.y) / 2)
+                    let folded = CGPoint(x: center.x - 16, y: center.y)
+                    if t < 0.7 {
+                        hand = Self.lowerShelfCarry(from: shelf, to: folded, progress: t / 0.7, placing: false)
+                        right = CGPoint(x: hand.x + 32, y: hand.y)
+                        pose.blanketFold = 1
+                    } else {
+                        let unfold = PetMath.smoothstep((t - 0.7) / 0.3)
+                        hand = Self.mix(folded, grip, unfold)
+                        right = Self.mix(CGPoint(x: folded.x + 32, y: folded.y), rightGrip, unfold)
+                        pose.blanketFold = 1 - unfold
+                    }
+                } else {
+                    hand = prop == .book ? Self.lowerShelfCarry(from: shelf, to: grip, progress: t, placing: false) : Self.carry(from: shelf, to: grip, progress: t)
+                }
+                pose.bookClose = 1 - PetMath.smoothstep((t - 0.55) / 0.45)
                 active = prop
             case .settle:
                 pose = PetContact.pose(base, holding: prop, species: species)
                 pose.recline = 0
                 pose.propLift *= t
                 hand = PetBodyGeometry.leftHand(pose, species: species, style: style)
+                if prop == .blanket {
+                    right = PetBodyGeometry.hand(pose, species: species, style: style, side: 1)
+                    pose.blanketFold = 0
+                }
                 active = prop
             }
             pose.lean -= 16 * reachWeight
@@ -256,6 +313,10 @@ struct PetPropHandling: Equatable, Sendable {
             pose.leftHandX = hand.x; pose.leftHandY = hand.y; pose.leftHandIK = 1
             // Put the supporting limb in front; the other paw keeps its normal acting.
             pose.armL = -45
+            if let right {
+                pose.rightHandX = right.x; pose.rightHandY = right.y; pose.rightHandIK = 1
+                pose.armR = -58
+            }
             return PetPropHandlingFrame(pose: pose.clamped(), prop: active,
                                         stage: PetPropStage(carried: active), handling: true)
         }
@@ -265,6 +326,20 @@ struct PetPropHandling: Equatable, Sendable {
 
     private static func mix(_ a: CGPoint, _ b: CGPoint, _ t: Double) -> CGPoint {
         CGPoint(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t)
+    }
+
+    /// Lower compartments require a horizontal withdrawal before the item can rise.
+    /// The reverse route folds/lowers outside the cabinet, then slides onto its support.
+    private static func lowerShelfCarry(from a: CGPoint, to b: CGPoint, progress t: Double, placing: Bool) -> CGPoint {
+        if placing {
+            let exit = CGPoint(x: 70, y: b.y)
+            if t < 0.25 { return a }
+            if t < 0.72 { return carry(from: a, to: exit, progress: PetMath.smoothstep((t - 0.25) / 0.47)) }
+            return mix(exit, b, PetMath.smoothstep((t - 0.72) / 0.28))
+        }
+        let exit = CGPoint(x: 70, y: a.y)
+        if t < 0.35 { return mix(a, exit, PetMath.smoothstep(t / 0.35)) }
+        return carry(from: exit, to: b, progress: PetMath.smoothstep((t - 0.35) / 0.65))
     }
 
     private static func carry(from a: CGPoint, to b: CGPoint, progress t: Double) -> CGPoint {

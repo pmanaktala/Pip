@@ -111,7 +111,7 @@ import Testing
         for species in PetSpecies.allCases {
             let asleep = PetStance.life(.sleeping).rest(species)
             let awake = PetStance.mood(.calm, .moderate).rest(species)
-            var plan = PetPropHandling(prop: .blanket)
+            var plan = PetPropHandling(prop: nil)
             plan.request(.mug, at: start, source: asleep, species: species, style: .illustrated)
             let prepare = try #require(plan.steps.first)
             #expect(prepare.action == .prepare(.mug))
@@ -129,10 +129,10 @@ import Testing
     @Test func cancelledWakeupSettlesBackToSleepWithoutAPoseJump() throws {
         let asleep = PetStance.life(.sleeping).rest(.penguin)
         let awake = PetStance.mood(.calm, .moderate).rest(.penguin)
-        var plan = PetPropHandling(prop: .blanket)
+        var plan = PetPropHandling(prop: nil)
         plan.request(.mug, at: start, source: asleep, species: .penguin, style: .illustrated)
         let prepareEnd = try #require(plan.steps.first).end
-        plan.request(.blanket, at: start.addingTimeInterval(0.2), source: awake, species: .penguin, style: .illustrated)
+        plan.request(nil, at: start.addingTimeInterval(0.2), source: awake, species: .penguin, style: .illustrated)
         let justBefore = plan.frame(at: prepareEnd.addingTimeInterval(-0.00001), base: asleep, fallback: .blanket, species: .penguin, style: .illustrated)
         let justAfter = plan.frame(at: prepareEnd, base: asleep, fallback: .blanket, species: .penguin, style: .illustrated)
         #expect(abs(justBefore.pose.recline - justAfter.pose.recline) < 0.001)
