@@ -34,6 +34,18 @@ Three companions, each a distinct silhouette at 24 pt. Fewer, finished.
 
 Old `capybara` and `redPanda` choices migrate to Pebble.
 
+### Character construction checkpoint
+
+The cast shares a graphic style, not one body with interchangeable heads. Pebble has a broad
+low egg body and a continuous cream heart mask; Mochi has a low cheek-heavy head, shorter ears,
+and a wider pear-shaped seated body; Biscuit has a larger plush head over a shorter body, broad
+paws and simple scalloped drop ears. Biscuit's badge omits the forehead curls so the eyes retain
+clear negative space. The dark coat is a slate blue; Biscuit's warm ears are slightly deeper than
+the white coat. These are construction changes, independent of the mood rig and accessories.
+
+Review the whole cast in `PetLab cast` and `tokens`, then review full/face/badge sizes and
+monochrome complications. Do not substitute recognition at full size for tiny-surface review.
+
 ## 3. Drawing rules
 
 - **Flat and graphic.** Each material is a base colour plus one form shadow (the same shape,

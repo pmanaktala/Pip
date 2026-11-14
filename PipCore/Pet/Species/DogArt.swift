@@ -28,22 +28,24 @@ enum DogArt {
         PetDraw.solid(ctx, head, pal.coat, rim: p.rim, depth: 5)
         if !badge { PetDraw.highlight(ctx, CGRect(x: -rx * 0.55, y: -ry * 0.8, width: rx * 0.45, height: ry * 0.26), pal.coat, amount: 0.35) }
 
-        // Soft bangs over the brow, parted a little by the head turn.
-        var bangs = Path()
-        let by = -ry * 0.52 + fy * 0.3
-        bangs.move(to: CGPoint(x: -rx * 0.55 + fx * 0.3, y: -ry * 0.8))
-        let points: [CGFloat] = [-0.5, -0.22, 0.06, 0.34, 0.58]
-        for (i, u) in points.enumerated() {
-            let x = rx * u + fx * 0.4
-            bangs.addQuadCurve(to: CGPoint(x: x + rx * 0.14, y: by - CGFloat(i % 2) * 2),
-                               control: CGPoint(x: x + rx * 0.07, y: by + 7))
-        }
-        bangs.addQuadCurve(to: CGPoint(x: -rx * 0.55 + fx * 0.3, y: -ry * 0.8), control: CGPoint(x: fx * 0.3, y: -ry * 1.12))
-        bangs.closeSubpath()
+        // A single soft forehead curl at full size; tiny faces keep their negative space.
         var inHead = ctx
         inHead.clip(to: skull)
-        inHead.fill(bangs, pal.coat.shade.mix(pal.coat, 0.55))
-        inHead.fill(bangs.offsetBy(dx: 0, dy: -1.8), pal.coat)
+        if !badge {
+            var bangs = Path()
+            let by = -ry * 0.52 + fy * 0.3
+            bangs.move(to: CGPoint(x: -rx * 0.55 + fx * 0.3, y: -ry * 0.8))
+            let points: [CGFloat] = [-0.5, -0.22, 0.06, 0.34, 0.58]
+            for (i, u) in points.enumerated() {
+                let x = rx * u + fx * 0.4
+                bangs.addQuadCurve(to: CGPoint(x: x + rx * 0.14, y: by - CGFloat(i % 2) * 2),
+                                   control: CGPoint(x: x + rx * 0.07, y: by + 7))
+            }
+            bangs.addQuadCurve(to: CGPoint(x: -rx * 0.55 + fx * 0.3, y: -ry * 0.8), control: CGPoint(x: fx * 0.3, y: -ry * 1.12))
+            bangs.closeSubpath()
+            inHead.fill(bangs, pal.coat.shade.mix(pal.coat, 0.55))
+            inHead.fill(bangs.offsetBy(dx: 0, dy: -1.8), pal.coat)
+        }
 
         // Muzzle: a soft lighter oval with a small beard below.
         let m = CGPoint(x: fx * 1.15, y: fig.mouthY + fy * 1.2)
@@ -81,14 +83,20 @@ enum DogArt {
         PetDraw.mirrored(ctx) { c, side in
             let e = CGFloat(side > 0 ? pose.earR : pose.earL)
             var ear = c
-            ear.translateBy(x: rx * 0.74 - fx * 0.2 * side + min(0, e) * 2, y: -ry * 0.52 - fy * 0.3 - min(0, e) * 4)
+            ear.translateBy(x: rx * 0.81 - fx * 0.2 * side + min(0, e) * 2, y: -ry * 0.52 - fy * 0.3 - min(0, e) * 4)
             ear.rotate(by: .degrees(Double(-6 - max(0, e) * 24 - min(0, e) * 6 + CGFloat(pose.headTilt) * 0.3 * side)))
-            let curls: [(CGFloat, CGFloat, CGFloat)] = [(0, 0, 9.5), (3, 11, 10.5), (4.5, 22.5, 11), (3, 34, 9.5), (-0.5, 43, 7)]
+            // Broad scallops read as a soft ear rather than a column of tiny circles.
             var shape = Path()
-            for (i, (x, y, r)) in curls.enumerated() {
-                let curl = PetDraw.fluffy(CGPoint(x: x, y: y), r, r, bumps: 6, depth: 1.1, phase: Double(i))
-                shape = i == 0 ? curl : shape.union(curl)
-            }
+            shape.move(to: CGPoint(x: -7, y: -3))
+            shape.addQuadCurve(to: CGPoint(x: 9, y: -2), control: CGPoint(x: 1, y: -12))
+            shape.addQuadCurve(to: CGPoint(x: 14, y: 13), control: CGPoint(x: 20, y: 1))
+            shape.addQuadCurve(to: CGPoint(x: 15, y: 29), control: CGPoint(x: 21, y: 21))
+            shape.addQuadCurve(to: CGPoint(x: 9, y: 44), control: CGPoint(x: 20, y: 41))
+            shape.addQuadCurve(to: CGPoint(x: -5, y: 46), control: CGPoint(x: 4, y: 55))
+            shape.addQuadCurve(to: CGPoint(x: -7, y: 31), control: CGPoint(x: -11, y: 43))
+            shape.addQuadCurve(to: CGPoint(x: -7, y: 13), control: CGPoint(x: -8, y: 22))
+            shape.addQuadCurve(to: CGPoint(x: -7, y: -3), control: CGPoint(x: -11, y: 2))
+            shape.closeSubpath()
             PetDraw.solid(ear, shape, pal.marking, rim: p.rim, depth: 3.5)
         }
     }

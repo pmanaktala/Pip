@@ -68,13 +68,13 @@ struct PetFigure {
     static func of(_ species: PetSpecies) -> PetFigure {
         switch species {
         case .penguin:
-            PetFigure(headCenter: CGPoint(x: 100, y: 70), headRX: 37.5, headRY: 35.5, neck: CGPoint(x: 100, y: 100), shoulder: CGPoint(x: 36, y: 104),
+            PetFigure(headCenter: CGPoint(x: 100, y: 70), headRX: 37, headRY: 36.5, neck: CGPoint(x: 100, y: 100), shoulder: CGPoint(x: 36, y: 104),
                       eyeX: 14.5, eyeY: 1, eyeW: 7.2, eyeH: 9.6, mouthY: 13, blushX: 18.5, blushY: 11.5)
         case .cat:
-            PetFigure(headCenter: CGPoint(x: 100, y: 76), headRX: 46, headRY: 36, neck: CGPoint(x: 100, y: 104), shoulder: CGPoint(x: 29, y: 112),
+            PetFigure(headCenter: CGPoint(x: 100, y: 76), headRX: 46, headRY: 33.5, neck: CGPoint(x: 100, y: 104), shoulder: CGPoint(x: 29, y: 112),
                       eyeX: 19, eyeY: 0, eyeW: 8, eyeH: 10.5, mouthY: 16, blushX: 25, blushY: 10)
         case .dog:
-            PetFigure(headCenter: CGPoint(x: 100, y: 75), headRX: 42, headRY: 37, neck: CGPoint(x: 100, y: 104), shoulder: CGPoint(x: 30, y: 112),
+            PetFigure(headCenter: CGPoint(x: 100, y: 75), headRX: 43, headRY: 38, neck: CGPoint(x: 100, y: 104), shoulder: CGPoint(x: 30, y: 112),
                       eyeX: 15.5, eyeY: 0, eyeW: 9, eyeH: 10.6, mouthY: 20, blushX: 23, blushY: 10)
         }
     }

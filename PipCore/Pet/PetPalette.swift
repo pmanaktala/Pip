@@ -54,7 +54,7 @@ public struct PetPalette: Sendable {
     public static func palette(for species: PetSpecies) -> PetPalette {
         switch species {
         case .penguin:
-            PetPalette(coat: PetRGB(0.24, 0.26, 0.33), cream: PetRGB(0.98, 0.96, 0.91), marking: PetRGB(0.17, 0.18, 0.24),
+            PetPalette(coat: PetRGB(0.21, 0.27, 0.35), cream: PetRGB(0.98, 0.96, 0.91), marking: PetRGB(0.17, 0.18, 0.24),
                        pink: PetRGB(0.97, 0.66, 0.64), accent: PetRGB(0.99, 0.67, 0.30), ink: PetRGB(0.13, 0.12, 0.17),
                        blush: PetRGB(0.99, 0.56, 0.56, 0.5), prop: PetRGB(0.93, 0.42, 0.38))
         case .cat:
@@ -63,7 +63,7 @@ public struct PetPalette: Sendable {
                        blush: PetRGB(0.99, 0.50, 0.46, 0.45), prop: PetRGB(0.34, 0.62, 0.72))
         case .dog:
             // A white, fluffy little dog: warm white coat, curly ears a shade deeper, a rosy nose.
-            PetPalette(coat: PetRGB(0.99, 0.97, 0.93), cream: PetRGB(1.0, 1.0, 0.98), marking: PetRGB(0.95, 0.86, 0.74),
+            PetPalette(coat: PetRGB(0.99, 0.97, 0.93), cream: PetRGB(1.0, 1.0, 0.98), marking: PetRGB(0.92, 0.82, 0.68),
                        pink: PetRGB(0.96, 0.60, 0.62), accent: PetRGB(0.66, 0.40, 0.38), ink: PetRGB(0.17, 0.13, 0.13),
                        blush: PetRGB(0.99, 0.55, 0.55, 0.45), prop: PetRGB(0.24, 0.62, 0.58))
         }

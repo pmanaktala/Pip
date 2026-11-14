@@ -15,14 +15,14 @@ enum CatArt {
             var ear = c
             ear.translateBy(x: 27 - fx * 0.3 * side, y: -26 - fy * 0.4)
             ear.rotate(by: .degrees(Double(14 - e * 12 + max(0, -e) * 26)))
-            let h: CGFloat = 30 + e * 3
+            let h: CGFloat = 25 + e * 3
             var outer = Path()
             outer.move(to: CGPoint(x: -15, y: 6))
             outer.addQuadCurve(to: CGPoint(x: 2, y: -h), control: CGPoint(x: -10, y: -h * 0.6))
             outer.addQuadCurve(to: CGPoint(x: 17, y: 6), control: CGPoint(x: 14, y: -h * 0.5))
             outer.closeSubpath()
             PetDraw.solid(ear, outer, pal.coat, rim: p.rim, depth: 3)
-            if !badge || true {
+            do {
                 var inner = Path()
                 inner.move(to: CGPoint(x: -8, y: 4))
                 inner.addQuadCurve(to: CGPoint(x: 2, y: -h * 0.66), control: CGPoint(x: -5, y: -h * 0.4))
@@ -32,13 +32,14 @@ enum CatArt {
             }
         }
 
-        // The head: wider than tall, with full cheeks.
+        // A low, broad mochi shape: full cheek pads taper into a small soft chin.
         var skull = Path()
         skull.move(to: CGPoint(x: 0, y: -ry))
-        skull.addCurve(to: CGPoint(x: rx, y: 4), control1: CGPoint(x: rx * 0.78, y: -ry), control2: CGPoint(x: rx, y: -ry * 0.45))
-        skull.addCurve(to: CGPoint(x: 0, y: ry), control1: CGPoint(x: rx, y: ry * 0.62), control2: CGPoint(x: rx * 0.62, y: ry))
-        skull.addCurve(to: CGPoint(x: -rx, y: 4), control1: CGPoint(x: -rx * 0.62, y: ry), control2: CGPoint(x: -rx, y: ry * 0.62))
-        skull.addCurve(to: CGPoint(x: 0, y: -ry), control1: CGPoint(x: -rx, y: -ry * 0.45), control2: CGPoint(x: -rx * 0.78, y: -ry))
+        skull.addCurve(to: CGPoint(x: rx, y: 6), control1: CGPoint(x: rx * 0.84, y: -ry), control2: CGPoint(x: rx * 0.96, y: -ry * 0.25))
+        skull.addCurve(to: CGPoint(x: rx * 0.38, y: ry), control1: CGPoint(x: rx * 1.08, y: ry * 0.75), control2: CGPoint(x: rx * 0.66, y: ry))
+        skull.addQuadCurve(to: CGPoint(x: -rx * 0.38, y: ry), control: CGPoint(x: 0, y: ry + 4))
+        skull.addCurve(to: CGPoint(x: -rx, y: 6), control1: CGPoint(x: -rx * 0.66, y: ry), control2: CGPoint(x: -rx * 1.08, y: ry * 0.75))
+        skull.addCurve(to: CGPoint(x: 0, y: -ry), control1: CGPoint(x: -rx * 0.96, y: -ry * 0.25), control2: CGPoint(x: -rx * 0.84, y: -ry))
         skull.closeSubpath()
         PetDraw.solid(ctx, skull, pal.coat, rim: p.rim, depth: 6)
         if !badge { PetDraw.highlight(ctx, CGRect(x: -rx * 0.6, y: -ry * 0.8, width: rx * 0.5, height: ry * 0.3), pal.coat, amount: 0.16) }

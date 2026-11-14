@@ -23,7 +23,7 @@ enum PenguinArt {
         if cross < 0.3 { feet() }
 
         // The egg: widest low down, narrowing into the head.
-        let w: CGFloat = 44 + breathe, top: CGFloat = 78 - breathe * 0.6, bottom = floor - 4
+        let w: CGFloat = 47 + breathe, top: CGFloat = 78 - breathe * 0.6, bottom = floor - 4
         var egg = Path()
         egg.move(to: CGPoint(x: 100, y: top))
         egg.addCurve(to: CGPoint(x: 100 + w, y: 132), control1: CGPoint(x: 100 + w * 0.55, y: top), control2: CGPoint(x: 100 + w, y: 100))
@@ -58,7 +58,14 @@ enum PenguinArt {
         let turn = CGFloat(pose.headTurn), nod = CGFloat(pose.headNod)
         let badge = p.detail == .badge
 
-        let skull = PetDraw.ellipse(.zero, rx, ry)
+        // A compact pebble, broad at the cheeks and gently flattened at the crown.
+        var skull = Path()
+        skull.move(to: CGPoint(x: 0, y: -ry))
+        skull.addCurve(to: CGPoint(x: rx, y: 1), control1: CGPoint(x: rx * 0.75, y: -ry), control2: CGPoint(x: rx, y: -ry * 0.45))
+        skull.addCurve(to: CGPoint(x: 0, y: ry), control1: CGPoint(x: rx, y: ry * 0.75), control2: CGPoint(x: rx * 0.56, y: ry))
+        skull.addCurve(to: CGPoint(x: -rx, y: 1), control1: CGPoint(x: -rx * 0.56, y: ry), control2: CGPoint(x: -rx, y: ry * 0.75))
+        skull.addCurve(to: CGPoint(x: 0, y: -ry), control1: CGPoint(x: -rx, y: -ry * 0.45), control2: CGPoint(x: -rx * 0.75, y: -ry))
+        skull.closeSubpath()
         PetDraw.solid(ctx, skull, pal.coat, rim: p.rim, depth: 6)
         if !badge { PetDraw.highlight(ctx, CGRect(x: -rx * 0.62, y: -ry * 0.82, width: rx * 0.52, height: ry * 0.32), pal.coat, amount: 0.12) }
 
@@ -66,10 +73,15 @@ enum PenguinArt {
         let fx = turn * 7, fy = nod * 5
         var face = ctx
         face.clip(to: skull)
-        let lobes = PetDraw.ellipse(CGPoint(x: fx + 13.5, y: fy - 1), 16.5, 17.5)
-            .union(PetDraw.ellipse(CGPoint(x: fx - 13.5, y: fy - 1), 16.5, 17.5))
-            .union(PetDraw.ellipse(CGPoint(x: fx, y: fy + 13), 23, 17))
-        PetDraw.solid(face, lobes, pal.cream, rim: 0, depth: 3)
+        // One continuous heart mask, designed to survive a 24pt monochrome face.
+        var mask = Path()
+        mask.move(to: CGPoint(x: fx, y: fy - 15))
+        mask.addCurve(to: CGPoint(x: fx + 30, y: fy - 2), control1: CGPoint(x: fx + 13, y: fy - 38), control2: CGPoint(x: fx + 31, y: fy - 25))
+        mask.addCurve(to: CGPoint(x: fx, y: fy + 30), control1: CGPoint(x: fx + 30, y: fy + 18), control2: CGPoint(x: fx + 16, y: fy + 30))
+        mask.addCurve(to: CGPoint(x: fx - 30, y: fy - 2), control1: CGPoint(x: fx - 16, y: fy + 30), control2: CGPoint(x: fx - 30, y: fy + 18))
+        mask.addCurve(to: CGPoint(x: fx, y: fy - 15), control1: CGPoint(x: fx - 31, y: fy - 25), control2: CGPoint(x: fx - 13, y: fy - 38))
+        mask.closeSubpath()
+        PetDraw.solid(face, mask, pal.cream, rim: 0, depth: badge ? 1.5 : 2.5)
 
         // Cheeks.
         if pose.blush > 0.01 {
