@@ -132,7 +132,7 @@ public enum PetDirector {
         p.earL += (-rise * 0.05 + tilt * 0.02).clamped(-0.5, 0.5)
         p.earR += (-rise * 0.05 - tilt * 0.02).clamped(-0.5, 0.5)
         p.tail += (-sway * 0.12 - (p.lean - past.lean) * 0.03).clamped(-0.5, 0.5)
-        return p.clamped()
+        return PetContact.pose(p.clamped(), holding: scene.prop(for: p), species: scene.species)
     }
 
     /// A still pose for surfaces that cannot animate: the stance's `hold` variation `index`.

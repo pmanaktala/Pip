@@ -123,6 +123,19 @@ its position still comes from the two paws and steam rises separately. `PetLab p
 both performances frame by frame for any species. This is use/contact choreography; the full
 pickup and put-down lifecycle between different stance props remains a separate milestone.
 
+### World and contact rules
+
+Every prop has a support. The mug and book use the left paw as their owner while the right paw
+can gesture or turn a page. The cup pivots about that contact during a sip, with a species-specific
+reach to the mouth. The blanket and carried ball keep both paws engaged. Food is drawn in the
+same body space as the holding paws, then consumed through its bite state; it is not attached to
+a moving head. `PetContact` applies these rules after acting and again at the renderer boundary,
+so static poses, vignettes and event clips cannot detach the support paw. Laptop and resting ball
+remain in room/floor space. No average-of-two-hands anchor when one hand is free.
+
+These constraints govern carrying and use. A complete reach/grasp/set-down lifecycle when
+switching between different props remains unfinished; do not disguise that gap with dissolves.
+
 ## 6. Interaction
 
 - **Arrival**: when the Pet tab or the watch app comes to the front, the pet notices you (looks

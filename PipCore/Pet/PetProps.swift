@@ -123,7 +123,9 @@ enum PetPropArt {
         case .ball: ball(ctx, p)
         case .laptop: laptop(ctx, p)
         case .snack:
-            break // Drawn with the head (see `PetRenderer`), so it stays at the mouth.
+            let c = between(p, fig)
+            PetSnackArt.draw(ctx, species: p.species, at: CGPoint(x: c.x, y: c.y - 8), size: 30,
+                             bite: p.pose.bite, time: p.time ?? 0, rim: p.rim)
         case .heldBall:
             let c = between(p, fig)
             let ball = PetDraw.ellipse(CGPoint(x: c.x, y: c.y - 4), 10, 10)
@@ -394,12 +396,17 @@ enum PetPropArt {
         return CGPoint(x: 100 + (r.x - l.x) / 2, y: (r.y + l.y) / 2)
     }
 
+    static func mugAnchor(_ p: PetPaint, _ fig: PetFigure) -> CGPoint {
+        let support = fig.paw(p.species, angle: p.pose.armL)
+        return CGPoint(x: 100 - support.x + 11, y: support.y)
+    }
+
     static func mug(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure) {
-        let c = between(p, fig)
+        let c = mugAnchor(p, fig)
         var cupContext = ctx
-        cupContext.translateBy(x: c.x, y: c.y)
+        cupContext.translateBy(x: c.x - 11, y: c.y)
         cupContext.rotate(by: .degrees(-8 * p.pose.propLift))
-        cupContext.translateBy(x: -c.x, y: -c.y)
+        cupContext.translateBy(x: -(c.x - 11), y: -c.y)
         let body = CGRect(x: c.x - 11, y: c.y - 14, width: 22, height: 20)
         let cup = Path(roundedRect: body, cornerSize: CGSize(width: 5, height: 5), style: .continuous)
         var handle = Path()

@@ -496,3 +496,38 @@ enum PetTestSupport {
 extension PetPose {
     var hasNaN: Bool { PetPose.channels.contains { self[keyPath: $0].isNaN || self[keyPath: $0].isInfinite } }
 }
+
+@Suite struct PetContactTests {
+    @Test func heldPropsRetainTheirSupportingPawThroughGestures() {
+        for species in PetSpecies.allCases {
+            let fig = PetFigure.of(species)
+            for angle in stride(from: -130.0, through: 175, by: 15) {
+                var source = PetPose()
+                source.armL = angle; source.armR = -angle
+                for prop in [PetProp.mug, .book, .blanket, .heldBall, .snack] {
+                    let paint = PetPaint(species: species, pose: source, prop: prop)
+                    #expect(paint.pose == PetContact.pose(paint.pose, holding: prop, species: species), "Contact constraints must be idempotent")
+                    #expect(paint.pose.armL < -40, "The support paw cannot wave away from its held object")
+                }
+                let mug = PetPaint(species: species, pose: source, prop: .mug)
+                let paw = fig.paw(species, angle: mug.pose.armL)
+                let center = PetPropArt.mugAnchor(mug, fig)
+                #expect(center.x - 11 == 100 - paw.x)
+                #expect(center.y == paw.y)
+                var wave = mug.pose
+                wave.armR = 175
+                #expect(PetPropArt.mugAnchor(PetPaint(species: species, pose: wave, prop: .mug), fig) == center,
+                        "The cup must not float toward the waving hand")
+            }
+        }
+    }
+
+    @Test func floorPropsDoNotConstrainOrRideTheBody() {
+        var pose = PetPose()
+        pose.lift = 20; pose.armL = 140; pose.armR = 130
+        #expect(PetContact.pose(pose, holding: .ball, species: .cat) == pose)
+        #expect(PetContact.pose(pose, holding: .laptop, species: .cat) == pose)
+        #expect(PetProp.ball.onFloor && PetProp.laptop.onFloor)
+        #expect(!PetProp.mug.onFloor && !PetProp.book.onFloor)
+    }
+}

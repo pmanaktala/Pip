@@ -30,7 +30,7 @@ public struct PetPaint {
         self.extra = extra
         self.sign = sign
         self.species = species
-        self.pose = pose.clamped()
+        self.pose = PetContact.pose(pose.clamped(), holding: prop, species: species)
         self.prop = prop
         self.wear = wear
         self.detail = detail
@@ -157,10 +157,6 @@ public enum PetRenderer {
             drawHead(head, p, fig)
             if let prop = p.prop, !prop.drawnBehindArms, !prop.drawnInFront { PetPropArt.held(body, p, fig, prop) }
             drawArms(body, p, fig, front: true)
-            if p.prop == .snack {
-                // At the mouth, riding the head, held up in front of the paws so you see it go.
-                PetSnackArt.draw(head, species: p.species, at: CGPoint(x: 0, y: fig.mouthY + 9), size: 30, bite: p.pose.bite, time: p.time ?? 0, rim: p.rim)
-            }
             if let prop = p.prop, prop.drawnInFront { PetPropArt.held(prop.onFloor ? ctx : body, p, fig, prop) }
         }
         PetEffects.draw(ctx, body: body, head: head, p, fig)
