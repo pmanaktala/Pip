@@ -153,7 +153,7 @@ struct PetRenderTests {
         switch name {
         case "refinement":
             let state = AppState.preview(species: species, seeded: false)
-            let entry = state.log(mood: .happy)
+            let entry = try state.log(mood: .happy)
             content = AnyView(MoodPickerSheet(previewEntry: entry).environment(state).modelContainer(state.container).fontDesign(.rounded))
         case "app": content = AnyView(PreviewHost(species: species) { MainTabView() })
         case "picker": content = AnyView(PreviewHost(species: species) { MoodPickerSheet() })

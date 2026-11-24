@@ -17,7 +17,7 @@ struct PersistenceTests {
         context.insert(PetProfile(identity: PetIdentity(species: .dog, name: "Biscuit")))
         let logger = MoodLogger(context: context, sharedStore: store)
 
-        let entry = logger.log(mood: .stressed, intensity: .strong, contexts: [.work], note: "Deploy broke")
+        let entry = try logger.log(mood: .stressed, intensity: .strong, contexts: [.work], note: "Deploy broke")
         #expect(PipQueries.allEntries(in: context).count == 1)
         #expect(entry.contexts == [.work])
 
@@ -27,11 +27,67 @@ struct PersistenceTests {
         #expect(snapshot.intensity == .strong)
         #expect(snapshot.today.count == 1)
 
-        logger.update(entry, intensity: .slight, note: .some(nil))
+        try logger.update(entry, intensity: .slight, note: .some(nil))
         #expect(entry.intensity == .slight)
         #expect(entry.note == nil)
         #expect(entry.modifiedAt >= entry.createdAt)
         #expect(store.snapshot?.intensity == .slight)
+    }
+
+    @Test func failedWritesRollBackAndCanBeRetried() throws {
+        let (container, store) = makeStore()
+        let context = container.mainContext
+        let effect = LogCounter()
+        var logger = MoodLogger(context: context, sharedStore: store, sideEffects: [effect])
+        logger.saveContext = { _ in throw CocoaError(.fileWriteOutOfSpace) }
+
+        #expect(throws: MoodSaveError.writeFailed) { try logger.log(mood: .happy) }
+        #expect(PipQueries.allEntries(in: context).isEmpty)
+        #expect(store.snapshot == nil)
+        #expect(effect.count == 0)
+
+        let entry = try MoodLogger(context: context, sharedStore: store, sideEffects: [effect])
+            .log(mood: .stressed, note: "Before")
+        let saved = store.snapshot
+        #expect(effect.count == 1)
+        #expect(throws: MoodSaveError.writeFailed) { try logger.update(entry, intensity: .strong, note: "Draft") }
+        #expect(entry.note == "Before")
+        #expect(entry.intensity == .moderate)
+        #expect(throws: MoodSaveError.writeFailed) { try logger.delete(entry) }
+        #expect(PipQueries.entry(id: entry.id, in: context) != nil)
+        #expect(store.snapshot == saved)
+
+        logger.saveContext = { try $0.save() }
+        try logger.update(entry, intensity: .strong, note: "Draft")
+        #expect(entry.note == "Draft")
+        #expect(store.snapshot?.intensity == .strong)
+        try logger.delete(entry)
+        #expect(try ModelContext(container).fetchCount(FetchDescriptor<MoodEntry>()) == 0)
+    }
+
+    @Test func unavailableStoreRefusesToConfirmMood() throws {
+        let blockedParent = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        try Data().write(to: blockedParent)
+        defer { try? FileManager.default.removeItem(at: blockedParent) }
+        let setup = PipModelContainer.makePersistent(at: blockedParent.appending(path: "Pip.store"))
+        let store = SharedStateStore(suiteName: "PersistenceTests.\(UUID().uuidString)")
+        let effect = LogCounter()
+        let logger = MoodLogger(context: setup.container.mainContext, sharedStore: store, sideEffects: [effect])
+
+        #expect(setup.mode == .unavailable)
+        #expect(throws: MoodSaveError.storageUnavailable) { try logger.log(mood: .happy) }
+        logger.refreshSnapshot()
+        #expect(store.snapshot == nil)
+        #expect(effect.count == 0)
+    }
+
+    @MainActor
+    private final class LogCounter: MoodLogSideEffect {
+        var count = 0
+
+        func moodLogged(_ entry: MoodEntry, identity: PetIdentity, snapshot: PetSnapshot) {
+            count += 1
+        }
     }
 
     @Test func duplicateProfilesConvergeOnNewest() throws {

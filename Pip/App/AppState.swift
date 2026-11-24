@@ -116,24 +116,24 @@ final class AppState {
     // MARK: Mood
 
     @discardableResult
-    func log(mood: Mood, intensity: MoodIntensity = .moderate, contexts: [MoodContext] = [], note: String? = nil) -> MoodEntry {
-        let entry = logger.log(mood: mood, intensity: intensity, contexts: contexts, note: note)
+    func log(mood: Mood, intensity: MoodIntensity = .moderate, contexts: [MoodContext] = [], note: String? = nil) throws -> MoodEntry {
+        let entry = try logger.log(mood: mood, intensity: intensity, contexts: contexts, note: note)
         latestEntry = entry
         todayEntries = PipQueries.entries(on: .now, in: context)
         pet.logged(mood, intensity: intensity, snapshot: snapshot)
         return entry
     }
 
-    func update(_ entry: MoodEntry, intensity: MoodIntensity? = nil, contexts: [MoodContext]? = nil, note: String?? = nil) {
-        logger.update(entry, intensity: intensity, contexts: contexts, note: note)
+    func update(_ entry: MoodEntry, intensity: MoodIntensity? = nil, contexts: [MoodContext]? = nil, note: String?? = nil) throws {
+        try logger.update(entry, intensity: intensity, contexts: contexts, note: note)
         todayEntries = PipQueries.entries(on: .now, in: context)
         pet.update(petSnapshot)
         DeviceSync.shared.send(entry)
     }
 
-    func delete(_ entry: MoodEntry) {
+    func delete(_ entry: MoodEntry) throws {
         let id = entry.id
-        logger.delete(entry)
+        try logger.delete(entry)
         refresh()
         DeviceSync.shared.sendDeletion(of: id)
     }

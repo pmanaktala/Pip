@@ -69,8 +69,8 @@ final class WatchState {
     // MARK: Actions
 
     @discardableResult
-    func log(mood: Mood, intensity: MoodIntensity = .moderate) -> MoodEntry {
-        let entry = logger.log(mood: mood, intensity: intensity)
+    func log(mood: Mood, intensity: MoodIntensity = .moderate) throws -> MoodEntry {
+        let entry = try logger.log(mood: mood, intensity: intensity)
         latestEntry = entry
         todayEntries = PipQueries.entries(on: .now, in: context)
         Haptics.success()
