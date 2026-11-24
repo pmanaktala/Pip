@@ -81,7 +81,7 @@ struct WatchHomeView: View {
             // Screenshot automation, like the phone: PIP_DEBUG=picker|log
             switch ProcessInfo.processInfo.environment["PIP_DEBUG"] {
             case "picker": showPicker = true
-            case "log": Task { try? await Task.sleep(for: .seconds(1)); state.log(mood: .happy) }
+            case "log": Task { try? await Task.sleep(for: .seconds(1)); _ = try? state.log(mood: .happy) }
             default: break
             }
         }
@@ -98,6 +98,7 @@ struct WatchMoodPicker: View {
     @Environment(WatchState.self) private var state
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
+    @State private var saveError: String?
 
     private let columns = [GridItem(.flexible()), GridItem(.flexible())]
 
@@ -107,8 +108,12 @@ struct WatchMoodPicker: View {
                 ForEach(Mood.allCases) { mood in
                     Button {
                         Haptics.selection()
-                        state.log(mood: mood)
-                        dismiss()
+                        do {
+                            try state.log(mood: mood)
+                            dismiss()
+                        } catch {
+                            saveError = error.localizedDescription
+                        }
                     } label: {
                         VStack(spacing: 3) {
                             PetView(species: state.identity.species, mood: mood)
@@ -132,6 +137,11 @@ struct WatchMoodPicker: View {
             .padding(.horizontal, 4)
         }
         .navigationTitle("How are you?")
+        .alert("Couldn’t log mood", isPresented: Binding(get: { saveError != nil }, set: { if !$0 { saveError = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(saveError ?? "")
+        }
     }
 }
 

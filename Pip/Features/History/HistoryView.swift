@@ -9,6 +9,7 @@ struct HistoryView: View {
     @State private var month: Date = .now
     @State private var selectedDay: Date = Calendar.current.startOfDay(for: .now)
     @State private var entryToDelete: MoodEntry?
+    @State private var deleteError: String?
     @State private var weekWords: String?
     @State private var dayWords: [String: String] = [:]
     /// The calendar shows this week by default; the month is one tap away, in the same place.
@@ -48,13 +49,22 @@ struct HistoryView: View {
         .confirmationDialog("Delete this entry?", isPresented: Binding(get: { entryToDelete != nil }, set: { if !$0 { entryToDelete = nil } }), titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 if let entry = entryToDelete {
-                    withAnimation(.smooth) { appState.delete(entry) }
+                    do {
+                        try withAnimation(.smooth) { try appState.delete(entry) }
+                    } catch {
+                        deleteError = error.localizedDescription
+                    }
                 }
                 entryToDelete = nil
             }
             Button("Cancel", role: .cancel) { entryToDelete = nil }
         } message: {
             Text("This removes the moment from Pip. If it was saved to Apple Health, it stays there.")
+        }
+        .alert("Couldn’t delete entry", isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(deleteError ?? "")
         }
     }
 

@@ -46,7 +46,7 @@ public struct LogMoodIntent: PipIntentBase {
     public func perform() async throws -> some IntentResult & ProvidesDialog {
         let context = PipModelContainer.shared.mainContext
         let logger = MoodLogger(context: context, sideEffects: MoodSideEffectRegistry.effects)
-        let entry = logger.log(mood: mood.mood, intensity: intensity.intensity)
+        let entry = try logger.log(mood: mood.mood, intensity: intensity.intensity)
         let name = PipQueries.petProfile(in: context)?.name ?? PetSpecies.penguin.defaultName
         return .result(dialog: "\(name) \(entry.mood.petDescription).")
     }

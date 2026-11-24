@@ -8,6 +8,7 @@ struct MoodPickerSheet: View {
     @State private var intensity: MoodIntensity = .moderate
     @State private var contexts: Set<MoodContext> = []
     @State private var note = ""
+    @State private var saveError: String?
     @FocusState private var noteFocused: Bool
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.colorScheme) private var scheme
@@ -17,6 +18,9 @@ struct MoodPickerSheet: View {
     #if DEBUG
     init(previewEntry: MoodEntry) {
         _logged = State(initialValue: previewEntry)
+        _intensity = State(initialValue: previewEntry.intensity)
+        _contexts = State(initialValue: Set(previewEntry.contexts))
+        _note = State(initialValue: previewEntry.note ?? "")
     }
     #endif
 
@@ -28,9 +32,17 @@ struct MoodPickerSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: PipSpacing.l) {
+                    if let saveError {
+                        Label(saveError, systemImage: "exclamationmark.circle")
+                            .font(PipFont.callout)
+                            .foregroundStyle(.secondary)
+                    }
                     if let logged {
                         loggedHeader(for: logged)
                         refinement(for: logged)
+                        if saveError != nil && hasDraft(for: logged) {
+                            Button("Discard unsaved edits", role: .destructive) { dismiss() }
+                        }
                     } else {
                         picker
                             .padding(.top, PipSpacing.s)
@@ -44,9 +56,11 @@ struct MoodPickerSheet: View {
             .navigationTitle(logged == nil ? "How are you feeling?" : "")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if logged != nil {
+                if let logged {
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Done", systemImage: "checkmark") { dismiss() }
+                        Button("Done", systemImage: "checkmark") {
+                            if commitDraft(logged) { dismiss() }
+                        }
                             .font(PipFont.headline)
                     }
                 } else {
@@ -56,10 +70,8 @@ struct MoodPickerSheet: View {
                 }
             }
         }
-        .onDisappear {
-            if let logged { commitNote(logged) }
-            appState.pet.preview(nil)
-        }
+        .interactiveDismissDisabled(logged.map { hasDraft(for: $0) } ?? false)
+        .onDisappear { appState.pet.preview(nil) }
     }
 
     // MARK: Step 1
@@ -79,7 +91,12 @@ struct MoodPickerSheet: View {
     private func choose(_ mood: Mood) {
         Haptics.selection()
         withAnimation(.spring(duration: 0.7, bounce: 0.3)) {
-            logged = appState.log(mood: mood, intensity: intensity)
+            do {
+                logged = try appState.log(mood: mood, intensity: intensity)
+                saveError = nil
+            } catch {
+                saveError = error.localizedDescription
+            }
         }
     }
 
@@ -120,9 +137,9 @@ struct MoodPickerSheet: View {
                 Text("Very").tag(MoodIntensity.strong)
             }
             .pipTabsPickerStyle()
-            .onChange(of: intensity) { _, new in
+            .onChange(of: intensity) { _, _ in
                 Haptics.selection()
-                withAnimation(.spring(duration: 0.6, bounce: 0.3)) { appState.update(entry, intensity: new) }
+                withAnimation(.spring(duration: 0.6, bounce: 0.3)) { _ = commitDraft(entry) }
             }
         }
 
@@ -136,7 +153,7 @@ struct MoodPickerSheet: View {
                     Button {
                         Haptics.selection()
                         if on { contexts.remove(context) } else { contexts.insert(context) }
-                        appState.update(entry, contexts: Array(contexts))
+                        _ = commitDraft(entry)
                     } label: {
                         Label(context.displayName, systemImage: context.symbolName)
                             .font(PipFont.callout)
@@ -162,14 +179,34 @@ struct MoodPickerSheet: View {
                 .padding(12)
                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: PipRadius.chip, style: .continuous))
                 .focused($noteFocused)
-                .onSubmit { commitNote(entry) }
+                .onSubmit { _ = commitDraft(entry) }
                 .onChange(of: note) { _, _ in appState.pet.listen() }
-                .onChange(of: noteFocused) { _, focused in if !focused { commitNote(entry) } }
+                .onChange(of: noteFocused) { _, focused in if !focused { _ = commitDraft(entry) } }
         }
     }
 
-    private func commitNote(_ entry: MoodEntry) {
-        appState.update(entry, note: .some(note.nilIfEmpty))
+    private var trimmedNote: String? {
+        note.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+    }
+
+    private func hasDraft(for entry: MoodEntry) -> Bool {
+        intensity != entry.intensity || contexts != Set(entry.contexts) || trimmedNote != entry.note
+    }
+
+    @discardableResult
+    private func commitDraft(_ entry: MoodEntry) -> Bool {
+        guard hasDraft(for: entry) else {
+            saveError = nil
+            return true
+        }
+        do {
+            try appState.update(entry, intensity: intensity, contexts: MoodContext.allCases.filter { contexts.contains($0) }, note: .some(trimmedNote))
+            saveError = nil
+            return true
+        } catch {
+            saveError = error.localizedDescription
+            return false
+        }
     }
 }
 
