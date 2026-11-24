@@ -134,6 +134,26 @@ import Testing
         #expect(asleep.lidL > 0.9 && asleep.smile > 0.3)
     }
 
+    @Test func liftingAFingerPreservesContactPoseBeforeSettling() {
+        for species in PetSpecies.allCases {
+            let start = base
+            let end = start.addingTimeInterval(0.18)
+            let stance = PetStance.mood(.neutral, .moderate)
+            let held = PetScene(species: species, stance: stance, pettingSince: start)
+            var released = PetScene(species: species, stance: stance, events: [PetEvent(.petted, at: end)])
+            released.pettingRelease = .init(began: start, ended: end)
+
+            let before = PetDirector.primary(held, t: end.timeIntervalSince1970)
+            let after = PetDirector.primary(released, t: end.timeIntervalSince1970)
+            for channel in PetPose.channels {
+                #expect(abs(before[keyPath: channel] - after[keyPath: channel]) < 0.001)
+            }
+            let settled = end.addingTimeInterval(1.6)
+            #expect(PetDirector.pose(released, at: settled) ==
+                    PetDirector.pose(PetScene(species: species, stance: stance), at: settled))
+        }
+    }
+
     @Test func stanceChangesBlend() {
         let scene = PetScene(species: .cat, stance: .mood(.happy, .moderate), previous: .mood(.sad, .moderate), stanceSince: base)
         let mid = PetDirector.primary(scene, t: base.timeIntervalSince1970 + PetDirector.stanceBlend / 2)

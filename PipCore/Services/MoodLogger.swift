@@ -46,7 +46,17 @@ public struct MoodLogger {
 
     /// Updates an existing entry (intensity / context / note refinements right after logging).
     public func update(_ entry: MoodEntry, intensity: MoodIntensity? = nil, contexts: [MoodContext]? = nil, note: String?? = nil) throws {
-        try commit {
+        let savedIntensity = entry.intensityRaw
+        let savedContexts = entry.contextsRaw
+        let savedNote = entry.note
+        let savedModifiedAt = entry.modifiedAt
+        try commit(reverting: {
+            // SwiftData may roll back the store while leaving a registered model's values dirty.
+            entry.intensityRaw = savedIntensity
+            entry.contextsRaw = savedContexts
+            entry.note = savedNote
+            entry.modifiedAt = savedModifiedAt
+        }) {
             if let intensity { entry.intensity = intensity }
             if let contexts { entry.contexts = contexts }
             if let note { entry.note = note?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty }
@@ -60,12 +70,13 @@ public struct MoodLogger {
         refreshSnapshot()
     }
 
-    private func commit(_ change: () -> Void) throws {
+    private func commit(reverting: () -> Void = {}, _ change: () -> Void) throws {
         guard !PipModelContainer.isUnavailable(context.container) else { throw MoodSaveError.storageUnavailable }
         change()
         do {
             try saveContext(context)
         } catch {
+            reverting()
             context.rollback()
             throw MoodSaveError.writeFailed
         }

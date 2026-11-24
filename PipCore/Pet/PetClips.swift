@@ -413,33 +413,11 @@ public enum PetClips {
 
     // MARK: Reactions
 
-    /// The pet answers a mood you just logged: it mirrors you for a beat (Bible §4).
+    /// The pet acknowledges a check-in, then returns to its current stance.
     public static func reaction(to mood: Mood, _ s: PetSpecies) -> PetClip {
         switch mood {
-        case .happy:
-            return PetClip("react.happy", 1.6, fadeIn: 0.05, [
-                add(\.squash, K(0, 0), K(0.15, 0.25), K(0.38, -0.2, .out), K(0.6, 0.2, .in), K(0.8, 0)),
-                add(\.lift, K(0, 0), K(0.15, 0), K(0.4, 12, .out), K(0.6, 0, .in)),
-                add(\.armL, K(0, 0), K(0.15, -10), K(0.4, 115, .out), K(1.1, 90), K(1.5, 0)),
-                add(\.armR, K(0, 0), K(0.15, -10), K(0.4, 115, .out), K(1.1, 90), K(1.5, 0)),
-                set(\.smileEyes, K(0, 0), K(0.3, 1), K(1.2, 1), K(1.6, 0.4)),
-                bump(\.mouthOpen, 0.7, from: 0.2, peak: 0.4, hold: 1.1, end: 1.5),
-                bump(\.blush, 0.8, from: 0.2, peak: 0.5, hold: 1.3, end: 1.6),
-                bump(\.hearts, 0.9, from: 0.3, peak: 0.6, hold: 1.2, end: 1.6),
-                bump(\.earL, -0.4, from: 0.38, peak: 0.5, end: 0.9), bump(\.earR, -0.4, from: 0.38, peak: 0.5, end: 0.9),
-            ])
-        case .excited:
-            return PetClip("react.excited", 2.0, fadeIn: 0.05, [
-                add(\.squash, K(0, 0), K(0.22, 0.35), K(0.45, -0.3, .out), K(0.72, 0.3, .in), K(0.86, -0.1), K(1.02, 0.18, .in), K(1.3, 0)),
-                add(\.lift, K(0, 0), K(0.22, 0), K(0.5, 22, .out), K(0.72, 0, .in), K(0.88, 7, .out), K(1.02, 0, .in)),
-                add(\.armL, K(0, 0), K(0.22, -20), K(0.5, 155, .out), K(1.4, 140), K(1.9, 0)),
-                add(\.armR, K(0, 0), K(0.22, -20), K(0.5, 155, .out), K(1.4, 140), K(1.9, 0)),
-                set(\.smileEyes, K(0, 0), K(0.3, 1), K(1.6, 1), K(2.0, 0.3)),
-                bump(\.mouthOpen, 1, from: 0.25, peak: 0.45, hold: 1.4, end: 1.9),
-                bump(\.sparkles, 1, from: 0.3, peak: 0.6, hold: 1.5, end: 2.0),
-                bump(\.earL, -0.6, from: 0.45, peak: 0.6, end: 1.0), bump(\.earR, -0.6, from: 0.45, peak: 0.6, end: 1.0),
-                osc(\.tail, from: 0.4, to: 1.9, amp: 1, cycles: 5),
-            ])
+        case .happy, .excited:
+            return celebrate(s, excited: mood == .excited)
         case .calm:
             return PetClip("react.calm", 3.0, fadeIn: 0.3, fadeOut: 0.6, [
                 add(\.breath, K(0, 0), K(1.3, 1.2), K(2.8, -0.1), K(3.0, 0)),
@@ -471,62 +449,140 @@ public enum PetClips {
                 add(\.slump, K(0, 0), K(0.6, -0.2), K(1.5, -0.2), K(2.2, 0.25), K(2.6, 0)),
                 bump(\.breath, 1, from: 0.1, peak: 0.7, hold: 1.3, end: 2.0),
             ])
-        case .stressed:
-            return PetClip("react.stressed", 3.2, fadeIn: 0.04, fadeOut: 0.6, [
-                add(\.squash, K(0, 0), K(0.1, 0.25, .out), K(0.5, 0.1), K(0.9, 0)),
-                bump(\.lift, 3, from: 0, peak: 0.1, end: 0.35),
-                bump(\.eyeWide, 0.35, from: 0, peak: 0.1, hold: 0.7, end: 1.1),
-                bump(\.earL, -0.6, from: 0, peak: 0.1, hold: 0.9, end: 1.4), bump(\.earR, -0.6, from: 0, peak: 0.1, hold: 0.9, end: 1.4),
-                bump(\.sweat, 1, from: 0.1, peak: 0.3, hold: 1.2, end: 1.8),
-                add(\.breath, K(0, 0), K(1.0, 0), K(2.0, 1.1), K(3.1, 0)),
-                set(\.lidL, K(0, 0), K(1.0, 0.1), K(1.8, 1), K(2.7, 1), K(3.2, 0.3)), set(\.lidR, K(0, 0), K(1.0, 0.1), K(1.8, 1), K(2.7, 1), K(3.2, 0.3)),
-            ])
-        case .sad:
-            return PetClip("react.sad", 3.0, fadeIn: 0.3, fadeOut: 0.6, [
-                add(\.headNod, K(0, 0), K(0.8, 0.3), K(1.0, 0.18, .out), K(1.15, 0.3), K(1.35, 0.2, .out), K(1.5, 0.3), K(2.4, 0.3), K(3.0, 0)),
-                add(\.slump, K(0, 0), K(0.8, 0.25), K(2.4, 0.25), K(3.0, 0)),
-                bump(\.tears, 0.9, from: 0.9, peak: 1.3, hold: 2.3, end: 2.9),
-                bump(\.lidSlant, -0.3, from: 0.2, peak: 0.8, hold: 2.2, end: 2.9),
-                set(\.gazeY, K(0, 0.2), K(0.8, 0.5), K(2.0, 0.5), K(2.5, -0.1), K(3.0, 0)),
-                bump(\.smile, 0.3, from: 2.2, peak: 2.6, end: 3.0),
-            ])
-        case .frustrated:
-            return PetClip("react.frustrated", 2.0, fadeIn: 0.05, [
-                add(\.squash, K(0, 0), K(0.18, 0.2), K(0.3, -0.05), K(0.42, 0.28, .in), K(0.65, 0)),
-                add(\.stepR, K(0, 0), K(0.28, 10, .out), K(0.42, 0, .in)),
-                set(\.cheekPuff, K(0, 0), K(0.5, 1), K(1.2, 1), K(1.35, 0)),
-                bump(\.steam, 1, from: 0.4, peak: 0.6, hold: 1.5, end: 1.9),
-                bump(\.mouthOpen, 0.35, from: 1.25, peak: 1.4, hold: 1.55, end: 1.8), bump(\.mouthRound, 0.9, from: 1.25, peak: 1.4, hold: 1.55, end: 1.8),
-                bump(\.headNod, 0.15, from: 0.38, peak: 0.45, end: 0.7),
-                osc(\.x, from: 0.42, to: 0.9, amp: 1.5, cycles: 3),
-            ])
+        case .stressed, .sad, .frustrated:
+            return keepCompany(s, breathe: mood == .stressed)
         }
+    }
+
+    private static func celebrate(_ s: PetSpecies, excited: Bool) -> PetClip {
+        let strength = excited ? 1.0 : 0.65
+        let name = excited ? "react.excited" : "react.happy"
+        let face: [PetClip.Track] = [
+            set(\.gazeX, K(0, 0)), set(\.gazeY, K(0, -0.15)),
+            bump(\.smile, 0.55, from: 0.1, peak: 0.36, hold: 1.15, end: 1.8),
+            bump(\.mouthOpen, 0.5 * strength, from: 0.18, peak: 0.49, hold: 0.72, end: 1.3),
+        ]
+        let motion: [PetClip.Track]
+        switch s {
+        case .penguin:
+            // A quick dip loads the hop; the flippers catch its balance on landing.
+            motion = [
+                add(\.squash, K(0, 0), K(0.26, 0.21), K(0.49, -0.12), K(0.68, 0.2, .in), K(0.97, 0)),
+                add(\.lift, K(0, 0), K(0.27, 0), K(0.49, 17 * strength, .out), K(0.67, 0, .in)),
+                bump(\.armL, 84 * strength, from: 0.25, peak: 0.53, hold: 0.72, end: 1.14),
+                bump(\.armR, 64 * strength, from: 0.27, peak: 0.57, hold: 0.76, end: 1.26),
+                bump(\.headTilt, -9, from: 0.56, peak: 0.83, hold: 1.18, end: 1.76),
+            ]
+        case .cat:
+            // Ears lift first, then one paw curls into the chest and the tail follows.
+            motion = [
+                bump(\.earL, 0.85, from: 0, peak: 0.16, hold: 0.82, end: 1.3),
+                bump(\.earR, 0.7, from: 0.04, peak: 0.21, hold: 0.86, end: 1.4),
+                bump(\.armL, -48 * strength, from: 0.22, peak: 0.58, hold: 0.94, end: 1.37),
+                bump(\.lean, -9 * strength, from: 0.14, peak: 0.52, hold: 0.9, end: 1.48),
+                bump(\.tailUp, 0.72 * strength, from: 0.26, peak: 0.62, hold: 1.18, end: 1.8),
+                bump(\.smileEyes, 0.8, from: 0.45, peak: 0.71, hold: 0.9, end: 1.6),
+            ]
+        case .dog:
+            // A planted shimmy with the head and ears trailing the shoulders.
+            motion = [
+                add(\.lean, K(0, 0), K(0.25, -9 * strength), K(0.49, 12 * strength), K(0.73, -7 * strength), K(1.13, 0)),
+                bump(\.squash, 0.16, from: 0.06, peak: 0.32, hold: 0.55, end: 0.97),
+                add(\.headTilt, K(0, 0), K(0.33, 8), K(0.57, -12), K(0.8, 6), K(1.35, 0)),
+                add(\.earR, K(0, 0), K(0.34, -0.65), K(0.61, 0.65), K(1.14, 0)),
+                osc(\.tail, from: 0.12, to: 1.51, amp: strength, cycles: 4),
+                bump(\.tailUp, 0.52, from: 0.08, peak: 0.32, hold: 1.04, end: 1.68),
+            ]
+        }
+        return PetClip(name, 1.85, fadeIn: 0.08, fadeOut: 0.45, face + motion)
+    }
+
+    private static func keepCompany(_ s: PetSpecies, breathe: Bool) -> PetClip {
+        let duration = 3.6
+        let attention: [PetClip.Track] = [
+            set(\.gazeX, K(0, 0)), set(\.gazeY, K(0, -0.12), K(2.8, -0.08)),
+            set(\.blink, K(0, 0)), set(\.tears, K(0, 0)), set(\.sweat, K(0, 0)),
+            set(\.steam, K(0, 0)), set(\.cheekPuff, K(0, 0)), set(\.browSlant, K(0, 0)),
+            set(\.smile, K(0, 0.12), K(2.9, 0.12)),
+            set(\.mouthOpen, K(0, 0)), set(\.lidSlant, K(0, 0)),
+            set(\.browShow, K(0, 0.15)), set(\.slump, K(0, 0.23)),
+            set(\.headNod, K(0, 0)),
+        ]
+        let rhythm: [PetClip.Track] = breathe ? [
+            // A single visibly slower breath: shoulders rise, then release.
+            set(\.breath, K(0, 0.15), K(0.55, 0.15), K(1.47, 1.18), K(3.12, 0.07)),
+            add(\.headNod, K(0, 0), K(1.45, -0.18), K(2.95, 0.15), K(duration, 0)),
+        ] : [
+            add(\.headNod, K(0, 0), K(0.27, -0.19), K(0.85, 0.15), K(1.38, 0.04), K(duration, 0)),
+        ]
+        let motion: [PetClip.Track]
+        switch s {
+        case .penguin:
+            motion = [
+                bump(\.headTilt, -9, from: 0.12, peak: 0.66, hold: 2.34, end: 3.39),
+                bump(\.lean, -6, from: 0.34, peak: 0.88, hold: 2.36, end: 3.42),
+                bump(\.armL, -17, from: 0.44, peak: 1.0, hold: 2.34, end: 3.4),
+            ]
+        case .cat:
+            motion = [
+                bump(\.earR, 0.85, from: 0.02, peak: 0.22, hold: 1.78, end: 3.12),
+                bump(\.earL, 0.62, from: 0.1, peak: 0.42, hold: 1.9, end: 3.23),
+                bump(\.squash, 0.14, from: 0.44, peak: 1.12, hold: 2.52, end: 3.57),
+                set(\.lidL, K(0, 0.12), K(0.82, 0.12), K(1.52, 0.94), K(2.0, 0.94), K(2.55, 0.19)),
+                set(\.lidR, K(0, 0.12), K(0.88, 0.12), K(1.58, 0.94), K(2.06, 0.94), K(2.61, 0.19)),
+            ]
+        case .dog:
+            motion = [
+                add(\.headTilt, K(0, 0), K(0.46, 13), K(1.16, 13), K(1.71, 5), K(3.42, 0)),
+                bump(\.earL, -0.5, from: 0.26, peak: 0.72, end: 1.59),
+                bump(\.lean, 7, from: 0.31, peak: 0.92, hold: 2.38, end: 3.51),
+                bump(\.squash, 0.1, from: 1.06, peak: 1.72, hold: 2.51, end: 3.6),
+                set(\.tail, K(0, 0), K(1.2, -0.18), K(2, 0.15), K(3.5, 0)),
+            ]
+        }
+        return PetClip("react.keepCompany", duration, fadeIn: 0.16, fadeOut: 0.65, attention + rhythm + motion)
     }
 
     // MARK: Touch and presence
 
-    /// Noticing you: eyes up, ears up, a wave or a hop depending on how it feels.
     public static func arrive(_ stance: PetStance, _ s: PetSpecies) -> PetClip {
-        if stance.isAsleep {
-            return sleepyHello(s)
-        }
-        let low = stance.energy < 0.3
-        let wave: [PetClip.Track] = low ? [
-            add(\.armR, K(0, 0), K(0.6, 70, .out), K(1.0, 55), K(1.4, 70), K(2.0, 0)),
-        ] : [
-            add(\.armR, K(0, 0), K(0.45, 135, .out), K(0.7, 115), K(0.95, 138), K(1.2, 115), K(1.45, 135), K(1.9, 0)),
+        if stance.isAsleep { return sleepyHello(s) }
+        if stance.isHard || stance.energy < 0.3 { return gentleHello(s) }
+        let attention: [PetClip.Track] = [
+            set(\.gazeX, K(0, 0)), set(\.gazeY, K(0, -0.15)),
+            bump(\.smile, 0.48, from: 0.17, peak: 0.55, hold: 1.52, end: 2.22),
         ]
-        return PetClip("arrive", 2.2, fadeIn: 0.08, fadeOut: 0.5, wave + [
-            set(\.gazeX, K(0, 0), K(2.2, 0)), set(\.gazeY, K(0, -0.15), K(2.2, -0.15)),
-            add(\.headNod, K(0, 0), K(0.2, -0.2, .out), K(1.8, -0.1), K(2.2, 0)),
-            bump(\.eyeWide, 0.22, from: 0, peak: 0.15, hold: 0.5, end: 0.9),
-            bump(\.earL, 0.7, from: 0, peak: 0.15, hold: 1.0, end: 1.6), bump(\.earR, 0.7, from: 0, peak: 0.15, hold: 1.0, end: 1.6),
-            bump(\.smileEyes, low ? 0.35 : 0.7, from: 0.3, peak: 0.6, hold: 1.7, end: 2.1),
-            bump(\.smile, low ? 0.35 : 0.5, from: 0.3, peak: 0.6, hold: 1.7, end: 2.1),
-            bump(\.lift, low ? 0 : 5, from: 0.1, peak: 0.28, end: 0.5),
-            add(\.squash, K(0, 0), K(0.1, low ? 0 : 0.12), K(0.28, low ? 0 : -0.1), K(0.5, low ? 0 : 0.08), K(0.7, 0)),
-            osc(\.tail, from: 0.2, to: 2.0, amp: low ? 0.3 : 1, cycles: s == .dog ? 6 : 2),
-        ])
+        let motion: [PetClip.Track]
+        switch s {
+        case .penguin:
+            // Transfer weight before lifting each toe. Finish with feet planted for the flipper hello.
+            motion = [
+                add(\.lean, K(0, 0), K(0.24, 9), K(0.55, -9), K(0.87, 3), K(1.29, 0)),
+                bump(\.stepL, 7, from: 0.21, peak: 0.39, end: 0.57),
+                bump(\.stepR, 7, from: 0.54, peak: 0.7, end: 0.89),
+                add(\.armR, K(0, 0), K(0.86, 0), K(1.17, 76, .out), K(1.34, 58), K(1.52, 74), K(2.19, 0)),
+                bump(\.headTilt, -8, from: 0.53, peak: 1.09, hold: 1.51, end: 2.19),
+            ]
+        case .cat:
+            motion = [
+                bump(\.earL, 0.88, from: 0, peak: 0.14, hold: 0.92, end: 1.84),
+                bump(\.earR, 0.61, from: 0.08, peak: 0.26, hold: 1.05, end: 1.95),
+                bump(\.headTilt, 9, from: 0.21, peak: 0.54, hold: 1.34, end: 2.18),
+                bump(\.squash, 0.12, from: 0.5, peak: 1.11, hold: 1.66, end: 2.35),
+                set(\.lidL, K(0, 0.1), K(0.53, 0.1), K(0.95, 0.95), K(1.25, 0.95), K(1.68, 0.13)),
+                set(\.lidR, K(0, 0.1), K(0.56, 0.1), K(0.98, 0.95), K(1.28, 0.95), K(1.71, 0.13)),
+            ]
+        case .dog:
+            motion = [
+                bump(\.earR, 0.7, from: 0, peak: 0.18, end: 0.63),
+                bump(\.eyeWide, 0.28, from: 0.03, peak: 0.19, hold: 0.45, end: 0.84),
+                add(\.lean, K(0, 0), K(0.39, -8), K(0.78, 10), K(1.12, 3), K(2.21, 0)),
+                add(\.headTilt, K(0, 0), K(0.46, 11), K(0.87, -6), K(1.29, 8), K(2.24, 0)),
+                osc(\.tail, from: 0.16, to: 1.96, amp: 0.83, cycles: 5),
+                bump(\.tailUp, 0.62, from: 0.12, peak: 0.44, hold: 1.24, end: 2.14),
+            ]
+        }
+        return PetClip("arrive", 2.35, fadeIn: 0.12, fadeOut: 0.48, attention + motion)
     }
 
     /// You came back after a few days: it hops twice with both arms up, then hugs itself happy.
@@ -709,16 +765,35 @@ public enum PetClips {
         ])
     }
 
-    /// After petting: a contented afterglow.
+    /// After petting, replay the pet’s quiet response when touched on another device.
     public static func afterPetting(_ s: PetSpecies) -> PetClip {
-        PetClip("afterPetting", 1.8, fadeIn: 0.05, fadeOut: 0.8, [
-            set(\.smileEyes, K(0, 1), K(1.2, 0.8), K(1.8, 0.3)),
-            bump(\.blush, 0.7, from: 0, peak: 0.1, hold: 1.0, end: 1.8),
-            bump(\.hearts, 0.8, from: 0, peak: 0.1, hold: 0.8, end: 1.6),
-            bump(\.smile, 0.5, from: 0, peak: 0.1, hold: 1.2, end: 1.8),
-            bump(\.headTilt, 7, from: 0, peak: 0.1, hold: 0.8, end: 1.7),
-            osc(\.tail, from: 0, to: 1.6, amp: 0.8, cycles: s == .dog ? 5 : 2),
-        ])
+        let rest: [PetClip.Track] = [
+            set(\.smileEyes, K(0, 0), K(0.16, 1), K(0.3, 1), K(0.98, 0.18)),
+            bump(\.smile, 0.36, from: 0, peak: 0.08, hold: 0.68, end: 1.34),
+            bump(\.blush, 0.46, from: 0, peak: 0.1, hold: 0.61, end: 1.45),
+        ]
+        let motion: [PetClip.Track]
+        switch s {
+        case .penguin:
+            motion = [
+                add(\.headTilt, K(0, 0), K(0.16, -12), K(0.38, -10), K(0.9, 3), K(1.44, 0)),
+                add(\.lean, K(0, 0), K(0.16, -5), K(0.32, -4), K(1.1, 0)),
+                add(\.armL, K(0, 0), K(0.16, -18), K(0.36, -16), K(0.97, 0)),
+            ]
+        case .cat:
+            motion = [
+                add(\.headTilt, K(0, 0), K(0.16, 14), K(0.45, 12), K(1.45, 0)),
+                add(\.squash, K(0, 0), K(0.18, 0.13), K(0.47, 0.13), K(1.46, 0)),
+                add(\.earR, K(0, 0), K(0.18, -0.36), K(0.31, -0.36), K(0.64, 0.52), K(1.14, 0)),
+            ]
+        case .dog:
+            motion = [
+                add(\.lean, K(0, 0), K(0.16, 9), K(0.34, 8), K(0.84, -2), K(1.42, 0)),
+                add(\.headTilt, K(0, 0), K(0.16, 10), K(0.42, 12), K(0.92, 4), K(1.47, 0)),
+                osc(\.tail, from: 0.05, to: 1.14, amp: 0.58, cycles: 2.5),
+            ]
+        }
+        return PetClip("afterPetting", 1.5, fadeIn: 0.05, fadeOut: 0.42, rest + motion)
     }
 
     /// A wave back (the Live Activity button, the watch).

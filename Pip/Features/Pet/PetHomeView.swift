@@ -118,10 +118,17 @@ struct PetHomeView: View {
                 }
             }
         }
-        .onDisappear { appState.pet.stopClock(); listening?.cancel() }
+        .onDisappear {
+            cancelTouch()
+            appState.pet.stopClock()
+            listening?.cancel()
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { appState.pet.arrive(now: .now.addingTimeInterval(0.3)); appState.pet.startClock() }
-            else if phase == .background { appState.pet.stopClock() }
+            else {
+                cancelTouch()
+                if phase == .background { appState.pet.stopClock() }
+            }
         }
     }
 
@@ -182,6 +189,15 @@ struct PetHomeView: View {
                 Haptics.soft()
             }
         }
+    }
+
+    private func cancelTouch() {
+        touch.hold?.cancel()
+        touch = TouchState()
+        purr?.cancel()
+        purr = nil
+        appState.pet.cancelPetting()
+        appState.pet.look(at: nil)
     }
 
     private func stopPetting() {

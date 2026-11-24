@@ -154,6 +154,7 @@ public struct LivePetView: View {
     public var framing: PetFraming
     public var showsShadow: Bool
     public var paused: Bool
+    var showsShelf: Bool
 
     @State private var propHandling: PetPropHandling
     @AppStorage("pet.illustratedArtwork", store: SharedStateStore.shared.defaultsSuite) private var illustratedArtwork = true
@@ -161,13 +162,14 @@ public struct LivePetView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.self) private var environment
 
-    public init(scene: PetScene, framing: PetFraming = .full, showsShadow: Bool = true, paused: Bool = false) {
+    public init(scene: PetScene, framing: PetFraming = .full, showsShadow: Bool = true, paused: Bool = false, showsShelf: Bool = true) {
         let original = SharedStateStore.shared.defaultsSuite.object(forKey: "pet.illustratedArtwork") as? Bool == false
         _propHandling = State(initialValue: PetPropHandling(prop: scene.handlingProp(style: original ? .original : .illustrated)))
         self.scene = scene
         self.framing = framing
         self.showsShadow = showsShadow
         self.paused = paused
+        self.showsShelf = showsShelf
     }
 
     private var artStyle: PetArtStyle { illustratedArtwork ? .illustrated : .original }
@@ -196,7 +198,7 @@ public struct LivePetView: View {
         Group {
             if reduceMotion || paused || isConceptPreview {
                 PetPoseView(species: scene.species, pose: PetDirector.hold(scene), prop: scene.prop, wear: scene.wear, framing: framing, showsShadow: showsShadow, dressing: scene.dressing,
-                            staging: PetPropStage(carried: carriedProp))
+                            staging: showsShelf ? PetPropStage(carried: carriedProp) : nil)
             } else {
                 TimelineView(.animation(minimumInterval: frameInterval)) { context in
                     let pose = PetDirector.pose(scene, at: context.date)
@@ -204,7 +206,7 @@ public struct LivePetView: View {
                                                    species: scene.species, style: artStyle)
                     PetPoseView(species: scene.species, pose: frame.pose, prop: frame.prop, wear: scene.wear, framing: framing,
                                 time: context.date.timeIntervalSince1970, showsShadow: showsShadow,
-                                dressing: scene.dressing, staging: frame.stage)
+                                dressing: scene.dressing, staging: showsShelf ? frame.stage : nil)
                         // The clock already interpolates the bones. A room-camera animation
                         // must not interpolate ownership and paw targets a second time.
                         .transaction { $0.animation = nil }
@@ -239,6 +241,7 @@ public struct PetStage: View {
     public var floor: CGFloat
     public var showsRoom: Bool
     public var showsFoliage: Bool
+    var showsShelf: Bool
     public var mood: Mood?
     public var date: Date
     public var showsSeason: Bool
@@ -248,9 +251,10 @@ public struct PetStage: View {
     public var petted: Bool
 
     public init(scene: PetScene, live: Bool = true, hold: Int = 0, petScale: CGFloat = 0.62, floor: CGFloat = 0.62, showsRoom: Bool = true,
-                showsFoliage: Bool = true, mood: Mood? = nil, date: Date = .now, showsSeason: Bool = true, petOffset: CGFloat = 0, petted: Bool = false) {
+                showsFoliage: Bool = true, mood: Mood? = nil, date: Date = .now, showsSeason: Bool = true, petOffset: CGFloat = 0, petted: Bool = false, showsShelf: Bool = true) {
         self.petted = petted
         self.showsSeason = showsSeason
+        self.showsShelf = showsShelf
         self.petOffset = petOffset
         self.scene = scene
         self.live = live
@@ -277,7 +281,7 @@ public struct PetStage: View {
                 }
                 Group {
                     if live {
-                        LivePetView(scene: scene)
+                        LivePetView(scene: scene, showsShelf: showsShelf)
                     } else {
                         let still = PetDirector.hold(scene, index: hold)
                         PetPoseView(species: scene.species, pose: petted ? PetDirector.petting(still, stance: scene.stance, species: scene.species, t: 0, weight: 1).clamped() : still,
