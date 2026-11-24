@@ -60,7 +60,11 @@ public final class DeviceSync: NSObject {
     }
 
     public func sendDeletion(of id: UUID) {
-        transfer(["deleted": id.uuidString])
+        transfer(["deleted": id.uuidString], reliably: true)
+        if latestForContext?["id"] as? String == id.uuidString {
+            latestForContext = nil
+            pushContext()
+        }
     }
 
     public func send(identity: PetIdentity) {
@@ -84,16 +88,16 @@ public final class DeviceSync: NSObject {
         #endif
         if let identityForContext { context["pet"] = identityForContext }
         if let latestForContext { context["latest"] = latestForContext }
-        guard !context.isEmpty else { return }
+        // An empty context is meaningful when the last advertised entry was deleted.
         do { try session.updateApplicationContext(context) } catch { Self.log.error("context: \(error.localizedDescription, privacy: .public)") }
     }
 
     /// Queues while the session is still activating (a log a second after launch is common on
     /// the watch); WatchConnectivity itself queues once activated, even if the other app is closed.
-    private func transfer(_ userInfo: [String: Any]) {
+    private func transfer(_ userInfo: [String: Any], reliably: Bool = false) {
         guard let session else { return }
         guard session.activationState == .activated else { pending.append(userInfo); Self.log.info("queued transfer until activation"); return }
-        if session.isReachable {
+        if session.isReachable && !reliably {
             // Counterpart app is up: deliver now; fall back to the queue if the message fails.
             session.sendMessage(userInfo, replyHandler: nil) { _ in session.transferUserInfo(userInfo) }
             Self.log.info("sent \(userInfo.keys.joined(separator: ","), privacy: .public)")
@@ -120,40 +124,56 @@ public final class DeviceSync: NSObject {
         Self.log.info("received \(userInfo.keys.joined(separator: ","), privacy: .public)")
         guard let container else { Self.log.error("no container to merge into"); return }
         let context = container.mainContext
-        var changed = false
-        if let raw = userInfo["entry"] as? [String: Any], let payload = Payload(raw) {
-            if let existing = PipQueries.entry(id: payload.id, in: context) {
-                // Last write wins, by the sender's modification time.
-                if payload.modifiedAt > existing.modifiedAt {
+        do {
+            guard try Self.mergeMoodChange(userInfo, into: context) else { return }
+            sharedStore.save(PipQueries.buildSnapshot(in: context))
+            onRemoteChange?()
+        } catch {
+            Self.log.error("Could not save a Watch sync change: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// Returns true only after committing a change. Also handles a deletion that arrives
+    /// before its entry, and a queued edit travelling after that deletion.
+    static func mergeMoodChange(_ userInfo: [String: Any], into context: ModelContext) throws -> Bool {
+        guard !PipModelContainer.isUnavailable(context.container) else { throw MoodSaveError.storageUnavailable }
+        do {
+            if let raw = userInfo["deleted"] as? String, let id = UUID(uuidString: raw) {
+                guard try MoodDeletion.record(id, in: context) else { return false }
+            } else if let raw = userInfo["entry"] as? [String: Any], let payload = Payload(raw) {
+                guard try !MoodDeletion.contains(payload.id, in: context) else { return false }
+                let id = payload.id
+                var descriptor = FetchDescriptor<MoodEntry>(
+                    predicate: #Predicate { $0.id == id },
+                    sortBy: [SortDescriptor(\.modifiedAt, order: .reverse)])
+                descriptor.fetchLimit = 1
+                if let existing = try context.fetch(descriptor).first {
+                    guard payload.modifiedAt > existing.modifiedAt else { return false }
                     existing.moodRaw = payload.mood
                     existing.intensityRaw = payload.intensity
                     existing.contextsRaw = payload.contexts
                     existing.note = payload.note
                     existing.timestamp = payload.timestamp
                     existing.modifiedAt = payload.modifiedAt
-                    changed = true
+                } else {
+                    let entry = MoodEntry(mood: Mood(rawValue: payload.mood) ?? .neutral,
+                                          intensity: MoodIntensity(rawValue: payload.intensity) ?? .moderate,
+                                          contexts: payload.contexts.split(separator: ",").compactMap { MoodContext(rawValue: String($0)) },
+                                          note: payload.note, timestamp: payload.timestamp)
+                    entry.id = id
+                    entry.createdAt = payload.createdAt
+                    entry.modifiedAt = payload.modifiedAt
+                    context.insert(entry)
                 }
             } else {
-                let entry = MoodEntry(mood: Mood(rawValue: payload.mood) ?? .neutral,
-                                      intensity: MoodIntensity(rawValue: payload.intensity) ?? .moderate,
-                                      contexts: payload.contexts.split(separator: ",").compactMap { MoodContext(rawValue: String($0)) },
-                                      note: payload.note, timestamp: payload.timestamp)
-                entry.id = payload.id
-                entry.createdAt = payload.createdAt
-                entry.modifiedAt = payload.modifiedAt
-                context.insert(entry)
-                changed = true
+                return false
             }
+            try context.save()
+            return true
+        } catch {
+            context.rollback()
+            throw error
         }
-        if let raw = userInfo["deleted"] as? String, let id = UUID(uuidString: raw), let existing = PipQueries.entry(id: id, in: context) {
-            context.delete(existing)
-            changed = true
-        }
-        guard changed else { Self.log.info("nothing to merge"); return }
-        do { try context.save() } catch { Self.log.error("save failed: \(error.localizedDescription, privacy: .public)") }
-        sharedStore.save(PipQueries.buildSnapshot(in: context))
-        Self.log.info("merged; notifying")
-        onRemoteChange?()
     }
 
     private func mergeContext(_ context: [String: Any]) {
@@ -169,13 +189,20 @@ public final class DeviceSync: NSObject {
 
     private func mergePet(_ context: [String: Any]) {
         guard let container, let raw = context["pet"] as? [String: String],
+              !PipModelContainer.isUnavailable(container),
               let species = raw["species"].flatMap(PetSpecies.init(rawValue:)), let name = raw["name"] else { return }
         let modelContext = container.mainContext
         guard let profile = PipQueries.petProfile(in: modelContext) else { return }
         let identity = PetIdentity(species: species, name: name, personality: raw["personality"].flatMap(PetPersonality.init(rawValue:)) ?? species.defaultPersonality)
         guard profile.identity != identity else { return }
         profile.identity = identity
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            modelContext.rollback()
+            Self.log.error("Could not save the synced pet profile: \(error.localizedDescription, privacy: .public)")
+            return
+        }
         sharedStore.save(PipQueries.buildSnapshot(in: modelContext))
         onRemoteChange?()
     }

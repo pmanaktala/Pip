@@ -5,7 +5,13 @@ import SwiftUI
 /// entries inline. Colour is the mood; the pet's face confirms it. No charts, streaks or scores.
 struct HistoryView: View {
     @Environment(AppState.self) private var appState
-    @Query(sort: \MoodEntry.timestamp, order: .reverse) private var entries: [MoodEntry]
+    @Query(sort: \MoodEntry.timestamp, order: .reverse) private var storedEntries: [MoodEntry]
+    @Query private var deletions: [MoodDeletion]
+
+    private var entries: [MoodEntry] {
+        let deleted = Set(deletions.map(\.entryID))
+        return storedEntries.filter { !deleted.contains($0.id) }
+    }
     @State private var month: Date = .now
     @State private var selectedDay: Date = Calendar.current.startOfDay(for: .now)
     @State private var entryToDelete: MoodEntry?

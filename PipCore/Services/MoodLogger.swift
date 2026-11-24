@@ -4,10 +4,12 @@ import SwiftData
 public enum MoodSaveError: LocalizedError {
     case storageUnavailable
     case writeFailed
+    case entryDeleted
 
     public var errorDescription: String? {
         switch self {
         case .storageUnavailable: "Mood storage is unavailable. Reopen Pip to try again."
+        case .entryDeleted: "This mood was deleted on another device."
         case .writeFailed: "Your change couldn’t be saved. Please try again."
         }
     }
@@ -46,7 +48,18 @@ public struct MoodLogger {
 
     /// Updates an existing entry (intensity / context / note refinements right after logging).
     public func update(_ entry: MoodEntry, intensity: MoodIntensity? = nil, contexts: [MoodContext]? = nil, note: String?? = nil) throws {
-        try commit {
+        if (try? MoodDeletion.contains(entry.id, in: context)) == true { throw MoodSaveError.entryDeleted }
+        let savedIntensity = entry.intensityRaw
+        let savedContexts = entry.contextsRaw
+        let savedNote = entry.note
+        let savedModifiedAt = entry.modifiedAt
+        try commit(reverting: {
+            // SwiftData may roll back the store while leaving a registered model's values dirty.
+            entry.intensityRaw = savedIntensity
+            entry.contextsRaw = savedContexts
+            entry.note = savedNote
+            entry.modifiedAt = savedModifiedAt
+        }) {
             if let intensity { entry.intensity = intensity }
             if let contexts { entry.contexts = contexts }
             if let note { entry.note = note?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty }
@@ -56,16 +69,17 @@ public struct MoodLogger {
     }
 
     public func delete(_ entry: MoodEntry) throws {
-        try commit { context.delete(entry) }
+        try commit { _ = try MoodDeletion.record(entry.id, in: context) }
         refreshSnapshot()
     }
 
-    private func commit(_ change: () -> Void) throws {
+    private func commit(reverting: () -> Void = {}, _ change: () throws -> Void) throws {
         guard !PipModelContainer.isUnavailable(context.container) else { throw MoodSaveError.storageUnavailable }
-        change()
         do {
+            try change()
             try saveContext(context)
         } catch {
+            reverting()
             context.rollback()
             throw MoodSaveError.writeFailed
         }

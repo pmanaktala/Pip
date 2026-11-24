@@ -14,7 +14,7 @@ public enum PipModelContainer {
 
     private static let log = Logger(subsystem: "com.pmanaktala.Pip", category: "Persistence")
 
-    public static let schema = Schema([MoodEntry.self, PetProfile.self])
+    public static let schema = Schema([MoodEntry.self, PetProfile.self, MoodDeletion.self])
 
     public enum StorageMode {
         case iCloud, local, unavailable

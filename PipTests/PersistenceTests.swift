@@ -50,9 +50,15 @@ struct PersistenceTests {
             .log(mood: .stressed, note: "Before")
         let saved = store.snapshot
         #expect(effect.count == 1)
-        #expect(throws: MoodSaveError.writeFailed) { try logger.update(entry, intensity: .strong, note: "Draft") }
+        let savedModifiedAt = entry.modifiedAt
+        #expect(throws: MoodSaveError.writeFailed) {
+            try logger.update(entry, intensity: .strong, contexts: [.work], note: "Draft")
+        }
         #expect(entry.note == "Before")
         #expect(entry.intensity == .moderate)
+        #expect(entry.contexts.isEmpty)
+        #expect(entry.modifiedAt == savedModifiedAt)
+        #expect(!context.hasChanges)
         #expect(throws: MoodSaveError.writeFailed) { try logger.delete(entry) }
         #expect(PipQueries.entry(id: entry.id, in: context) != nil)
         #expect(store.snapshot == saved)
@@ -88,6 +94,65 @@ struct PersistenceTests {
         func moodLogged(_ entry: MoodEntry, identity: PetIdentity, snapshot: PetSnapshot) {
             count += 1
         }
+    }
+
+    @Test func watchDeletionBeforeFirstDeliverySurvivesStoreReopen() throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appending(path: "Pip.store")
+        let oldSchema = Schema([MoodEntry.self, PetProfile.self])
+        let oldConfig = ModelConfiguration("Pip", schema: oldSchema, url: url, cloudKitDatabase: .none)
+        let schema = PipModelContainer.schema
+        let config = ModelConfiguration("Pip", schema: schema, url: url, cloudKitDatabase: .none)
+        let delayed = MoodEntry(mood: .sad, note: "Queued")
+        let deletion = ["deleted": delayed.id.uuidString]
+
+        // Start with the shipping schema and make sure upgrading preserves unrelated history.
+        let existingID: UUID
+        do {
+            let container = try ModelContainer(for: oldSchema, configurations: [oldConfig])
+            let existing = MoodEntry(mood: .calm)
+            existingID = existing.id
+            container.mainContext.insert(existing)
+            try container.mainContext.save()
+        }
+        do {
+            let container = try ModelContainer(for: schema, configurations: [config])
+            #expect(PipQueries.entry(id: existingID, in: container.mainContext)?.mood == .calm)
+            #expect(try DeviceSync.mergeMoodChange(deletion, into: container.mainContext))
+        }
+
+        let reopened = try ModelContainer(for: schema, configurations: [config])
+        let context = reopened.mainContext
+        #expect(try !DeviceSync.mergeMoodChange(["entry": DeviceSync.Payload(delayed).dictionary], into: context))
+        #expect(try !DeviceSync.mergeMoodChange(deletion, into: context))
+        #expect(try context.fetchCount(FetchDescriptor<MoodDeletion>()) == 1)
+        #expect(PipQueries.allEntries(in: context).map(\.id) == [existingID])
+    }
+
+    @Test func delayedWatchEditAndCloudDuplicateStayDeleted() throws {
+        let (container, store) = makeStore()
+        let context = container.mainContext
+        let logger = MoodLogger(context: context, sharedStore: store)
+        let entry = try logger.log(mood: .happy)
+        let id = entry.id
+        var lateEdit = DeviceSync.Payload(entry)
+        lateEdit.modifiedAt = .now.addingTimeInterval(30)
+        lateEdit.note = "Edited offline"
+        try logger.delete(entry)
+
+        #expect(try !DeviceSync.mergeMoodChange(["entry": lateEdit.dictionary], into: context))
+        // A late CloudKit import can hold a second row with the same app-level UUID.
+        let duplicate = MoodEntry(mood: .happy, note: "Cloud copy")
+        duplicate.id = id
+        context.insert(duplicate)
+        try context.save()
+        #expect(PipQueries.latestEntry(in: context) == nil)
+        #expect(PipQueries.entries(on: .now, in: context).isEmpty)
+        #expect(logger.refreshSnapshot().mood == nil)
+        #expect(try DeviceSync.mergeMoodChange(["deleted": id.uuidString], into: context))
+        #expect(try context.fetchCount(FetchDescriptor<MoodEntry>()) == 0)
     }
 
     @Test func duplicateProfilesConvergeOnNewest() throws {
