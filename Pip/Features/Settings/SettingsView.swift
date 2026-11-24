@@ -121,9 +121,17 @@ struct SettingsView: View {
             }
 
             Section {
-                LabeledContent("iCloud", value: PipModelContainer.isCloudKitEnabled ? "On" : "Unavailable")
-                if !PipModelContainer.isCloudKitEnabled {
+                switch PipModelContainer.storageMode {
+                case .iCloud:
+                    LabeledContent("Mood storage", value: "Device & iCloud")
+                case .local:
+                    LabeledContent("Mood storage", value: "Device only")
                     Text("Without iCloud, your history is stored only on this device and won’t survive deleting the app.")
+                        .font(PipFont.footnote)
+                        .foregroundStyle(.secondary)
+                case .unavailable:
+                    LabeledContent("Mood storage", value: "Unavailable")
+                    Text("Pip couldn’t open your history. Reopen Pip to try again.")
                         .font(PipFont.footnote)
                         .foregroundStyle(.secondary)
                 }

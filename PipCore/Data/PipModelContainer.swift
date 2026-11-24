@@ -16,10 +16,19 @@ public enum PipModelContainer {
 
     public static let schema = Schema([MoodEntry.self, PetProfile.self])
 
-    /// The shared container. Created once per process.
-    public static let shared: ModelContainer = make()
+    public enum StorageMode {
+        case iCloud, local, unavailable
+    }
 
-    public private(set) static var isCloudKitEnabled = false
+    /// The shared container and its actual storage mode. Created once per process.
+    private static let sharedSetup = makePersistent()
+    public static var shared: ModelContainer { sharedSetup.container }
+    public static var storageMode: StorageMode { sharedSetup.mode }
+    private static let unavailableConfigurationName = "PipUnavailable"
+
+    static func isUnavailable(_ container: ModelContainer) -> Bool {
+        container.configurations.contains { $0.name == unavailableConfigurationName && $0.isStoredInMemoryOnly }
+    }
 
     public static var storeURL: URL {
         let base = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID)
@@ -28,26 +37,28 @@ public enum PipModelContainer {
     }
 
     public static func make(inMemory: Bool = false) -> ModelContainer {
-        if inMemory {
-            let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)
-            return try! ModelContainer(for: schema, configurations: [config])
-        }
+        inMemory ? makeInMemory() : makePersistent().container
+    }
 
-        let url = storeURL
+    private static func makeInMemory(name: String? = nil) -> ModelContainer {
+        let config = ModelConfiguration(name, schema: schema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)
+        return try! ModelContainer(for: schema, configurations: [config])
+    }
+
+    static func makePersistent(at url: URL = storeURL) -> (container: ModelContainer, mode: StorageMode) {
         let cloud = ModelConfiguration("Pip", schema: schema, url: url, cloudKitDatabase: .private(cloudKitContainerID))
         if let container = try? ModelContainer(for: schema, configurations: [cloud]) {
-            isCloudKitEnabled = true
             log.info("Model container ready with CloudKit mirroring")
-            return container
+            return (container, .iCloud)
         }
 
         let local = ModelConfiguration("Pip", schema: schema, url: url, cloudKitDatabase: .none)
         if let container = try? ModelContainer(for: schema, configurations: [local]) {
             log.warning("CloudKit configuration unavailable; using local-only store")
-            return container
+            return (container, .local)
         }
 
         log.error("Persistent store unavailable; falling back to in-memory store")
-        return make(inMemory: true)
+        return (makeInMemory(name: unavailableConfigurationName), .unavailable)
     }
 }

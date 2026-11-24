@@ -72,7 +72,7 @@ struct PetHomeView: View {
                 case "poke":
                     Task { try? await Task.sleep(for: .seconds(1.5)); appState.pet.tap(onHead: true) }
                 case "react":
-                    Task { try? await Task.sleep(for: .seconds(1.5)); appState.log(mood: .excited) }
+                    Task { try? await Task.sleep(for: .seconds(1.5)); _ = try? appState.log(mood: .excited) }
                 default: break
                 }
             }
