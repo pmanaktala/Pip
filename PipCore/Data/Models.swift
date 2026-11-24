@@ -56,6 +56,29 @@ public final class MoodEntry {
     public func touch() { modifiedAt = .now }
 }
 
+/// Leaves a deletion marker across restarts and iCloud sync, without retaining mood content.
+@Model
+final class MoodDeletion {
+    var entryID: UUID = UUID()
+
+    init(entryID: UUID) { self.entryID = entryID }
+
+    static func contains(_ id: UUID, in context: ModelContext) throws -> Bool {
+        var descriptor = FetchDescriptor<MoodDeletion>(predicate: #Predicate { $0.entryID == id })
+        descriptor.fetchLimit = 1
+        return try !context.fetch(descriptor).isEmpty
+    }
+
+    /// Deletion always wins for a UUID. Logging a new mood generates a fresh UUID.
+    static func record(_ id: UUID, in context: ModelContext) throws -> Bool {
+        let entries = try context.fetch(FetchDescriptor<MoodEntry>(predicate: #Predicate { $0.id == id }))
+        let isNew = try !contains(id, in: context)
+        if isNew { context.insert(MoodDeletion(entryID: id)) }
+        for entry in entries { context.delete(entry) }
+        return isNew || !entries.isEmpty
+    }
+}
+
 /// The user's pet. There should be exactly one; duplicates from multi-device setup are
 /// reconciled by keeping the most recently modified profile.
 @Model

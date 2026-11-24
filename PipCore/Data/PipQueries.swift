@@ -30,7 +30,9 @@ public enum PipQueries {
     public static func latestEntry(in context: ModelContext) -> MoodEntry? {
         var d = FetchDescriptor<MoodEntry>(sortBy: [SortDescriptor(\.timestamp, order: .reverse)])
         d.fetchLimit = 1
-        return try? context.fetch(d).first
+        guard let latest = try? context.fetch(d).first,
+              let deleted = try? MoodDeletion.contains(latest.id, in: context) else { return nil }
+        return deleted ? allEntries(in: context).first : latest
     }
 
     public static func entries(on day: Date, calendar: Calendar = .current, in context: ModelContext) -> [MoodEntry] {
@@ -43,12 +45,12 @@ public enum PipQueries {
         let d = FetchDescriptor<MoodEntry>(
             predicate: #Predicate { $0.timestamp >= start && $0.timestamp < end },
             sortBy: [SortDescriptor(\.timestamp)])
-        return (try? context.fetch(d)) ?? []
+        return visibleEntries(matching: d, in: context)
     }
 
     public static func allEntries(in context: ModelContext) -> [MoodEntry] {
         let d = FetchDescriptor<MoodEntry>(sortBy: [SortDescriptor(\.timestamp, order: .reverse)])
-        return (try? context.fetch(d)) ?? []
+        return visibleEntries(matching: d, in: context)
     }
 
     /// Entries that still need a Health write (or a rewrite after editing).
@@ -61,8 +63,19 @@ public enum PipQueries {
     }
 
     public static func entry(id: UUID, in context: ModelContext) -> MoodEntry? {
-        let d = FetchDescriptor<MoodEntry>(predicate: #Predicate { $0.id == id })
-        return try? context.fetch(d).first
+        guard (try? MoodDeletion.contains(id, in: context)) == false else { return nil }
+        var descriptor = FetchDescriptor<MoodEntry>(
+            predicate: #Predicate { $0.id == id },
+            sortBy: [SortDescriptor(\.modifiedAt, order: .reverse)])
+        descriptor.fetchLimit = 1
+        return try? context.fetch(descriptor).first
+    }
+
+    private static func visibleEntries(matching descriptor: FetchDescriptor<MoodEntry>, in context: ModelContext) -> [MoodEntry] {
+        guard let entries = try? context.fetch(descriptor), !entries.isEmpty,
+              let deletions = try? context.fetch(FetchDescriptor<MoodDeletion>()) else { return [] }
+        let deleted = Set(deletions.map(\.entryID))
+        return entries.filter { !deleted.contains($0.id) }
     }
 
     /// Builds the widget snapshot from the store.
