@@ -82,4 +82,80 @@ struct PetHandlingGalleryView: View {
         }
     }
 }
+/// Runs the same live stage and director as home, with props hidden to review the acting.
+struct PetActingGalleryView: View {
+    private enum Beat: String, CaseIterable {
+        case arrival = "Arrival"
+        case touch = "Hold touch"
+        case release = "Lift finger"
+        case sad = "Log sad"
+        case stressed = "Log stressed"
+        case excited = "Log excited"
+
+        var mood: Mood {
+            switch self {
+            case .sad: .sad
+            case .stressed: .stressed
+            case .excited: .excited
+            default: .neutral
+            }
+        }
+
+        var duration: Double {
+            switch self {
+            case .arrival, .excited: 3.0
+            case .touch, .release: 1.6
+            case .sad, .stressed: 4.2
+            }
+        }
+    }
+
+    @State private var beat = Beat.arrival
+    @State private var previous = Beat.arrival
+    @State private var since = Date.distantFuture
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Text(beat.rawValue).font(.title2.bold())
+            ForEach(PetSpecies.allCases) { species in
+                PetStage(scene: scene(for: species), petScale: 0.82, floor: 0.85, showsFoliage: false, showsSeason: false, showsShelf: false)
+                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .overlay(alignment: .topLeading) {
+                        Text(species.defaultName).font(.headline).padding(12)
+                    }
+            }
+        }
+        .padding()
+        .task {
+            try? await Task.sleep(for: .seconds(0.8))
+            while !Task.isCancelled {
+                for next in Beat.allCases {
+                    guard !Task.isCancelled else { return }
+                    previous = beat
+                    beat = next
+                    since = .now
+                    try? await Task.sleep(for: .seconds(next.duration))
+                }
+            }
+        }
+    }
+
+    private func scene(for species: PetSpecies) -> PetScene {
+        let events: [PetEvent]
+        switch beat {
+        case .arrival: events = [PetEvent(.arrive, at: since)]
+        case .touch: events = []
+        case .release: events = [PetEvent(.petted, at: since)]
+        case .sad, .stressed, .excited: events = [PetEvent(.logged(beat.mood, .moderate), at: since)]
+        }
+        var scene = PetScene(species: species, stance: .mood(beat.mood, .moderate),
+                             previous: .mood(previous.mood, .moderate), stanceSince: since,
+                             events: events, pettingSince: beat == .touch ? since : nil)
+        scene.hidesStanceProp = true
+        if beat == .release {
+            scene.pettingRelease = .init(began: since.addingTimeInterval(-Beat.touch.duration), ended: since)
+        }
+        return scene
+    }
+}
 #endif

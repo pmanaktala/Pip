@@ -8,6 +8,8 @@ struct RootView: View {
             #if DEBUG
             if ProcessInfo.processInfo.environment["PIP_DEBUG"] == "handling" {
                 PetHandlingGalleryView()
+            } else if ProcessInfo.processInfo.environment["PIP_DEBUG"] == "acting" {
+                PetActingGalleryView()
             } else if ProcessInfo.processInfo.environment["PIP_DEBUG"] == "gallery" {
                 PetGalleryView()
             } else if ProcessInfo.processInfo.environment["PIP_DEBUG"] == "onboarding" {

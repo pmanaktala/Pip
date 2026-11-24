@@ -173,7 +173,14 @@ public final class PetPresence {
     public func endPetting(now: Date = .now) {
         guard let since = scene.pettingSince else { return }
         scene.pettingSince = nil
+        scene.pettingRelease = .init(began: since, ended: now)
         add(PetEvent(.petted, at: now), share: now.timeIntervalSince(since) > 0.6)
+    }
+
+    public func cancelPetting() {
+        scene.pettingSince = nil
+        scene.pettingRelease = nil
+        scene.events.removeAll { $0.kind == .petted }
     }
 
     /// Where a finger is, in −1…1 around the head; `nil` when it lifts.

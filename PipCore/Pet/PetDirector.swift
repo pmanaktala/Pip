@@ -58,6 +58,13 @@ public struct PetScene: Equatable, Sendable {
     public var events: [PetEvent]
     /// A finger has been resting on the pet since then.
     public var pettingSince: Date?
+    /// Preserve the strength of the contact pose when a local touch lifts.
+    var pettingRelease: PettingRelease?
+
+    struct PettingRelease: Equatable, Sendable {
+        var began: Date
+        var ended: Date
+    }
     /// Where a finger is, in −1…1 around the head, while one is down.
     public var look: CGPoint?
     /// Sit With Pet's breathing guide, 0 (out) … 1 (in). Overrides the idle breath.
@@ -182,8 +189,16 @@ public enum PetDirector {
                 next.at.timeIntervalSince1970 <= t && Self.clip(for: next.kind, stance: stance, species: s, gentle: scene.gentle) != nil
             }
             let blend = successor.map { 1 - PetMath.smoothstep((t - $0.at.timeIntervalSince1970) / 0.22) } ?? 1
-            p = clip.apply(to: p, at: local, weight: weight(for: event.kind) * blend)
-            busy = max(busy, clip.envelope(at: local) * blend)
+            if event.kind == .petted, let release = scene.pettingRelease, release.ended == event.at {
+                let contact = PetMath.smoothstep(release.ended.timeIntervalSince(release.began) / 0.35)
+                let easing = 1 - PetMath.smoothstep(local / 0.82)
+                let strength = contact * easing * blend
+                p = petting(p, stance: stance, species: s, t: release.ended.timeIntervalSince1970, weight: strength)
+                busy = max(busy, strength)
+            } else {
+                p = clip.apply(to: p, at: local, weight: weight(for: event.kind) * blend)
+                busy = max(busy, clip.envelope(at: local) * blend)
+            }
         }
         if let since = scene.pettingSince {
             let w = PetMath.smoothstep((t - since.timeIntervalSince1970) / 0.35)
@@ -458,9 +473,7 @@ public enum PetDirector {
         return idx
     }
 
-    /// A hand resting on the pet: eyes shut happy, leaning into it, slow breath, hearts. Asleep, it
-    /// smiles in its sleep and snuggles into your hand without waking; in a hard feeling it leans
-    /// in quietly, with a heart or two rather than a shower of them.
+    /// A pet leans into a held touch without lifting off the floor. An asleep pet keeps its eyes shut.
     public static func petting(_ base: PetPose, stance: PetStance = .mood(.happy, .moderate), species: PetSpecies, t: Double, weight w: Double) -> PetPose {
         if stance.isAsleep {
             var target = base
@@ -482,14 +495,27 @@ public enum PetDirector {
         target.mouthOpen = 0
         target.cheekPuff = 0
         target.blush = 0.9
-        target.headTilt = base.headTilt + 11 + sin(t * 1.3) * 2
         target.headNod = min(base.headNod, 0.1)
-        target.lean = base.lean + 4
         target.slump = min(base.slump, 0.2)
         target.earL = -0.25; target.earR = -0.25
         target.hearts = stance.isHard ? 0.4 : 0.75
-        target.tail = species == .dog ? sin(t * 12) * 0.9 : base.tail
-        target.tailUp = max(base.tailUp, 0.3)
+        switch species {
+        case .penguin:
+            target.lean -= 5
+            target.headTilt -= 12
+            target.armL -= 18
+        case .cat:
+            target.headTilt += 14 + sin(t * 1.8) * 1.5
+            target.squash += 0.13
+            target.earR -= 0.12
+            target.armL -= 13
+            target.armR -= 13
+        case .dog:
+            target.lean += 9
+            target.headTilt += 10
+            target.tail = sin(t * 9) * 0.78
+            target.tailUp = max(base.tailUp, 0.55)
+        }
         target.gazeX = 0; target.gazeY = 0
         return PetPose.mix(base, target, w)
     }
