@@ -50,9 +50,15 @@ struct PersistenceTests {
             .log(mood: .stressed, note: "Before")
         let saved = store.snapshot
         #expect(effect.count == 1)
-        #expect(throws: MoodSaveError.writeFailed) { try logger.update(entry, intensity: .strong, note: "Draft") }
+        let savedModifiedAt = entry.modifiedAt
+        #expect(throws: MoodSaveError.writeFailed) {
+            try logger.update(entry, intensity: .strong, contexts: [.work], note: "Draft")
+        }
         #expect(entry.note == "Before")
         #expect(entry.intensity == .moderate)
+        #expect(entry.contexts.isEmpty)
+        #expect(entry.modifiedAt == savedModifiedAt)
+        #expect(!context.hasChanges)
         #expect(throws: MoodSaveError.writeFailed) { try logger.delete(entry) }
         #expect(PipQueries.entry(id: entry.id, in: context) != nil)
         #expect(store.snapshot == saved)

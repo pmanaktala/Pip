@@ -9,6 +9,7 @@ struct MoodPickerSheet: View {
     @State private var contexts: Set<MoodContext> = []
     @State private var note = ""
     @State private var saveError: String?
+    @State private var isDiscardingDraft = false
     @FocusState private var noteFocused: Bool
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.colorScheme) private var scheme
@@ -41,7 +42,10 @@ struct MoodPickerSheet: View {
                         loggedHeader(for: logged)
                         refinement(for: logged)
                         if saveError != nil && hasDraft(for: logged) {
-                            Button("Discard unsaved edits", role: .destructive) { dismiss() }
+                            Button("Discard unsaved edits", role: .destructive) {
+                                isDiscardingDraft = true
+                                dismiss()
+                            }
                         }
                     } else {
                         picker
@@ -195,7 +199,7 @@ struct MoodPickerSheet: View {
 
     @discardableResult
     private func commitDraft(_ entry: MoodEntry) -> Bool {
-        guard hasDraft(for: entry) else {
+        guard !isDiscardingDraft, hasDraft(for: entry) else {
             saveError = nil
             return true
         }
