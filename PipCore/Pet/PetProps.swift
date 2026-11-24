@@ -116,21 +116,24 @@ public enum PetSnackArt {
 
 enum PetPropArt {
     /// Both reading objects have a stable room-space support before and after a carry.
-    static func readingShelf(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure, _ stage: PetPropStage) {
+    static func propShelf(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure, _ stage: PetPropStage) {
         let wood = PetRGB(0.72, 0.59, 0.45)
         for x: CGFloat in [16, 55] {
             PetDraw.solid(ctx, Path(roundedRect: CGRect(x: x, y: 148, width: 3, height: 22), cornerSize: CGSize(width: 1, height: 1)), wood, rim: 0.4, depth: 1)
         }
-        for y: CGFloat in [148, 168] {
+        for y: CGFloat in [148, 158, 168] {
             PetDraw.solid(ctx, Path(roundedRect: CGRect(x: 13, y: y, width: 46, height: 2), cornerSize: CGSize(width: 1, height: 1)), wood, rim: 0.4, depth: 1)
         }
-        for prop in [PetProp.book, .mug] where stage.carried != prop {
+        for prop in [PetProp.book, .blanket, .mug] where stage.carried != prop {
             var stored = p
             stored.pose = .zero
             stored.pose.leftHandIK = 1
             let hand = PetPropStage.grip(for: prop)
             stored.pose.leftHandX = hand.x; stored.pose.leftHandY = hand.y
             stored.pose.bookClose = prop == .book ? 1 : 0
+            stored.pose.blanketFold = prop == .blanket ? 1 : 0
+            stored.pose.rightHandIK = prop == .blanket ? 1 : 0
+            stored.pose.rightHandX = hand.x + 32; stored.pose.rightHandY = hand.y
             held(ctx, stored, fig, prop)
         }
     }
@@ -518,6 +521,10 @@ enum PetPropArt {
     /// A soft wrap round the shoulders, held closed at the chest (the paws hold the edges), with
     /// a turned-down fold at the top and a few dots. It should look cosy, never like a cape.
     static func blanket(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure) {
+        if p.staging != nil {
+            stagedBlanket(ctx, p, fig)
+            return
+        }
         let floor = PetFigure.floor
         let top = fig.neck.y - 6 + CGFloat(p.pose.slump) * 4
         let w: CGFloat = p.species == .penguin ? 48 : 50
@@ -550,6 +557,68 @@ enum PetPropArt {
             band.addQuadCurve(to: CGPoint(x: 100 + 3, y: top + 13), control: CGPoint(x: 100 + w * 0.6, y: top + 6))
             band.closeSubpath()
             inside.fill(band, fold)
+        }
+    }
+
+    private static func stagedBlanket(_ ctx: GraphicsContext, _ p: PetPaint, _ fig: PetFigure) {
+        let color = PetRGB(0.66, 0.72, 0.86).mix(p.palette.prop, 0.2)
+        let lighter = color.mix(PetRGB(1, 1, 1), 0.45)
+        let panels = PetBlanketGeometry.panels(p.pose, species: p.species, style: p.style)
+        let fold = CGFloat(p.pose.blanketFold)
+        let transform = PetBodyGeometry.transform(p.pose, style: p.style)
+        let center = CGPoint(x: (panels[0].grip.x + panels[1].grip.x) / 2,
+                             y: (panels[0].grip.y + panels[1].grip.y) / 2)
+        for (index, panel) in panels.enumerated() {
+            var fabric = Path()
+            fabric.move(to: panel.grip)
+            fabric.addQuadCurve(to: panel.shoulder, control: panel.crown)
+            fabric.addQuadCurve(to: panel.outerHem, control: panel.outerControl)
+            fabric.addQuadCurve(to: panel.innerHem, control: panel.hemControl)
+            fabric.addQuadCurve(to: panel.chest, control: panel.chestControl)
+            fabric.addLine(to: panel.grip)
+            fabric.closeSubpath()
+            PetDraw.solid(ctx, fabric, color, rim: p.rim, depth: 6 * (1 - fold) + 0.6)
+            var inside = ctx
+            inside.clip(to: fabric)
+            let side: CGFloat = index == 0 ? -1 : 1
+            let width: CGFloat = p.species == .penguin ? 48 : 50
+            let top = fig.neck.y - 6 + CGFloat(p.pose.slump) * 4
+            for (dx, dy) in [(0.35, 0.34), (0.72, 0.5), (0.4, 0.66), (0.8, 0.82), (0.25, 0.92)] as [(CGFloat, CGFloat)] {
+                let wrapped = CGPoint(x: 100 + side * width * dx, y: top + (170 - top) * dy).applying(transform)
+                let folded = CGPoint(x: center.x + (panel.grip.x - center.x) * dx, y: center.y + 1 + dy * 4)
+                let dot = CGPoint(x: wrapped.x + (folded.x - wrapped.x) * fold,
+                                  y: wrapped.y + (folded.y - wrapped.y) * fold)
+                inside.fill(PetDraw.ellipse(dot, 2.2 - fold * 1.4, 2.2 - fold * 1.4), PetRGB(1, 1, 1, 0.55))
+            }
+            // A gathering hem shows the fabric turning over itself while it is folded.
+            let roll = CGFloat(sin(Double(fold) * .pi)) * 4
+            var hem = Path()
+            hem.move(to: panel.outerHem)
+            hem.addQuadCurve(to: panel.innerHem, control: panel.hemControl)
+            hem.addLine(to: CGPoint(x: panel.innerHem.x, y: panel.innerHem.y - roll))
+            hem.addQuadCurve(to: CGPoint(x: panel.outerHem.x, y: panel.outerHem.y - roll),
+                             control: CGPoint(x: panel.hemControl.x, y: panel.hemControl.y - roll * 1.8))
+            hem.closeSubpath()
+            inside.fill(hem, lighter)
+            // The facing follows the same upper fold, so it cannot drift off the fabric.
+            var band = Path()
+            band.move(to: panel.grip)
+            band.addQuadCurve(to: panel.shoulder, control: panel.crown)
+            band.addLine(to: CGPoint(x: panel.shoulder.x + (panel.grip.x - panel.shoulder.x) * 0.12,
+                                    y: panel.shoulder.y + 7 * (1 - fold)))
+            band.addQuadCurve(to: panel.grip, control: CGPoint(x: panel.crown.x, y: panel.crown.y + 6 * (1 - fold)))
+            band.closeSubpath()
+            inside.fill(band, lighter)
+        }
+        if fold > 0 {
+            var detail = ctx
+            detail.opacity = Double(fold)
+            for offset: CGFloat in [2, 4] {
+                var crease = Path()
+                crease.move(to: CGPoint(x: panels[0].grip.x + 1, y: center.y + offset))
+                crease.addLine(to: CGPoint(x: panels[1].grip.x - 1, y: center.y + offset))
+                detail.stroke(crease, color.shade.alpha(0.5), width: 0.6)
+            }
         }
     }
 

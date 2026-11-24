@@ -96,6 +96,11 @@ public struct PetPose: Equatable, Sendable {
     public var leftHandX = 0.0
     public var leftHandY = 0.0
     public var leftHandIK = 0.0
+    public var rightHandX = 0.0
+    public var rightHandY = 0.0
+    public var rightHandIK = 0.0
+    /// Zero wraps the shoulders; one is a folded bundle held by its two top corners.
+    public var blanketFold = 0.0
     /// The reading book closes before it is put back on its shelf.
     public var bookClose = 0.0
     /// Progress through a visible page turn; zero at rest, one when the leaf has landed.
@@ -128,7 +133,7 @@ public struct PetPose: Equatable, Sendable {
         \.browShow, \.browSlant, \.browRaise,
         \.smile, \.mouthOpen, \.mouthRound, \.cheekPuff, \.blush,
         \.earL, \.earR, \.armL, \.armR, \.crossLegs, \.recline, \.stepL, \.stepR, \.tail, \.tailUp,
-        \.propLift, \.leftHandX, \.leftHandY, \.leftHandIK, \.bookClose, \.pageTurn, \.tears, \.sweat, \.zzz, \.notes, \.hearts, \.sparkles, \.steam, \.question, \.exclaim, \.thought, \.bubble, \.holdToy, \.bite,
+        \.propLift, \.leftHandX, \.leftHandY, \.leftHandIK, \.rightHandX, \.rightHandY, \.rightHandIK, \.blanketFold, \.bookClose, \.pageTurn, \.tears, \.sweat, \.zzz, \.notes, \.hearts, \.sparkles, \.steam, \.question, \.exclaim, \.thought, \.bubble, \.holdToy, \.bite,
     ]
 
     /// A pose with every channel at zero — the identity for additive layers.
@@ -169,6 +174,8 @@ public struct PetPose: Equatable, Sendable {
         p.lean = p.lean.clamped(-22, 22)
         p.breath = p.breath.clamped(-0.5, 1.5)
         p.slump = p.slump.clamped(0, 1)
+        p.rightHandIK = p.rightHandIK.clamped(0, 1)
+        p.blanketFold = p.blanketFold.clamped(0, 1)
         p.leftHandIK = p.leftHandIK.clamped(0, 1)
         p.bookClose = p.bookClose.clamped(0, 1)
         p.recline = p.recline.clamped(0, 1)
